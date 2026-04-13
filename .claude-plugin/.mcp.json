@@ -1,0 +1,6 @@
+{
+  "wiki": {
+    "command": "wiki",
+    "args": ["serve"]
+  }
+}
