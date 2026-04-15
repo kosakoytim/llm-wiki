@@ -20,11 +20,11 @@ tracked per-feature in the individual specification docs.
 
 - Initialize a new wiki with default directory structure and git repo (`wiki init`)
 - Register wiki automatically in `~/.wiki/config.toml` on init
-- List all registered wikis (`wiki registry list`)
-- Remove a wiki from the registry, optionally deleting local files (`wiki registry remove`)
-- Set the default wiki (`wiki registry set-default`)
+- List all registered wikis (`wiki spaces list`)
+- Remove a wiki from the spaces, optionally deleting local files (`wiki spaces remove`)
+- Set the default wiki (`wiki spaces set-default`)
 - Multi-wiki support — one process manages all registered wikis
-- Per-wiki config at `.wiki/config.toml`, global config at `~/.wiki/config.toml`
+- Per-wiki config at `wiki.toml` in repo root, global config at `~/.wiki/config.toml`
 - Two-level config resolution: CLI flag → per-wiki → global → built-in default
 - `wiki config get/set/list` for reading and writing config
 
@@ -42,16 +42,13 @@ tracked per-feature in the individual specification docs.
 
 ## Ingest
 
-- File ingest — Markdown with frontmatter, authored by human or LLM (`wiki ingest <file>`)
-- Folder ingest — recursive, assets co-located (`wiki ingest <folder>`)
-- Engine validates frontmatter, places files, commits, indexes
-- LLM writes complete Markdown files — no JSON intermediary
-- Update mode — overwrite existing page (`--update`)
+- Validate, commit, and index files already in the wiki tree (`wiki ingest <path>`)
+- File ingest — single Markdown file
+- Folder ingest — recursive, all `.md` files and co-located assets
+- Engine validates frontmatter, `git add`, commits, indexes
+- LLM writes directly into the wiki tree via `wiki_write` MCP tool
 - Frontmatter preserved on ingest; minimal frontmatter generated if absent
-- Bundle promotion — flat page auto-promoted to bundle when first asset co-located
-- Co-located assets — non-Markdown files stay beside their page
-- Shared assets — assets referenced by multiple pages go to `assets/`
-- Dry run mode — show what would be written without committing (`--dry-run`)
+- Dry run mode — show what would be committed without committing (`--dry-run`)
 - All ingests produce a git commit
 
 ---
@@ -81,9 +78,9 @@ tracked per-feature in the individual specification docs.
 
 - Explicit index rebuild from committed Markdown (`wiki index rebuild`)
 - Index status inspection — built date, page count, staleness (`wiki index status`)
-- Staleness detection via `index-status.toml` committed to git (compares git HEAD)
+- Indexes stored in `~/.wiki/indexes/<name>/` — outside the wiki repo
+- Staleness detection: compare indexed commit hash in `state.toml` against `git HEAD`
 - Auto-rebuild on stale index before search/list (configurable, default off)
-- `index-status.toml` committed on every rebuild; `.wiki/search-index/` gitignored
 
 ---
 
@@ -137,7 +134,8 @@ tracked per-feature in the individual specification docs.
 
 | Tool | Description |
 |------|-------------|
-| `wiki_ingest` | Ingest a Markdown file or folder into the wiki |
+| `wiki_write` | Write a file into the wiki tree |
+| `wiki_ingest` | Validate, commit, and index files in the wiki tree |
 | `wiki_search` | Full-text search, returns `Vec<PageRef>` |
 | `wiki_read` | Read full content of a page by slug or URI |
 | `wiki_new_page` | Create a new page with scaffolded frontmatter |
@@ -148,9 +146,9 @@ tracked per-feature in the individual specification docs.
 | `wiki_index_rebuild` | Rebuild tantivy index |
 | `wiki_index_status` | Inspect index health |
 | `wiki_config` | Get or set config values |
-| `wiki_registry_list` | List registered wikis |
-| `wiki_registry_remove` | Remove a wiki from the registry |
-| `wiki_registry_set_default` | Set the default wiki |
+| `wiki_spaces_list` | List registered wiki spaces |
+| `wiki_spaces_remove` | Remove a wiki space |
+| `wiki_spaces_set_default` | Set the default wiki space |
 | `wiki_init` | Initialize a new wiki |
 
 ---
@@ -191,7 +189,6 @@ tracked per-feature in the individual specification docs.
 - Custom types defined in `schema.md`, validated by engine on ingest
 - `--type paper` filters directly in `wiki search` and `wiki list`
 - Lint flags source pages with missing or deprecated `source-summary` type
-
 ---
 
 ## Instructions
@@ -210,12 +207,12 @@ tracked per-feature in the individual specification docs.
 
 - Flat page: `{slug}.md`
 - Bundle page: `{slug}/index.md` + co-located assets
-- Four fixed categories: `concepts/`, `sources/`, `queries/`, `raw/`
-- User-defined sections created on demand via direct ingest or `wiki new section`
-- Shared assets: `assets/diagrams/`, `assets/configs/`, `assets/scripts/`, `assets/data/`
-- `LINT.md` at wiki root — committed by `wiki lint`
-- `.wiki/index-status.toml` — committed by `wiki index rebuild`
-- `.wiki/search-index/` — gitignored, rebuilt locally
+- Folder structure defined by `schema.md` — no engine-enforced categories
+- Default `schema.md` suggests `concepts/`, `sources/`, `queries/` as conventions
+- Epistemic distinctions carried by `type` field, not by folder
+- User-defined sections created on demand via `wiki new section`
+- `LINT.md` at repository root — committed by `wiki lint`
+- Indexes stored in `~/.wiki/indexes/<name>/` — outside the repo
 
 ---
 

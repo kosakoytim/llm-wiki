@@ -21,29 +21,30 @@ src/
 ├── lib.rs              # module declarations
 ├── cli.rs              # clap Command enum — all subcommands and flags
 ├── config.rs           # GlobalConfig, WikiConfig, two-level resolution
-├── registry.rs         # Registry, WikiEntry, resolve_name(), resolve_uri()
+├── spaces.rs           # Spaces, WikiEntry, resolve_name(), resolve_uri()
 ├── git.rs              # init_repo(), commit(), current_head(), diff_last()
-├── markdown.rs         # frontmatter parse/write, scaffold, slug helpers,
-│                       # promote_to_bundle, read_page, list_assets, read_asset
+├── frontmatter.rs      # parse/write, scaffold_frontmatter(), validate_frontmatter(),
+│                       # generate_minimal_frontmatter()
+├── markdown.rs         # read_page, list_assets, read_asset,
+│                       # promote_to_bundle, slug helpers
+├── links.rs            # extract_links()
 ├── analysis.rs         # Enrichment, QueryResult, Asset, Analysis — new schema
-├── ingest.rs           # Input, DirectIngestOptions, ingest()
-├── integrate.rs        # integrate_direct_file/folder, integrate_enrichment,
-│                       # integrate_query_result, create_page, create_section,
-│                       # write_assets, IngestReport
+├── ingest.rs           # IngestOptions, validate → git add → commit → index
 ├── search.rs           # PageRef, PageList, tantivy index, search(), list(),
-│                       # IndexStatus, IndexReport, index-status.toml
+│                       # IndexStatus, IndexReport, state.toml
 ├── lint.rs             # LintReport, orphan/stub/section detection, LINT.md
 ├── graph.rs            # petgraph build, render_mermaid/dot, GraphReport
-├── server.rs           # rmcp WikiServer — all MCP tools, resources, prompts
+├── server.rs           # WikiServer, startup, stdio + SSE transport wiring
+├── mcp.rs              # all MCP tools, resources, prompts
 └── acp.rs              # WikiAgent, AcpSession, workflow dispatch
 ```
 
 ---
 
-## Phase 1 — Foundation: Schema + Config + Registry
+## Phase 1 — Foundation: Schema + Config + Spaces
 
-**Goal:** The new data model compiles. Config and registry load correctly.
-`wiki init`, `wiki config`, and `wiki registry` work end-to-end.
+**Goal:** The new data model compiles. Config and spaces load correctly.
+`wiki init`, `wiki config`, and `wiki spaces` work end-to-end.
 
 ### 1.1 New `analysis.rs` schema
 
@@ -81,7 +82,7 @@ pub struct WikiConfig { name, root, description }
 pub fn resolve(global: &GlobalConfig, per_wiki: &WikiConfig) -> ResolvedConfig
 ```
 
-### 1.3 `registry.rs` — `wiki://` URI resolution
+### 1.3 `spaces.rs` — `wiki://` URI resolution
 
 ```rust
 pub fn resolve_uri(uri: &str, global: &GlobalConfig) -> Result<(WikiEntry, String)>
@@ -95,8 +96,8 @@ pub fn remove(name: &str, delete: bool, config_path: &Path) -> Result<()>
 
 - `wiki init <path> --name --description --force --set-default`
 - `wiki config get/set/list`
-- `wiki registry list/remove/set-default`
-- MCP tools: `wiki_init`, `wiki_config`, `wiki_registry_*`
+- `wiki spaces list/remove/set-default`
+- MCP tools: `wiki_init`, `wiki_config`, `wiki_spaces_*`
 
 **Deliverable:** `cargo test` green. `wiki init` creates a wiki and registers it.
 
@@ -104,13 +105,13 @@ pub fn remove(name: &str, delete: bool, config_path: &Path) -> Result<()>
 
 ## Phase 2 — Core Write Loop: Ingest + Page Creation
 
-**Goal:** `wiki ingest <path> --target <uri>` writes pages and assets to the
-wiki. `wiki new page/section <uri>` creates scaffolded pages.
+**Goal:** `wiki ingest <path>` validates, commits, and indexes files already
+in the wiki tree. `wiki new page/section` creates scaffolded pages.
 
 ### 2.1 `markdown.rs` additions
 
 ```rust
-pub fn generate_minimal_frontmatter(title: &str, slug: &str) -> PageFrontmatter
+pub fn generate_minimal_frontmatter(title: &str) -> PageFrontmatter
 pub fn scaffold_frontmatter(slug: &str) -> PageFrontmatter  // for wiki new
 pub fn read_page(slug: &str, wiki_root: &Path, no_frontmatter: bool) -> Result<String>
 pub fn list_assets(slug: &str, wiki_root: &Path) -> Result<Vec<String>>  // wiki:// URIs
@@ -119,34 +120,36 @@ pub fn read_asset(slug: &str, filename: &str, wiki_root: &Path) -> Result<Vec<u8
 
 `PageFrontmatter` updated: remove `contradictions` field, add `claims`.
 
-### 2.2 `integrate.rs` — ingest
+### 2.2 `ingest.rs` — validate, commit, index
 
 ```rust
-pub fn integrate_file(path: &Path, target: &ResolvedTarget, options: &IngestOptions, wiki_root: &Path) -> Result<IngestReport>
-pub fn integrate_folder(path: &Path, target: &ResolvedTarget, options: &IngestOptions, wiki_root: &Path) -> Result<IngestReport>
-pub fn write_assets(assets: &[Asset], wiki_root: &Path) -> Result<usize>
-pub fn create_page(uri: &str, bundle: bool, registry: &Registry) -> Result<String>
-pub fn create_section(uri: &str, registry: &Registry) -> Result<String>
+pub struct IngestOptions { dry_run: bool }
+pub fn ingest(path: &Path, options: &IngestOptions, wiki_root: &Path) -> Result<IngestReport>
+// validate frontmatter → git add → commit → index
 ```
 
-`IngestReport`: `pages_written`, `assets_written`, `bundles_created`, `commit`.
+`IngestReport`: `pages_validated`, `assets_found`, `warnings`, `commit`.
 
-### 2.3 `ingest.rs`
+No `integrate_file`, `integrate_folder`, or file placement logic — files are
+already in the wiki tree.
+
+### 2.3 `mcp.rs` — write + ingest tools
 
 ```rust
-pub enum Input { Direct(PathBuf), }
-pub struct IngestOptions { target: Option<String>, update: bool }
+pub async fn wiki_write(path: String, content: String) -> WriteResult
+pub async fn wiki_ingest(path: String, dry_run: Option<bool>) -> IngestReport
+pub async fn wiki_new_page(slug: String, bundle: Option<bool>) -> String
+pub async fn wiki_new_section(slug: String) -> String
 ```
 
-### 2.4 CLI + MCP
+### 2.4 CLI
 
-- `wiki ingest <path> --target --update --dry-run`
-- `wiki new page <uri> --bundle --dry-run`
-- `wiki new section <uri> --dry-run`
-- MCP tools: `wiki_ingest`, `wiki_new_page`, `wiki_new_section`
+- `wiki ingest <path> --dry-run`
+- `wiki new page <slug> --bundle --dry-run`
+- `wiki new section <slug> --dry-run`
 
-**Deliverable:** `wiki ingest ~/agent-skills/semantic-commit/ --target wiki://research/skills`
-writes pages + assets, commits.
+**Deliverable:** Author writes a file into the wiki tree, `wiki ingest` validates,
+commits, and indexes it.
 
 ---
 
@@ -161,6 +164,7 @@ guide in instructions.
 ```rust
 pub fn validate_frontmatter(fm: &PageFrontmatter, schema: &SchemaConfig) -> Result<Vec<Warning>>
 // Checks: required fields present, type in built-in + custom list, source-summary deprecated
+// No folder-to-type inference — type is independent of path
 ```
 
 ### 3.2 `config.rs` — schema.md parsing
@@ -186,7 +190,7 @@ authoring guide with full type taxonomy in context.
 ## Phase 4 — Search + Read + Index
 
 **Goal:** `wiki search`, `wiki read`, `wiki list`, `wiki index` work.
-Unified `PageRef` return type. `index-status.toml` committed on rebuild.
+Unified `PageRef` return type. `state.toml` committed on rebuild.
 
 ### 4.1 `search.rs` — unified return types + full frontmatter indexing
 
@@ -199,8 +203,9 @@ pub struct IndexReport { wiki, pages_indexed, duration_ms }
 ```
 
 All frontmatter fields indexed in tantivy schema (not just `slug`, `title`,
-`tags`, `body`, `type`). `index-status.toml` written and committed on rebuild.
-Staleness detection: compare `commit` field vs `git HEAD`.
+`tags`, `body`, `type`). Index stored in `~/.wiki/indexes/<name>/search-index/`.
+`state.toml` written alongside the index on rebuild.
+Staleness detection: compare `commit` field in `state.toml` vs `git HEAD`.
 
 ### 4.2 CLI + MCP
 
@@ -235,8 +240,8 @@ pub fn lint_fix(wiki_root: &Path, config: &LintConfig, only: Option<&str>) -> Re
 `_No X found._`, `uri` and `path` in orphan/contradiction tables.
 Missing connections section shows candidate pairs with overlapping terms.
 Untyped sources section lists source pages with missing or deprecated
-`source-summary` type. See [backlink-quality.md](specifications/backlink-quality.md)
-and [source-classification.md](specifications/source-classification.md).
+`source-summary` type. See [backlink-quality.md](specifications/llm/backlink-quality.md)
+and [source-classification.md](specifications/core/source-classification.md).
 
 ### 5.2 `graph.rs`
 
@@ -268,11 +273,11 @@ empty sections. `wiki graph` outputs Mermaid to stdout.
 resources, and prompts from the spec live. `wiki instruct` structured by workflow.
 Session bootstrap complete.
 
-### 6.1 `server.rs` — complete
+### 6.1 `mcp.rs` — complete
 
 All tools from `specifications/features.md` MCP Tools table. Resources
 namespaced by wiki name. Prompts: `ingest_source`, `research_question`,
-`lint_and_enrich`. `src/instructions.md` structured as:
+`lint_and_fix`. `src/instructions.md` structured as:
 `## help`, `## new`, `## ingest`, `## research`, `## lint`,
 `## crystallize`, `## frontmatter`.
 
@@ -281,7 +286,7 @@ references in all prompts.
 
 ### 6.2 Session bootstrap
 
-See [session-bootstrap.md](specifications/session-bootstrap.md).
+See [session-bootstrap.md](specifications/llm/session-bootstrap.md).
 
 - `schema.md` injected alongside instructions at MCP server start
 - `## session-orientation` preamble in `src/instructions.md`
@@ -307,12 +312,12 @@ from the wiki's current state. All registered wikis accessible via
 ### 7.1 `acp.rs`
 
 ```rust
-pub struct WikiAgent { registry: Arc<Registry>, sessions: Mutex<HashMap<String, AcpSession>> }
+pub struct WikiAgent { spaces: Arc<Spaces>, sessions: Mutex<HashMap<String, AcpSession>> }
 pub struct AcpSession { id, label, wiki: Option<String>, created_at, active_run }
 impl Agent for WikiAgent { initialize, new_session, load_session, list_sessions, prompt, cancel }
 ```
 
-Workflow dispatch: `ingest`, `research`, `lint`, `enrich`. Instructions injected
+Workflow dispatch: `ingest`, `research`, `lint`, `crystallize`. Instructions injected
 at `initialize`. All registered wikis accessible per session.
 
 ### 7.2 Cargo.toml
@@ -332,7 +337,7 @@ streams ingest/research workflows.
 **Goal:** `.claude-plugin/` is complete and installable. All slash commands work.
 
 - `plugin.json`, `marketplace.json`, `.mcp.json` updated to spec
-- Commands: `help`, `init`, `new`, `ingest`, `research`, `enrich`, `lint`
+- Commands: `help`, `init`, `new`, `ingest`, `research`, `crystallize`, `lint`
 - `SKILL.md` updated — no contradiction workflow
 - `wiki instruct <workflow>` returns correct step-by-step for all workflows
 
@@ -344,8 +349,8 @@ streams ingest/research workflows.
 
 | After phase | You can… |
 |-------------|----------|
-| 1 | Initialize wikis, manage registry and config |
-| 2 | Ingest any file or folder, create pages and sections |
+| 1 | Initialize wikis, manage spaces and config |
+| 2 | Validate, commit, and index files in the wiki tree; create pages and sections |
 | 3 | Frontmatter validation on ingest, unified type taxonomy enforced, authoring guide in instructions |
 | 4 | Search (with classification filter), read pages and assets, manage the index |
 | 5 | Audit wiki structure (orphans, stubs, missing connections, unclassified sources), visualize concept graph |

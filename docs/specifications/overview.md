@@ -50,16 +50,18 @@ structure the engine enforces is the flow from inbox to archive to knowledge:
 
 ```
 my-wiki/
+├── README.md   ← for humans (name, description, usage)
+├── wiki.toml   ← per-wiki config (name, description, overrides)
 ├── schema.md   ← wiki schema: categories, ingest rules, lint conventions
 ├── inbox/      ← Layer 1: drop zone          (human puts files here)
-├── raw/        ← Layer 2: immutable archive  (moved here after ingest)
-├── wiki/       ← Layer 3: compiled knowledge (LLM reads and writes here)
-└── .wiki/      ← Layer 4: engine metadata    (engine manages this)
+├── raw/        ← Layer 2: immutable archive  (originals preserved here)
+└── wiki/       ← Layer 3: compiled knowledge (authors write directly here)
 ```
 
-The human drops files in `inbox/`. The LLM ingests them and moves them to
-`raw/`. The LLM maintains `wiki/`. The engine owns `.wiki/`. Git history is
-the activity log. The search engine is the index.
+The human drops files in `inbox/` for the LLM to process. The LLM reads
+them, writes pages directly into `wiki/`, and runs `wiki ingest` to validate,
+commit, and index. Originals can be archived to `raw/`. Git history is the
+activity log. Search indexes live in `~/.wiki/indexes/<name>/`, not in the repo.
 
 `schema.md` is the only configuration the LLM needs. It defines how *this
 wiki instance* is organized — categories, ingest depth, lint rules, domain
@@ -76,20 +78,17 @@ expressed in `schema.md`.
 ## The Model
 
 ```
-Human drops file in inbox/       LLM ingests it
+Human drops file in inbox/       LLM processes it
 ─────────────────────────        ──────────────────────────────────────────────
 inbox/my-article.md         →   reads schema.md (knows this wiki's conventions)
                                  reads inbox file
-                                 writes wiki pages per schema conventions
-                                 flags contradictions
-                                 moves inbox/my-article.md → raw/my-article.md
-                                 git commit: ingest(<slug>)
+                                 writes pages directly into wiki/ tree
+                                 wiki ingest → validate, commit, index
 ```
 
-The LLM writes directly to `wiki/` via MCP tools. The engine handles file
-operations, slug resolution, frontmatter merging, and git commits. The two
-are independent — the engine works without an LLM, the LLM works through
-the engine's MCP interface.
+Authors (human or LLM) write directly into the wiki tree. The engine
+validates, commits to git, and indexes. The two are independent — the engine
+works without an LLM, the LLM works through the engine's MCP interface.
 
 ---
 
@@ -97,7 +96,7 @@ the engine's MCP interface.
 
 A Rust CLI and MCP/ACP server that manages a wiki repository:
 
-- **Ingest** — add files, folders, or LLM-produced enrichments to the wiki
+- **Ingest** — validate, commit, and index files already in the wiki tree
 - **Search** — full-text BM25 search across all pages
 - **Read** — fetch the full content of a single page by slug or `wiki://` URI
 - **List** — paginated enumeration of pages with type and status filters
@@ -138,26 +137,31 @@ either `concepts/mixture-of-experts.md` or `concepts/mixture-of-experts/index.md
 `wiki://research/concepts/mixture-of-experts` or `wiki://concepts/mixture-of-experts`
 for the default wiki.
 
-**Enrichment** — LLM-produced metadata (claims, confidence, tags, sources)
-merged into existing page frontmatter. The LLM annotates pages; it does not
-author them.
+**Write + Ingest** — the two-step pattern. The author writes a file into the
+wiki tree, then `wiki ingest` validates, commits, and indexes it. No file
+movement — the file is already where it belongs.
 
 ---
 
 ## Epistemic Model
 
-The DKR model requires only one flow:
+The DKR model has two physical layers and one epistemic axis:
 
 ```
 inbox/  → waiting to be processed (human drop zone)
 raw/    → what we received        (immutable archive, never indexed)
-wiki/   → what we derived         (compiled knowledge, LLM-maintained)
+wiki/   → what we derived         (compiled knowledge, authors write here)
 ```
 
-Within `wiki/`, the page `type` frontmatter field carries the epistemic role
-(`concept`, `source-summary`, `query-result`). Directory structure is the
-wiki owner's choice, defined in `schema.md`. See
-[epistemic-model.md](epistemic-model.md) for the full rationale.
+Within `wiki/`, the page `type` field is the epistemic axis:
+
+- `concept` — what we know (synthesized knowledge)
+- `paper`, `article`, `documentation`, etc. — what each source claims (provenance)
+- `query-result` — what we concluded (reasoning output)
+
+Folder structure is organizational, defined by `schema.md`. The engine
+enforces nothing about folders inside `wiki/`. See
+[epistemic-model.md](core/epistemic-model.md) for the full rationale.
 
 ---
 
@@ -166,4 +170,4 @@ wiki owner's choice, defined in `schema.md`. See
 A single `wiki` process manages multiple git repositories registered in
 `~/.wiki/config.toml`. All CLI commands and MCP tools accept `--wiki <name>`.
 Pages are addressed as `wiki://<name>/<slug>` or `wiki://<slug>` for the
-default wiki.
+default wiki. See [spaces.md](commands/spaces.md).

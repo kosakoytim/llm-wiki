@@ -1,8 +1,7 @@
 # Specifications
 
 Full specification of the llm-wiki project. These documents are the source of
-truth for design decisions, contracts, and behavior. The `design/` folder and
-`dev/` folder will be rewritten to reference these specs.
+truth for design decisions, contracts, and behavior.
 
 ---
 
@@ -12,59 +11,78 @@ truth for design decisions, contracts, and behavior. The `design/` folder and
 |----------|---------------|
 | [overview.md](overview.md) | What llm-wiki is, the core model, key concepts |
 | [features.md](features.md) | Complete feature list by capability area |
-| [cli.md](cli.md) | All commands, subcommands, and flags |
-| [epistemic-model.md](epistemic-model.md) | Why the four default categories exist |
 
 ---
 
-## Commands
+## core/
+
+Foundational data model and repository structure.
+
+| Document | What it covers |
+|----------|---------------|
+| [repository-layout.md](core/repository-layout.md) | How pages and assets are organized on disk |
+| [page-content.md](core/page-content.md) | Frontmatter schema, required fields, per-type conventions |
+| [frontmatter-authoring.md](core/frontmatter-authoring.md) | LLM-facing reference for writing frontmatter |
+| [epistemic-model.md](core/epistemic-model.md) | Why the type taxonomy carries epistemic distinctions |
+| [source-classification.md](core/source-classification.md) | How source types work within the type taxonomy |
+
+---
+
+## commands/
+
+One file per CLI command.
 
 | Document | Command |
 |----------|---------|
-| [init.md](init.md) | `wiki init` |
-| [page-creation.md](page-creation.md) | `wiki new page` / `wiki new section` |
-| [ingest.md](ingest.md) | `wiki ingest` |
-| [read.md](read.md) | `wiki read` |
-| [search.md](search.md) | `wiki search` |
-| [list.md](list.md) | `wiki list` |
-| [lint.md](lint.md) | `wiki lint` |
-| [graph.md](graph.md) | `wiki graph` |
-| [index.md](index.md) | `wiki index` |
-| [serve.md](serve.md) | `wiki serve` |
-| [instruct.md](instruct.md) | `wiki instruct` |
-| [registry.md](registry.md) | `wiki registry` |
-| [configuration.md](configuration.md) | `wiki config` + all config keys |
+| [cli.md](commands/cli.md) | All commands, subcommands, and flags |
+| [init.md](commands/init.md) | `wiki init` |
+| [spaces.md](commands/spaces.md) | `wiki spaces` |
+| [configuration.md](commands/configuration.md) | `wiki config` |
+| [page-creation.md](commands/page-creation.md) | `wiki new page` / `wiki new section` |
+| [read.md](commands/read.md) | `wiki read` |
+| [list.md](commands/list.md) | `wiki list` |
+| [search.md](commands/search.md) | `wiki search` |
+| [graph.md](commands/graph.md) | `wiki graph` |
+| [lint.md](commands/lint.md) | `wiki lint` |
+| [index.md](commands/index.md) | `wiki index` |
+| [serve.md](commands/serve.md) | `wiki serve` |
+| [instruct.md](commands/instruct.md) | `wiki instruct` |
 
 ---
 
-## Data Model and Layout
+## pipelines/
+
+Data processing and ingestion flows.
 
 | Document | What it covers |
 |----------|---------------|
-| [repository-layout.md](repository-layout.md) | How pages and assets are organized on disk |
-| [page-content.md](page-content.md) | Frontmatter schema, merge rules, body assembly |
-| [asset-ingest.md](asset-ingest.md) | Co-located assets and bundle promotion |
-| [source-classification.md](source-classification.md) | Configurable taxonomy for source types |
+| [ingest.md](pipelines/ingest.md) | Validate, commit, and index files in the wiki tree |
+| [asset-ingest.md](pipelines/asset-ingest.md) | Co-located assets and bundle promotion |
+| [crystallize.md](pipelines/crystallize.md) | Distilling chat sessions into wiki pages |
 
 ---
 
-## Knowledge Quality
+## llm/
+
+LLM-facing behavior and workflows.
 
 | Document | What it covers |
 |----------|---------------|
-| [session-bootstrap.md](session-bootstrap.md) | How the LLM orients at session start |
-| [crystallize.md](crystallize.md) | Workflow for distilling chat sessions into wiki pages |
-| [backlink-quality.md](backlink-quality.md) | Linking policy and missing connection detection |
-| [frontmatter-authoring.md](frontmatter-authoring.md) | LLM-facing reference for writing frontmatter |
+| [session-bootstrap.md](llm/session-bootstrap.md) | How the LLM orients itself at session start |
+| [backlink-quality.md](llm/backlink-quality.md) | Linking policy and missing connection detection |
+
+See also [commands/instruct.md](commands/instruct.md) for the `wiki instruct` command that delivers these workflows.
 
 ---
 
-## Integrations
+## integrations/
+
+External tool integrations.
 
 | Document | What it covers |
 |----------|---------------|
-| [acp-transport.md](acp-transport.md) | ACP transport for Zed / VS Code |
-| [claude-plugin.md](claude-plugin.md) | Claude Code plugin structure |
+| [acp-transport.md](integrations/acp-transport.md) | ACP transport for Zed / VS Code |
+| [claude-plugin.md](integrations/claude-plugin.md) | Claude Code plugin structure |
 
 ---
 
@@ -72,3 +90,7 @@ truth for design decisions, contracts, and behavior. The `design/` folder and
 
 The `design/` folder contains historical design documents. The specifications
 folder is the source of truth for current contracts and behavior.
+
+[rust-modules.md](rust-modules.md) is the canonical reference for the `src/`
+module layout — consult it when a spec's "Rust Module Changes" table is
+ambiguous.
