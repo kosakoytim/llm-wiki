@@ -1,9 +1,11 @@
 # Logging Tasks
 
-Implement structured logging per logging.md. Phased approach — essentials
-first, polish later.
+Implement structured logging per logging spec and logging.md analysis.
+Phased approach — essentials first, polish later.
 
-Reference: [logging.md](logging.md)
+Reference:
+- [Logging spec](specifications/core/logging.md)
+- [Logging analysis](logging.md)
 
 Dependencies already in Cargo.toml: `tracing = "0.1"`, `tracing-subscriber`
 with `env-filter`. No new crates needed for Phase 1.
@@ -187,22 +189,90 @@ Depends on: Task L1.
 
 ### Task L6 — File rotation for serve mode
 
-Add `tracing-appender` for long-running `wiki serve` processes.
+**Goal:** Add rotating file logging to `wiki serve` under `~/.wiki/logs/`.
 
-New dependency: `tracing-appender = "0.2"`.
+Reference: [Logging spec §4-5](specifications/core/logging.md)
 
-Config: `serve.log_path` (optional, default: stderr only).
+#### Config changes
 
-Depends on: Task L1.
+- `src/config.rs` — add `LoggingConfig` struct:
+  ```rust
+  pub struct LoggingConfig {
+      pub log_path: String,       // default: ~/.wiki/logs
+      pub log_rotation: String,   // daily | hourly | never
+      pub log_max_files: u32,     // default: 7
+      pub log_format: String,     // text | json
+  }
+  ```
+  Add `logging: LoggingConfig` to `GlobalConfig`. Global-only — not in
+  `WikiConfig` or `ResolvedConfig`.
+- `src/config.rs` — add to `set_global_config_value` match arms:
+  `logging.log_path`, `logging.log_rotation`, `logging.log_max_files`,
+  `logging.log_format`.
+- `src/config.rs` — add `logging.log_path`, `logging.log_rotation`,
+  `logging.log_max_files`, `logging.log_format` to the global-only
+  rejection list in `set_wiki_config_value` (alongside `serve.*`).
+- `src/main.rs` — in `get_config_value`: add the 3 logging keys.
+- `src/mcp/tools.rs` — in `get_value`: add the 3 logging keys.
+
+#### Init changes
+
+- `src/init.rs` — in `init()`, after `spaces::register`: create
+  `~/.wiki/logs/` directory if it doesn't exist. This is global engine
+  infrastructure, created once alongside `~/.wiki/config.toml`.
+- Only create on the first `wiki init` (when `~/.wiki/` is new). If
+  `~/.wiki/logs/` already exists, skip.
+
+#### Logging changes
+
+- `Cargo.toml` — add `tracing-appender = "0.2"`.
+- `src/main.rs` — in `Commands::Serve` branch, before starting the server:
+  - Read `logging` config from global config.
+  - If `log_path` is non-empty:
+    - Create `log_path` directory if it doesn't exist.
+    - Build `RollingFileAppender` with the configured rotation.
+    - Set `max_log_files` if > 0.
+    - Wrap in `non_blocking`.
+    - Build a layered subscriber: stderr + file.
+    - If `log_format` is `json`: use `.json()` formatter.
+    - If `log_format` is `text` (default): use `.compact()` formatter.
+    - Hold the `_guard` in `main()` scope.
+  - If `log_path` is empty: stderr-only (current behavior).
+- CLI commands (non-serve): always stderr-only, ignore `log_path`.
+
+#### Default behavior
+
+- `log_path` defaults to `~/.wiki/logs` — file logging works out of the
+  box for `wiki serve`.
+- `log_path = ""` explicitly disables file logging.
+- `~/.wiki/logs/` is created automatically on first `wiki serve`.
+
+#### Tests
+
+- `tests/config.rs` — new tests:
+  - `logging_config_defaults` — assert default values.
+  - `set_global_config_value_sets_logging_keys` — set each key, assert.
+  - `set_wiki_config_value_rejects_logging_keys` — set `logging.log_path`
+    on a WikiConfig, assert error with "global-only" message.
+- No file rotation tests (would require time manipulation or waiting).
+
+#### Exit criteria
+
+- `wiki init` creates `~/.wiki/logs/` alongside `~/.wiki/config.toml`.
+- `wiki serve` creates `~/.wiki/logs/wiki.log.YYYY-MM-DD`.
+- Logs appear in both stderr and the file.
+- `wiki config get logging.log_path` returns the path.
+- `wiki config set logging.log_path "" --global` disables file logging.
+- `wiki config set logging.log_path "/tmp" --wiki research` → error
+  (global-only key).
+- CLI commands do not create log files.
+- `cargo test` passes.
 
 ---
 
-### Task L7 — JSON log output
+### Task L7 — (merged into L6)
 
-Add `--log-format json` flag or `serve.log_format` config for
-machine-parseable logs.
-
-Depends on: Task L1.
+JSON log output is now part of Task L6 via the `log_format` config key.
 
 ---
 
@@ -214,9 +284,8 @@ Depends on: Task L1.
 | 2 | L2 — Replace eprintln! | Small | L1 |
 | 3 | L3 — Stop silent discard | Small | L1 |
 | 4 | L4 — Tool observability | Small | L1 |
-| — | L5 — ACP spans | Small | L1 (defer) |
-| — | L6 — File rotation | Medium | L1 (defer) |
-| — | L7 — JSON output | Small | L1 (defer) |
+| 5 | L5 — ACP spans | Small | L1 |
+| 6 | L6 — File rotation + JSON format | Medium | L1 |
 
-Phase 1 (L1–L4) can be done in a single commit. No new dependencies,
-no behavior changes, no new config surface. Pure additive.
+Phase 1 (L1–L5) is done. L6 adds a dependency (`tracing-appender`),
+config surface (`[logging]`), and init changes (`~/.wiki/logs/`).

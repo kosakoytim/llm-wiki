@@ -35,6 +35,7 @@ fn index_path_for(wiki_name: &str) -> PathBuf {
 
 fn main() -> Result<()> {
     tracing_subscriber::fmt()
+        .compact()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| "llm_wiki=info,warn".into()),

@@ -13,7 +13,7 @@
 
 ## monitoring
 
-- log → [logging.md](logging.md) · [logging-tasks.md](logging-tasks.md)
+- log → [logging.md](logging.md) · [logging-tasks.md](logging-tasks.md) · [logging spec](specifications/core/logging.md)
 - server thread auto restart → [server-resilience.md](server-resilience.md)
 - index corruption detection / rebuild → [index-corruption.md](index-corruption.md)
 

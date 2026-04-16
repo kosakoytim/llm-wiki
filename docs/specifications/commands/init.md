@@ -30,7 +30,22 @@ registers the wiki in `~/.wiki/config.toml`. Safe to re-run.
 ```
 
 No hidden directories. No `.gitignore` needed for engine artifacts — indexes
-live in `~/.wiki/indexes/<name>/`.
+live in `~/.wiki/indexes/<name>/`, logs in `~/.wiki/logs/`.
+
+### Global engine directories
+
+On the first `wiki init`, the engine also ensures the global `~/.wiki/`
+infrastructure exists:
+
+```
+~/.wiki/
+├── config.toml     ← global config (created by spaces::register)
+├── indexes/        ← search indexes, one per wiki
+└── logs/           ← rotating log files for wiki serve
+```
+
+`~/.wiki/logs/` is created alongside `config.toml` so that `wiki serve`
+can write log files without additional setup.
 
 Initial git commit: `init: <name>`
 
