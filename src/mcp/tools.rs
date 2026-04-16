@@ -292,27 +292,29 @@ pub struct ToolResult {
 
 pub fn call(server: &WikiServer, name: &str, args: &Map<String, Value>) -> ToolResult {
     let _span = tracing::info_span!("tool_call", tool = name).entered();
-    let result = match name {
-        "wiki_init" => handle_init(server, args),
-        "wiki_config" => handle_config(server, args),
-        "wiki_spaces_list" => handle_spaces_list(server),
-        "wiki_spaces_remove" => handle_spaces_remove(server, args),
-        "wiki_spaces_set_default" => handle_spaces_set_default(server, args),
-        "wiki_write" => handle_write(server, args),
-        "wiki_ingest" => handle_ingest(server, args),
-        "wiki_new_page" => handle_new_page(server, args),
-        "wiki_new_section" => handle_new_section(server, args),
-        "wiki_search" => handle_search(server, args),
-        "wiki_read" => handle_read(server, args),
-        "wiki_list" => handle_list(server, args),
-        "wiki_index_rebuild" => handle_index_rebuild(server, args),
-        "wiki_index_status" => handle_index_status(server, args),
-        "wiki_lint" => handle_lint(server, args),
-        "wiki_graph" => handle_graph(server, args),
-        _ => Err(format!("unknown tool: {name}")),
-    };
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        match name {
+            "wiki_init" => handle_init(server, args),
+            "wiki_config" => handle_config(server, args),
+            "wiki_spaces_list" => handle_spaces_list(server),
+            "wiki_spaces_remove" => handle_spaces_remove(server, args),
+            "wiki_spaces_set_default" => handle_spaces_set_default(server, args),
+            "wiki_write" => handle_write(server, args),
+            "wiki_ingest" => handle_ingest(server, args),
+            "wiki_new_page" => handle_new_page(server, args),
+            "wiki_new_section" => handle_new_section(server, args),
+            "wiki_search" => handle_search(server, args),
+            "wiki_read" => handle_read(server, args),
+            "wiki_list" => handle_list(server, args),
+            "wiki_index_rebuild" => handle_index_rebuild(server, args),
+            "wiki_index_status" => handle_index_status(server, args),
+            "wiki_lint" => handle_lint(server, args),
+            "wiki_graph" => handle_graph(server, args),
+            _ => Err(format!("unknown tool: {name}")),
+        }
+    }));
     match result {
-        Ok((content, notify_uris)) => {
+        Ok(Ok((content, notify_uris))) => {
             tracing::debug!(tool = name, "tool call ok");
             ToolResult {
                 content,
@@ -320,10 +322,18 @@ pub fn call(server: &WikiServer, name: &str, args: &Map<String, Value>) -> ToolR
                 notify_uris,
             }
         }
-        Err(msg) => {
+        Ok(Err(msg)) => {
             tracing::warn!(tool = name, error = %msg, "tool call failed");
             ToolResult {
                 content: err_text(msg),
+                is_error: true,
+                notify_uris: vec![],
+            }
+        }
+        Err(_) => {
+            tracing::error!(tool = name, "tool handler panicked");
+            ToolResult {
+                content: err_text("internal error: tool panicked".into()),
                 is_error: true,
                 notify_uris: vec![],
             }

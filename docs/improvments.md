@@ -13,18 +13,9 @@ parameter global only should not be updated locally
 
 → [ingest-auto-commit.md](ingest-auto-commit.md)
 
-
-## bugs
-
-- [x] `wiki init` path canonicalization — re-run detection failed on macOS
-  when symlinks resolved differently between calls. Fixed: create directory
-  before canonicalize.
-
-
 ## monitoring
 
-- log → [logging.md](logging.md) · [logging-tasks.md](logging-tasks.md) · [logging spec](specifications/core/logging.md)
-- server thread auto restart → [server-resilience.md](server-resilience.md)
+- server thread auto restart → [server-resilience.md](server-resilience.md) · [server-resilience-tasks.md](server-resilience-tasks.md) · [server resilience spec](specifications/core/server-resilience.md)
 - index corruption detection / rebuild → [index-corruption.md](index-corruption.md)
 
 

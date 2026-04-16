@@ -90,6 +90,16 @@ wiki serve --sse :8080 --acp   # all three, SSE on 8080
 sse      = false    # enable SSE by default
 sse_port = 8080     # SSE port
 acp      = false    # enable ACP by default
+max_restarts    = 10  # max transport restarts before exit (0 = no restart)
+restart_backoff = 1   # initial backoff in seconds, doubles up to 30s cap
 ```
 
 CLI flags override config per-invocation.
+
+---
+
+## 6. Failure Handling
+
+See [Server Resilience](../core/server-resilience.md) for the full
+specification of failure isolation, transport supervision, and crash
+recovery guarantees.

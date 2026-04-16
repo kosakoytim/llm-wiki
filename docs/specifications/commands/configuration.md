@@ -125,6 +125,8 @@ fix_missing_stubs  = false  # do not auto-create stubs for this wiki
 | `serve.sse` | global only | `false` | Enable SSE transport by default |
 | `serve.sse_port` | global only | `8080` | SSE port |
 | `serve.acp` | global only | `false` | Enable ACP transport by default |
+| `serve.max_restarts` | global only | `10` | Max transport restarts before exit. `0` = no restart (crash exits). |
+| `serve.restart_backoff` | global only | `1` | Initial backoff in seconds. Doubles on each restart, capped at 30s. |
 | `logging.log_path` | global only | `~/.wiki/logs` | Log file directory. Empty string disables file logging. |
 | `logging.log_rotation` | global only | `daily` | Rotation schedule: `daily`, `hourly`, `never` |
 | `logging.log_max_files` | global only | `7` | Max rotated log files. `0` = unlimited. |
