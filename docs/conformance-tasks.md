@@ -236,18 +236,32 @@ and rejects non-UTF-8 body content."
 
 ### Code changes
 
-- `src/ingest.rs` — in `process_file()`, after `read_to_string` (which
-  already rejects non-UTF-8), normalize CRLF→LF: `content.replace("\r\n", "\n")`.
-  Apply before frontmatter parsing.
+- `src/ingest.rs` — add `normalize_line_endings(input: &str) -> String`.
+  Replaces `\r\n` → `\n` then lone `\r` → `\n` (order matters). Standalone
+  function, independently testable.
+- `src/ingest.rs` — in `process_file()`, call `normalize_line_endings` on
+  the content immediately after `read_to_string`, before the
+  `starts_with("---")` check. This ensures frontmatter parsing and body
+  preservation both operate on LF-only content.
+- Non-UTF-8 rejection is already handled by `read_to_string` returning an
+  error.
 
 ### Tests
 
-- `tests/ingest.rs` — new test: `ingest_normalizes_crlf_to_lf` — write a
-  page with `\r\n` line endings, ingest, read back, assert no `\r` remains.
+- `tests/ingest.rs` — new tests:
+  - `normalize_line_endings_converts_crlf_to_lf` — `"a\r\nb"` → `"a\nb"`.
+  - `normalize_line_endings_converts_lone_cr_to_lf` — `"a\rb"` → `"a\nb"`.
+  - `normalize_line_endings_preserves_lf` — `"a\nb"` → `"a\nb"`.
+  - `normalize_line_endings_handles_mixed` — `"a\r\nb\rc\nd"` →
+    `"a\nb\nc\nd"`.
+  - `ingest_normalizes_crlf_to_lf` — write a page with `\r\n` line
+    endings, ingest, read back, assert no `\r` remains.
 
 ### Exit criteria
 
 - A file with CRLF line endings is normalized to LF after ingest.
+- A file with lone CR line endings is normalized to LF after ingest.
+- LF-only files are unchanged.
 - `cargo test` passes.
 
 ---

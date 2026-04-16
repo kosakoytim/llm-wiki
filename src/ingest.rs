@@ -12,6 +12,11 @@ use crate::frontmatter::{
 };
 use crate::git;
 
+/// Normalize line endings: CRLF → LF, lone CR → LF. Order matters.
+pub fn normalize_line_endings(input: &str) -> String {
+    input.replace("\r\n", "\n").replace('\r', "\n")
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct IngestOptions {
     pub dry_run: bool,
@@ -92,7 +97,8 @@ fn process_file(
     validation: &ValidationConfig,
     report: &mut IngestReport,
 ) -> Result<()> {
-    let content = std::fs::read_to_string(path)?;
+    let raw = std::fs::read_to_string(path)?;
+    let content = normalize_line_endings(&raw);
 
     if !content.starts_with("---") {
         // No frontmatter — generate minimal

@@ -312,3 +312,55 @@ fn ingest_leaves_index_stale_when_auto_rebuild_disabled() {
     let status = llm_wiki::search::index_status("test", &index_path, dir.path()).unwrap();
     assert!(status.stale);
 }
+
+
+// ── normalize_line_endings ────────────────────────────────────────────────────
+
+use llm_wiki::ingest::normalize_line_endings;
+
+#[test]
+fn normalize_line_endings_converts_crlf_to_lf() {
+    assert_eq!(normalize_line_endings("a\r\nb\r\nc"), "a\nb\nc");
+}
+
+#[test]
+fn normalize_line_endings_converts_lone_cr_to_lf() {
+    assert_eq!(normalize_line_endings("a\rb\rc"), "a\nb\nc");
+}
+
+#[test]
+fn normalize_line_endings_preserves_lf() {
+    assert_eq!(normalize_line_endings("a\nb\nc"), "a\nb\nc");
+}
+
+#[test]
+fn normalize_line_endings_handles_mixed() {
+    assert_eq!(normalize_line_endings("a\r\nb\rc\nd"), "a\nb\nc\nd");
+}
+
+#[test]
+fn ingest_normalizes_crlf_to_lf() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+
+    // Write a page with CRLF line endings
+    let crlf_content = "---\r\ntitle: \"CRLF Test\"\r\nsummary: \"test\"\r\nstatus: active\r\nlast_updated: \"2025-01-01\"\r\ntype: concept\r\n---\r\n\r\n## Body\r\n";
+    let page_path = wiki_root.join("concepts/crlf.md");
+    std::fs::create_dir_all(page_path.parent().unwrap()).unwrap();
+    std::fs::write(&page_path, crlf_content).unwrap();
+
+    let opts = IngestOptions { dry_run: false };
+    ingest(
+        Path::new("concepts/crlf.md"),
+        &opts,
+        &wiki_root,
+        &default_schema(),
+        &default_validation(),
+    )
+    .unwrap();
+
+    let result = std::fs::read_to_string(&page_path).unwrap();
+    assert!(!result.contains('\r'), "file should have no CR after ingest");
+    assert!(result.contains("CRLF Test"));
+    assert!(result.contains("## Body"));
+}
