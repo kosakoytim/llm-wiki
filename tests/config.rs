@@ -112,3 +112,72 @@ fn load_schema_returns_empty_when_absent() {
     let schema = load_schema(dir.path()).unwrap();
     assert!(schema.custom_types.is_empty());
 }
+
+
+#[test]
+fn save_wiki_roundtrips() {
+    let dir = tempfile::tempdir().unwrap();
+    let cfg = WikiConfig {
+        name: "test".into(),
+        description: "A test wiki".into(),
+        defaults: Some(Defaults {
+            search_top_k: 25,
+            ..Default::default()
+        }),
+        validation: Some(ValidationConfig {
+            type_strictness: "strict".into(),
+        }),
+        lint: None,
+    };
+    save_wiki(&cfg, dir.path()).unwrap();
+
+    let loaded = load_wiki(dir.path()).unwrap();
+    assert_eq!(loaded.name, "test");
+    assert_eq!(loaded.description, "A test wiki");
+    assert_eq!(loaded.defaults.unwrap().search_top_k, 25);
+    assert_eq!(loaded.validation.unwrap().type_strictness, "strict");
+}
+
+#[test]
+fn set_wiki_config_value_sets_defaults_key() {
+    let mut cfg = WikiConfig::default();
+    set_wiki_config_value(&mut cfg, "defaults.search_top_k", "42").unwrap();
+    assert_eq!(cfg.defaults.unwrap().search_top_k, 42);
+}
+
+#[test]
+fn set_wiki_config_value_sets_validation_key() {
+    let mut cfg = WikiConfig::default();
+    set_wiki_config_value(&mut cfg, "validation.type_strictness", "strict").unwrap();
+    assert_eq!(cfg.validation.unwrap().type_strictness, "strict");
+}
+
+#[test]
+fn set_wiki_config_value_sets_lint_key() {
+    let mut cfg = WikiConfig::default();
+    set_wiki_config_value(&mut cfg, "lint.fix_missing_stubs", "false").unwrap();
+    assert_eq!(cfg.lint.unwrap().fix_missing_stubs, false);
+}
+
+#[test]
+fn set_wiki_config_value_rejects_global_only_key() {
+    let mut cfg = WikiConfig::default();
+    let result = set_wiki_config_value(&mut cfg, "serve.sse", "true");
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("global-only"));
+}
+
+#[test]
+fn set_wiki_config_value_rejects_unknown_key() {
+    let mut cfg = WikiConfig::default();
+    let result = set_wiki_config_value(&mut cfg, "nonexistent.key", "value");
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("unknown key"));
+}
+
+#[test]
+fn set_global_config_value_sets_key() {
+    let mut global = GlobalConfig::default();
+    set_global_config_value(&mut global, "defaults.search_top_k", "30").unwrap();
+    assert_eq!(global.defaults.search_top_k, 30);
+}

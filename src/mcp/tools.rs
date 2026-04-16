@@ -367,7 +367,24 @@ fn handle_config(server: &WikiServer, args: &Map<String, Value>) -> ToolHandlerR
             let resolved = config::resolve(&g, &config::WikiConfig::default());
             ok_text(format!("{}: {}", key, get_value(&resolved, &g, &key)))
         }
-        "set" => ok_text("set not yet fully implemented via MCP".into()),
+        "set" => {
+            let key = arg_str_req(args, "key")?;
+            let value = arg_str_req(args, "value")?;
+            let is_global = arg_bool(args, "global");
+            if is_global {
+                let mut g = config::load_global(config_path).map_err(|e| format!("{e}"))?;
+                config::set_global_config_value(&mut g, &key, &value).map_err(|e| format!("{e}"))?;
+                config::save_global(&g, config_path).map_err(|e| format!("{e}"))?;
+                ok_text(format!("Set {key} = {value} (global)"))
+            } else {
+                let (entry, _global) = resolve_wiki(server, args)?;
+                let entry_path = PathBuf::from(&entry.path);
+                let mut wiki_cfg = config::load_wiki(&entry_path).map_err(|e| format!("{e}"))?;
+                config::set_wiki_config_value(&mut wiki_cfg, &key, &value).map_err(|e| format!("{e}"))?;
+                config::save_wiki(&wiki_cfg, &entry_path).map_err(|e| format!("{e}"))?;
+                ok_text(format!("Set {key} = {value} (wiki: {})", entry.name))
+            }
+        }
         _ => Err(format!("unknown config action: {action}")),
     }
 }

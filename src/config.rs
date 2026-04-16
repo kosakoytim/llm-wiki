@@ -319,3 +319,73 @@ pub fn save_global(config: &GlobalConfig, path: &Path) -> Result<()> {
     std::fs::write(path, content)?;
     Ok(())
 }
+
+/// Save a WikiConfig to `wiki.toml` inside the wiki root.
+pub fn save_wiki(config: &WikiConfig, wiki_root: &Path) -> Result<()> {
+    let path = wiki_root.join("wiki.toml");
+    let content = toml::to_string_pretty(config)?;
+    std::fs::write(path, content)?;
+    Ok(())
+}
+
+/// Set a global config value.
+pub fn set_global_config_value(global: &mut GlobalConfig, key: &str, value: &str) -> Result<()> {
+    match key {
+        "global.default_wiki" => global.global.default_wiki = value.into(),
+        "defaults.search_top_k" => global.defaults.search_top_k = value.parse()?,
+        "defaults.search_excerpt" => global.defaults.search_excerpt = value.parse()?,
+        "defaults.search_sections" => global.defaults.search_sections = value.parse()?,
+        "defaults.page_mode" => global.defaults.page_mode = value.into(),
+        "defaults.list_page_size" => global.defaults.list_page_size = value.parse()?,
+        "read.no_frontmatter" => global.read.no_frontmatter = value.parse()?,
+        "index.auto_rebuild" => global.index.auto_rebuild = value.parse()?,
+        "graph.format" => global.graph.format = value.into(),
+        "graph.depth" => global.graph.depth = value.parse()?,
+        "graph.output" => global.graph.output = value.into(),
+        "serve.sse" => global.serve.sse = value.parse()?,
+        "serve.sse_port" => global.serve.sse_port = value.parse()?,
+        "serve.acp" => global.serve.acp = value.parse()?,
+        "validation.type_strictness" => global.validation.type_strictness = value.into(),
+        "lint.fix_missing_stubs" => global.lint.fix_missing_stubs = value.parse()?,
+        "lint.fix_empty_sections" => global.lint.fix_empty_sections = value.parse()?,
+        _ => anyhow::bail!("unknown key: {key}"),
+    }
+    Ok(())
+}
+
+/// Set a per-wiki config value. Only keys with per-wiki scope are accepted.
+pub fn set_wiki_config_value(wiki_cfg: &mut WikiConfig, key: &str, value: &str) -> Result<()> {
+    match key {
+        "defaults.search_top_k" => {
+            wiki_cfg.defaults.get_or_insert_with(Defaults::default).search_top_k = value.parse()?;
+        }
+        "defaults.search_excerpt" => {
+            wiki_cfg.defaults.get_or_insert_with(Defaults::default).search_excerpt = value.parse()?;
+        }
+        "defaults.search_sections" => {
+            wiki_cfg.defaults.get_or_insert_with(Defaults::default).search_sections = value.parse()?;
+        }
+        "defaults.page_mode" => {
+            wiki_cfg.defaults.get_or_insert_with(Defaults::default).page_mode = value.into();
+        }
+        "defaults.list_page_size" => {
+            wiki_cfg.defaults.get_or_insert_with(Defaults::default).list_page_size = value.parse()?;
+        }
+        "validation.type_strictness" => {
+            wiki_cfg.validation.get_or_insert_with(ValidationConfig::default).type_strictness = value.into();
+        }
+        "lint.fix_missing_stubs" => {
+            wiki_cfg.lint.get_or_insert_with(LintConfig::default).fix_missing_stubs = value.parse()?;
+        }
+        "lint.fix_empty_sections" => {
+            wiki_cfg.lint.get_or_insert_with(LintConfig::default).fix_empty_sections = value.parse()?;
+        }
+        "global.default_wiki" | "read.no_frontmatter" | "index.auto_rebuild"
+        | "graph.format" | "graph.depth" | "graph.output"
+        | "serve.sse" | "serve.sse_port" | "serve.acp" => {
+            anyhow::bail!("{key} is a global-only key \u{2014} use --global");
+        }
+        _ => anyhow::bail!("unknown key: {key}"),
+    }
+    Ok(())
+}

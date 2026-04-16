@@ -117,15 +117,22 @@ fn main() -> Result<()> {
                 key,
                 value,
                 global: is_global,
-                wiki: _wiki,
+                wiki: wiki_name,
             } => {
                 if is_global {
                     let mut global = config::load_global(&config_path)?;
-                    set_global_config_value(&mut global, &key, &value)?;
+                    config::set_global_config_value(&mut global, &key, &value)?;
                     config::save_global(&global, &config_path)?;
                     println!("Set {key} = {value} (global)");
                 } else {
-                    println!("Per-wiki config set not yet implemented");
+                    let global = config::load_global(&config_path)?;
+                    let name = wiki_name.as_deref().unwrap_or(&global.global.default_wiki);
+                    let entry = spaces::resolve_name(name, &global)?;
+                    let entry_path = PathBuf::from(&entry.path);
+                    let mut wiki_cfg = config::load_wiki(&entry_path)?;
+                    config::set_wiki_config_value(&mut wiki_cfg, &key, &value)?;
+                    config::save_wiki(&wiki_cfg, &entry_path)?;
+                    println!("Set {key} = {value} (wiki: {name})");
                 }
             }
             ConfigAction::List {
@@ -552,30 +559,4 @@ fn get_config_value(
     }
 }
 
-fn set_global_config_value(
-    global: &mut config::GlobalConfig,
-    key: &str,
-    value: &str,
-) -> Result<()> {
-    match key {
-        "global.default_wiki" => global.global.default_wiki = value.into(),
-        "defaults.search_top_k" => global.defaults.search_top_k = value.parse()?,
-        "defaults.search_excerpt" => global.defaults.search_excerpt = value.parse()?,
-        "defaults.search_sections" => global.defaults.search_sections = value.parse()?,
-        "defaults.page_mode" => global.defaults.page_mode = value.into(),
-        "defaults.list_page_size" => global.defaults.list_page_size = value.parse()?,
-        "read.no_frontmatter" => global.read.no_frontmatter = value.parse()?,
-        "index.auto_rebuild" => global.index.auto_rebuild = value.parse()?,
-        "graph.format" => global.graph.format = value.into(),
-        "graph.depth" => global.graph.depth = value.parse()?,
-        "graph.output" => global.graph.output = value.into(),
-        "serve.sse" => global.serve.sse = value.parse()?,
-        "serve.sse_port" => global.serve.sse_port = value.parse()?,
-        "serve.acp" => global.serve.acp = value.parse()?,
-        "validation.type_strictness" => global.validation.type_strictness = value.into(),
-        "lint.fix_missing_stubs" => global.lint.fix_missing_stubs = value.parse()?,
-        "lint.fix_empty_sections" => global.lint.fix_empty_sections = value.parse()?,
-        _ => anyhow::bail!("unknown key: {key}"),
-    }
-    Ok(())
-}
+
