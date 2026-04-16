@@ -491,19 +491,15 @@ fn handle_new_section(server: &WikiServer, args: &Map<String, Value>) -> ToolHan
 }
 
 fn handle_search(server: &WikiServer, args: &Map<String, Value>) -> ToolHandlerResult {
-    let (entry, global) = resolve_wiki(server, args)?;
     let query = arg_str_req(args, "query")?;
-    let repo_root = PathBuf::from(&entry.path);
-    let index_path = WikiServer::index_path_for(&entry.name);
-    let wiki_cfg = config::load_wiki(&repo_root).unwrap_or_default();
-    let resolved = config::resolve(&global, &wiki_cfg);
+    let global = config::load_global(server.config_path()).map_err(|e| format!("{e}"))?;
+    let all = arg_bool(args, "all");
 
-    if let Ok(status) = search::index_status(&entry.name, &index_path, &repo_root) {
-        if status.stale && resolved.index.auto_rebuild {
-            let wiki_root = repo_root.join("wiki");
-            let _ = search::rebuild_index(&wiki_root, &index_path, &entry.name, &repo_root);
-        }
-    }
+    let name = arg_str(args, "wiki");
+    let wiki_name = name.as_deref().unwrap_or(&global.global.default_wiki);
+    let entry = spaces::resolve_name(wiki_name, &global).map_err(|e| format!("{e}"))?;
+    let wiki_cfg = config::load_wiki(&PathBuf::from(&entry.path)).unwrap_or_default();
+    let resolved = config::resolve(&global, &wiki_cfg);
 
     let opts = search::SearchOptions {
         no_excerpt: arg_bool(args, "no_excerpt"),
@@ -511,8 +507,28 @@ fn handle_search(server: &WikiServer, args: &Map<String, Value>) -> ToolHandlerR
         top_k: arg_usize(args, "top_k").unwrap_or(resolved.defaults.search_top_k as usize),
         ..Default::default()
     };
-    let results =
-        search::search(&query, &opts, &index_path, &entry.name).map_err(|e| format!("{e}"))?;
+
+    let results = if all {
+        let wikis: Vec<(String, std::path::PathBuf)> = global
+            .wikis
+            .iter()
+            .map(|w| (w.name.clone(), WikiServer::index_path_for(&w.name)))
+            .collect();
+        search::search_all(&query, &opts, &wikis).map_err(|e| format!("{e}"))?
+    } else {
+        let repo_root = PathBuf::from(&entry.path);
+        let index_path = WikiServer::index_path_for(&entry.name);
+
+        if let Ok(status) = search::index_status(&entry.name, &index_path, &repo_root) {
+            if status.stale && resolved.index.auto_rebuild {
+                let wiki_root = repo_root.join("wiki");
+                let _ = search::rebuild_index(&wiki_root, &index_path, &entry.name, &repo_root);
+            }
+        }
+
+        search::search(&query, &opts, &index_path, &entry.name).map_err(|e| format!("{e}"))?
+    };
+
     let s = serde_json::to_string_pretty(&results).map_err(|e| format!("{e}"))?;
     ok_text(s)
 }

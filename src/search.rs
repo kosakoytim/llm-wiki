@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context, Result};
 use chrono::Utc;
@@ -476,4 +476,25 @@ pub fn list(options: &ListOptions, index_path: &Path, wiki_name: &str) -> Result
         page,
         page_size,
     })
+}
+
+// ── search_all ────────────────────────────────────────────────────────────────
+
+/// Search across multiple wikis, merge results by score descending, truncate to top_k.
+/// Each entry is (wiki_name, index_path). Wikis without an index are silently skipped.
+pub fn search_all(
+    query_str: &str,
+    options: &SearchOptions,
+    wikis: &[(String, PathBuf)],
+) -> Result<Vec<PageRef>> {
+    let mut all_results = Vec::new();
+    for (name, index_path) in wikis {
+        match search(query_str, options, index_path, name) {
+            Ok(results) => all_results.extend(results),
+            Err(_) => continue, // skip wikis without index
+        }
+    }
+    all_results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    all_results.truncate(options.top_k);
+    Ok(all_results)
 }

@@ -234,7 +234,7 @@ fn main() -> Result<()> {
             no_excerpt,
             top_k,
             include_sections,
-            all: _all,
+            all,
             dry_run,
         } => {
             let global = config::load_global(&config_path)?;
@@ -242,33 +242,49 @@ fn main() -> Result<()> {
             let entry = spaces::resolve_name(wiki_name, &global)?;
             let wiki_cfg = config::load_wiki(&PathBuf::from(&entry.path))?;
             let resolved = config::resolve(&global, &wiki_cfg);
-            let repo_root = PathBuf::from(&entry.path);
-            let index_path = index_path_for(wiki_name);
+
+            let effective_top_k = top_k.unwrap_or(resolved.defaults.search_top_k as usize);
 
             if dry_run {
                 println!("query: {query}");
-                println!("wiki:  {wiki_name}");
-                println!("index: {}", index_path.display());
-                return Ok(());
-            }
-
-            // Staleness check
-            if let Ok(status) = search::index_status(wiki_name, &index_path, &repo_root) {
-                if status.stale && resolved.index.auto_rebuild {
-                    let wiki_root = repo_root.join("wiki");
-                    search::rebuild_index(&wiki_root, &index_path, wiki_name, &repo_root)?;
-                } else if status.stale {
-                    eprintln!("warning: search index is stale — run `wiki index rebuild`");
+                if all {
+                    println!("wiki:  (all)");
+                } else {
+                    println!("wiki:  {wiki_name}");
                 }
+                return Ok(());
             }
 
             let opts = search::SearchOptions {
                 no_excerpt,
                 include_sections,
-                top_k: top_k.unwrap_or(resolved.defaults.search_top_k as usize),
+                top_k: effective_top_k,
                 ..Default::default()
             };
-            let results = search::search(&query, &opts, &index_path, wiki_name)?;
+
+            let results = if all {
+                let wikis: Vec<(String, PathBuf)> = global
+                    .wikis
+                    .iter()
+                    .map(|w| (w.name.clone(), index_path_for(&w.name)))
+                    .collect();
+                search::search_all(&query, &opts, &wikis)?
+            } else {
+                let repo_root = PathBuf::from(&entry.path);
+                let index_path = index_path_for(wiki_name);
+
+                // Staleness check
+                if let Ok(status) = search::index_status(wiki_name, &index_path, &repo_root) {
+                    if status.stale && resolved.index.auto_rebuild {
+                        let wiki_root = repo_root.join("wiki");
+                        search::rebuild_index(&wiki_root, &index_path, wiki_name, &repo_root)?;
+                    } else if status.stale {
+                        eprintln!("warning: search index is stale — run `wiki index rebuild`");
+                    }
+                }
+
+                search::search(&query, &opts, &index_path, wiki_name)?
+            };
             for r in &results {
                 println!("slug:  {}", r.slug);
                 println!("uri:   {}", r.uri);

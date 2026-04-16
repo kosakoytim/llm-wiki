@@ -392,3 +392,126 @@ fn list_pagination_returns_correct_page_and_total() {
     assert_eq!(result.total, 5);
     assert!(result.pages.is_empty());
 }
+
+
+// ── search_all ────────────────────────────────────────────────────────────────
+
+#[test]
+fn search_all_merges_results_from_multiple_wikis() {
+    // Wiki A
+    let dir_a = tempfile::tempdir().unwrap();
+    let wiki_root_a = setup_repo(dir_a.path());
+    write_page(
+        &wiki_root_a,
+        "concepts/moe.md",
+        &concept_page("Mixture of Experts", "MoE routes tokens to sparse expert subnetworks."),
+    );
+    let index_a = build_index(dir_a.path(), &wiki_root_a);
+
+    // Wiki B
+    let dir_b = tempfile::tempdir().unwrap();
+    let wiki_root_b = setup_repo(dir_b.path());
+    write_page(
+        &wiki_root_b,
+        "sources/switch.md",
+        &paper_page("Switch Transformer", "Switch Transformer uses sparse MoE layers."),
+    );
+    let index_b = build_index(dir_b.path(), &wiki_root_b);
+
+    let wikis = vec![
+        ("alpha".to_string(), index_a),
+        ("beta".to_string(), index_b),
+    ];
+    let opts = SearchOptions::default();
+    let results = search_all("MoE", &opts, &wikis).unwrap();
+
+    assert!(results.len() >= 2, "expected results from both wikis, got {}", results.len());
+
+    let uris: Vec<&str> = results.iter().map(|r| r.uri.as_str()).collect();
+    assert!(uris.iter().any(|u| u.starts_with("wiki://alpha/")), "missing alpha wiki result");
+    assert!(uris.iter().any(|u| u.starts_with("wiki://beta/")), "missing beta wiki result");
+}
+
+#[test]
+fn search_all_sorts_by_score_descending() {
+    let dir_a = tempfile::tempdir().unwrap();
+    let wiki_root_a = setup_repo(dir_a.path());
+    write_page(
+        &wiki_root_a,
+        "concepts/foo.md",
+        &concept_page("Foo", "Foo content about scaling."),
+    );
+    let index_a = build_index(dir_a.path(), &wiki_root_a);
+
+    let dir_b = tempfile::tempdir().unwrap();
+    let wiki_root_b = setup_repo(dir_b.path());
+    write_page(
+        &wiki_root_b,
+        "concepts/bar.md",
+        &concept_page("Bar", "Bar content about scaling efficiency."),
+    );
+    let index_b = build_index(dir_b.path(), &wiki_root_b);
+
+    let wikis = vec![
+        ("alpha".to_string(), index_a),
+        ("beta".to_string(), index_b),
+    ];
+    let opts = SearchOptions::default();
+    let results = search_all("scaling", &opts, &wikis).unwrap();
+
+    for w in results.windows(2) {
+        assert!(
+            w[0].score >= w[1].score,
+            "results not sorted by score: {} < {}",
+            w[0].score,
+            w[1].score
+        );
+    }
+}
+
+#[test]
+fn search_all_skips_wikis_without_index() {
+    let dir_a = tempfile::tempdir().unwrap();
+    let wiki_root_a = setup_repo(dir_a.path());
+    write_page(
+        &wiki_root_a,
+        "concepts/foo.md",
+        &concept_page("Foo", "Foo body text."),
+    );
+    let index_a = build_index(dir_a.path(), &wiki_root_a);
+
+    // Wiki B has no index
+    let missing_index = tempfile::tempdir().unwrap().path().join("nonexistent");
+
+    let wikis = vec![
+        ("alpha".to_string(), index_a),
+        ("beta".to_string(), missing_index),
+    ];
+    let opts = SearchOptions::default();
+    let results = search_all("Foo", &opts, &wikis).unwrap();
+
+    assert!(!results.is_empty());
+    assert!(results.iter().all(|r| r.uri.starts_with("wiki://alpha/")));
+}
+
+#[test]
+fn search_all_respects_top_k() {
+    let dir_a = tempfile::tempdir().unwrap();
+    let wiki_root_a = setup_repo(dir_a.path());
+    for i in 0..5 {
+        write_page(
+            &wiki_root_a,
+            &format!("concepts/page-{i}.md"),
+            &concept_page(&format!("Scaling Page {i}"), &format!("scaling content {i}")),
+        );
+    }
+    let index_a = build_index(dir_a.path(), &wiki_root_a);
+
+    let wikis = vec![("alpha".to_string(), index_a)];
+    let opts = SearchOptions {
+        top_k: 2,
+        ..Default::default()
+    };
+    let results = search_all("scaling", &opts, &wikis).unwrap();
+    assert!(results.len() <= 2, "expected at most 2 results, got {}", results.len());
+}
