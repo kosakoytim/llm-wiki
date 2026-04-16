@@ -15,8 +15,7 @@ parameter global only should not be updated locally
 
 ## monitoring
 
-- server thread auto restart → [server-resilience.md](server-resilience.md) · [server-resilience-tasks.md](server-resilience-tasks.md) · [server resilience spec](specifications/core/server-resilience.md)
-- index corruption detection / rebuild → [index-corruption.md](index-corruption.md)
+- index corruption detection / rebuild → [index-corruption.md](index-corruption.md) · [index-corruption-tasks.md](index-corruption-tasks.md) · [index integrity spec](specifications/core/index-integrity.md)
 
 
 ## release

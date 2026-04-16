@@ -326,26 +326,24 @@ launchd KeepAlive) need a signal to detect this.
 
 ---
 
-### Task R6 — SSE health endpoint
+### Task R6 — SSE health endpoint (BLOCKED)
 
 **Goal:** HTTP health check for external monitoring.
 
-#### Analysis
+**Status:** Blocked on rmcp API. `SseServer` builds the axum `Router`
+internally and does not expose it for adding custom routes. No way to
+inject `/health` without forking rmcp.
 
-The SSE server uses axum via rmcp. Adding a `/health` route requires
-access to the axum router, which may not be exposed by the rmcp
-`SseServer` API.
+Alternatives considered:
+- Separate health port — adds complexity, second port to monitor
+- Fork rmcp — maintenance burden
+- Use `/sse` endpoint as liveness proxy — works but not a clean health check
 
-#### Code changes
+The MCP protocol supports `ping` for liveness. The SSE endpoint itself
+returning a connection is proof of liveness. A dedicated `/health` is
+nice-to-have, not critical.
 
-- Investigate whether `SseServer` exposes the axum `Router` for
-  customization. If yes, add a `/health` route returning `200 OK`.
-  If not, this task is blocked on rmcp upstream.
-
-#### Exit criteria
-
-- `curl http://localhost:8080/health` returns `200 OK`.
-- Or: documented as blocked on rmcp API.
+Revisit when rmcp exposes router customization.
 
 ---
 

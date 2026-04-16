@@ -141,12 +141,13 @@ level.
 
 ### Health endpoint
 
-When SSE is enabled, a `/health` HTTP route returns `200 OK`. This
-enables HTTP-based health checks from external monitors (load balancers,
-container orchestrators).
+When SSE is enabled, a `/health` HTTP route returning `200 OK` would
+enable HTTP-based health checks. Currently **blocked** on the rmcp
+`SseServer` API which does not expose the axum router for customization.
 
-Note: depends on the rmcp `SseServer` API exposing the axum router.
-If not available, this is deferred.
+The MCP protocol supports `ping` for liveness. The SSE endpoint (`/sse`)
+returning a connection is proof of liveness. Revisit when rmcp exposes
+router customization.
 
 ---
 

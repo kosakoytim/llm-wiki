@@ -116,7 +116,8 @@ fix_missing_stubs  = false  # do not auto-create stubs for this wiki
 | `defaults.page_mode` | global / per-wiki | `flat` | Default page creation mode: `flat` or `bundle` |
 | `defaults.list_page_size` | global / per-wiki | `20` | Default page size for `wiki list` pagination |
 | `read.no_frontmatter` | global / per-wiki | `false` | Strip frontmatter from `wiki read` output by default |
-| `index.auto_rebuild` | global / per-wiki | `false` | Automatically rebuild stale index before search/list |
+| `index.auto_rebuild` | global only | `false` | Automatically rebuild stale index before search/list |
+| `index.auto_recovery` | global only | `true` | Automatically rebuild corrupt index on open failure |
 | `graph.format` | global / per-wiki | `mermaid` | Default output format: `mermaid` or `dot` |
 | `graph.depth` | global / per-wiki | `3` | Default hop limit when `--root` is set |
 | `graph.type` | global / per-wiki | `[]` | Page types to include; empty = all types |

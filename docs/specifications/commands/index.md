@@ -137,8 +137,11 @@ This is reliable across clones and filesystems. mtime is not used.
 - `auto_rebuild = false` (default) — print a warning, continue with stale index
 - `auto_rebuild = true` — rebuild silently before executing the command
 
-Users who want seamless behavior after a pull opt in via config. The default
-is explicit — auto-rebuild adds latency to the first command after any commit.
+All `index.*` config keys are **global-only** — indexes are global engine
+infrastructure, not per-wiki state.
+
+See [Index Integrity](../core/index-integrity.md) for corruption detection,
+auto-recovery, and schema versioning.
 
 ---
 

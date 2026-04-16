@@ -206,6 +206,8 @@ pub struct WikiConfig {
     #[serde(default)]
     pub defaults: Option<Defaults>,
     #[serde(default)]
+    pub read: Option<ReadConfig>,
+    #[serde(default)]
     pub validation: Option<ValidationConfig>,
     #[serde(default)]
     pub lint: Option<LintConfig>,
@@ -304,7 +306,11 @@ pub fn resolve(global: &GlobalConfig, per_wiki: &WikiConfig) -> ResolvedConfig {
 
     ResolvedConfig {
         defaults,
-        read: global.read.clone(),
+        read: if let Some(pw) = &per_wiki.read {
+            pw.clone()
+        } else {
+            global.read.clone()
+        },
         index: global.index.clone(),
         graph: global.graph.clone(),
         serve: global.serve.clone(),
@@ -438,6 +444,9 @@ pub fn set_wiki_config_value(wiki_cfg: &mut WikiConfig, key: &str, value: &str) 
         "defaults.list_page_size" => {
             wiki_cfg.defaults.get_or_insert_with(Defaults::default).list_page_size = value.parse()?;
         }
+        "read.no_frontmatter" => {
+            wiki_cfg.read.get_or_insert_with(ReadConfig::default).no_frontmatter = value.parse()?;
+        }
         "validation.type_strictness" => {
             wiki_cfg.validation.get_or_insert_with(ValidationConfig::default).type_strictness = value.into();
         }
@@ -447,7 +456,7 @@ pub fn set_wiki_config_value(wiki_cfg: &mut WikiConfig, key: &str, value: &str) 
         "lint.fix_empty_sections" => {
             wiki_cfg.lint.get_or_insert_with(LintConfig::default).fix_empty_sections = value.parse()?;
         }
-        "global.default_wiki" | "read.no_frontmatter" | "index.auto_rebuild"
+        "global.default_wiki" | "index.auto_rebuild"
         | "graph.format" | "graph.depth" | "graph.output"
         | "serve.sse" | "serve.sse_port" | "serve.acp"
         | "serve.max_restarts" | "serve.restart_backoff" | "serve.heartbeat_secs"

@@ -124,6 +124,7 @@ fn save_wiki_roundtrips() {
             search_top_k: 25,
             ..Default::default()
         }),
+        read: None,
         validation: Some(ValidationConfig {
             type_strictness: "strict".into(),
         }),
@@ -262,4 +263,37 @@ fn set_wiki_config_value_rejects_heartbeat() {
     let result = set_wiki_config_value(&mut cfg, "serve.heartbeat_secs", "30");
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("global-only"));
+}
+
+
+#[test]
+fn set_wiki_config_value_sets_read_no_frontmatter() {
+    let mut cfg = WikiConfig::default();
+    set_wiki_config_value(&mut cfg, "read.no_frontmatter", "true").unwrap();
+    assert_eq!(cfg.read.unwrap().no_frontmatter, true);
+}
+
+#[test]
+fn resolve_per_wiki_overrides_read_no_frontmatter() {
+    let global = GlobalConfig {
+        read: ReadConfig { no_frontmatter: false },
+        ..Default::default()
+    };
+    let per_wiki = WikiConfig {
+        read: Some(ReadConfig { no_frontmatter: true }),
+        ..Default::default()
+    };
+    let resolved = resolve(&global, &per_wiki);
+    assert_eq!(resolved.read.no_frontmatter, true);
+}
+
+#[test]
+fn resolve_falls_back_to_global_read_when_per_wiki_absent() {
+    let global = GlobalConfig {
+        read: ReadConfig { no_frontmatter: true },
+        ..Default::default()
+    };
+    let per_wiki = WikiConfig::default();
+    let resolved = resolve(&global, &per_wiki);
+    assert_eq!(resolved.read.no_frontmatter, true);
 }

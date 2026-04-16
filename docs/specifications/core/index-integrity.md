@@ -1,0 +1,184 @@
+---
+title: "Index Integrity"
+summary: "Corruption detection, auto-recovery, schema versioning, and health checks for the tantivy search index."
+read_when:
+  - Implementing or extending index corruption handling
+  - Understanding the auto-recovery behavior
+  - Adding or changing indexed fields (schema migration)
+  - Diagnosing search failures
+status: draft
+last_updated: "2025-07-17"
+---
+
+# Index Integrity
+
+The tantivy search index is a local build artifact at
+`~/.wiki/indexes/<name>/`. It can become corrupt (disk failure, partial
+write) or incompatible (schema change between versions). This document
+specifies how the engine detects and recovers from these conditions.
+
+---
+
+## 1. Failure Modes
+
+| Mode | Cause | Detection |
+|------|-------|-----------|
+| Stale | Git commit moved since last rebuild | `state.toml` commit ≠ HEAD |
+| Corrupt | Truncated mmap files, disk error | `Index::open()` fails |
+| Schema mismatch | `build_schema()` changed between versions | `state.toml` schema_version ≠ current |
+| Missing | Fresh clone, first use, deleted index | `state.toml` absent |
+| state.toml malformed | Crash during rebuild, manual edit | `toml::from_str` fails |
+
+All five modes should result in a recoverable state, not an opaque error.
+
+---
+
+## 2. state.toml
+
+Written to `~/.wiki/indexes/<name>/state.toml` on every rebuild:
+
+```toml
+schema_version = 1
+built = "2025-07-17T14:32:01Z"
+pages = 142
+sections = 8
+commit = "a3f9c12"
+```
+
+### Fields
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `schema_version` | u32 | Tantivy schema version. Mismatch → stale. |
+| `built` | string | ISO 8601 datetime of last rebuild |
+| `pages` | usize | Total pages indexed |
+| `sections` | usize | Section pages indexed |
+| `commit` | string | Git HEAD at time of rebuild |
+
+### Parsing rules
+
+- Missing file → `stale: true`, `built: None`, `pages: 0`, `sections: 0`
+- Malformed file (parse error) → same as missing, no error propagated
+- Missing `schema_version` field → treated as version 0 (pre-versioning)
+
+---
+
+## 3. Schema Versioning
+
+The engine defines a `CURRENT_SCHEMA_VERSION` constant. It is bumped
+whenever `build_schema()` changes (adding/removing/renaming fields).
+
+```rust
+const CURRENT_SCHEMA_VERSION: u32 = 1;
+```
+
+`index_status` compares the stored version against the constant:
+- Match → schema is compatible
+- Mismatch → `stale: true` (triggers auto-rebuild if enabled)
+
+This prevents silent query failures after a version upgrade that changes
+the indexed fields.
+
+---
+
+## 4. Auto-Recovery
+
+### Staleness recovery (`index.auto_rebuild`)
+
+When the index is stale (commit mismatch or schema mismatch):
+- `auto_rebuild = true` → rebuild silently before search/list
+- `auto_rebuild = false` (default) → warn, continue with stale index
+
+### Corruption recovery (`index.auto_recovery`)
+
+When `Index::open()` fails (corrupt mmap files, incompatible format):
+- `auto_recovery = true` (default) → rebuild, retry open, continue
+- `auto_recovery = false` → error propagated to caller
+
+The recovery sequence:
+
+```
+1. Index::open(dir)
+   → Success: proceed with query
+   → Failure + auto_recovery = true:
+     2. Log warning: "index corrupt, rebuilding"
+     3. rebuild_index() — full delete + re-index
+     4. Index::open(dir) again
+        → Success: proceed
+        → Failure: error — "index still corrupt after rebuild"
+   → Failure + auto_recovery = false:
+     2. Error propagated
+```
+
+Recovery is attempted once. If the rebuild itself produces a corrupt
+index (e.g. disk full), the error propagates.
+
+---
+
+## 5. Configuration
+
+All index configuration is **global-only**. Indexes are global engine
+infrastructure (`~/.wiki/indexes/`), not per-wiki state.
+
+```toml
+[index]
+auto_rebuild = false    # rebuild stale index before search/list
+auto_recovery = true    # rebuild corrupt index on open failure
+```
+
+| Key | Scope | Default | Description |
+|-----|-------|---------|-------------|
+| `index.auto_rebuild` | global only | `false` | Rebuild stale index before search/list |
+| `index.auto_recovery` | global only | `true` | Rebuild corrupt index on open failure |
+
+`wiki config set index.* --wiki <name>` is rejected with
+`"index.* is a global-only key — use --global"`.
+
+### Why different defaults
+
+- `auto_rebuild = false` — rebuilding a stale index adds latency. The
+  user should opt in explicitly.
+- `auto_recovery = true` — a corrupt index blocks all search/list. The
+  user almost always wants automatic recovery.
+
+---
+
+## 6. Health Check
+
+`wiki index check` performs a read-only integrity check:
+
+1. Parse `state.toml` — exists? valid? schema version current?
+2. Open index — `Index::open()` succeeds?
+3. Test query — `AllQuery` with limit 1 returns a result?
+
+Returns a structured report:
+
+```rust
+pub struct IndexCheckReport {
+    pub wiki: String,
+    pub openable: bool,
+    pub queryable: bool,
+    pub schema_version: Option<u32>,
+    pub schema_current: bool,
+    pub state_valid: bool,
+    pub stale: bool,
+}
+```
+
+Available as CLI (`wiki index check`) and MCP tool (`wiki_index_check`).
+Does not modify the index or trigger any rebuild.
+
+---
+
+## 7. Logging
+
+All recovery actions are logged:
+
+| Event | Level | Fields |
+|-------|-------|--------|
+| Corrupt index detected | `warn` | wiki, error |
+| Auto-rebuild triggered | `info` | wiki, reason (corrupt/stale/schema) |
+| Rebuild succeeded | `info` | wiki, pages_indexed, duration_ms |
+| Rebuild failed | `error` | wiki, error |
+| state.toml parse error | `warn` | wiki, error |
+| Schema version mismatch | `info` | wiki, stored, current |
