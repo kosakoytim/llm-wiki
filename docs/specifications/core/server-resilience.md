@@ -129,9 +129,12 @@ ERROR tool="wiki_search" "tool handler panicked"
 
 ### Heartbeat
 
-The server emits a periodic heartbeat at `debug` level (every 60
-seconds). This enables silence-based monitoring — if the heartbeat
-stops, the server is hung.
+The server emits a periodic heartbeat at `debug` level. The interval
+is configurable via `serve.heartbeat_secs` (default: 60 seconds).
+`0` disables the heartbeat.
+
+This enables silence-based monitoring — if the heartbeat stops, the
+server is hung.
 
 Visible with `RUST_LOG=llm_wiki=debug`. Silent at the default `info`
 level.

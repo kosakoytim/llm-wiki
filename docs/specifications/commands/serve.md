@@ -92,6 +92,7 @@ sse_port = 8080     # SSE port
 acp      = false    # enable ACP by default
 max_restarts    = 10  # max transport restarts before exit (0 = no restart)
 restart_backoff = 1   # initial backoff in seconds, doubles up to 30s cap
+heartbeat_secs  = 60  # heartbeat interval in seconds (0 = disabled)
 ```
 
 CLI flags override config per-invocation.

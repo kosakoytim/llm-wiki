@@ -207,6 +207,19 @@ pub async fn serve(
 
     let server = WikiServer::new(global.clone(), config_path)?;
 
+    // Heartbeat task
+    if global.serve.heartbeat_secs > 0 {
+        let interval_secs = global.serve.heartbeat_secs;
+        tokio::spawn(async move {
+            let mut interval =
+                tokio::time::interval(std::time::Duration::from_secs(interval_secs as u64));
+            loop {
+                interval.tick().await;
+                tracing::debug!("heartbeat");
+            }
+        });
+    }
+
     if acp {
         let global_arc = Arc::new((*server.global).clone());
         let max_restarts = global.serve.max_restarts;

@@ -285,29 +285,43 @@ launchd KeepAlive) need a signal to detect this.
 
 #### Code changes
 
-- `src/server.rs` — spawn a background task in `serve()` that logs a
-  heartbeat every 60 seconds:
+- `src/config.rs` — add `heartbeat_secs: u32` (default 60) to
+  `ServeConfig`. Add to `set_global_config_value`. Add to global-only
+  rejection list in `set_wiki_config_value`.
+- `src/main.rs` — add to `get_config_value`.
+- `src/mcp/tools.rs` — add to `get_value`.
+- `src/server.rs` — in `serve()`, after the startup log and before
+  transport start, spawn a heartbeat task if `heartbeat_secs > 0`:
   ```rust
-  tokio::spawn(async {
-      let mut interval = tokio::time::interval(Duration::from_secs(60));
-      loop {
-          interval.tick().await;
-          tracing::debug!("heartbeat");
-      }
-  });
+  if global.serve.heartbeat_secs > 0 {
+      let interval_secs = global.serve.heartbeat_secs;
+      tokio::spawn(async move {
+          let mut interval = tokio::time::interval(
+              std::time::Duration::from_secs(interval_secs as u64),
+          );
+          loop {
+              interval.tick().await;
+              tracing::debug!("heartbeat");
+          }
+      });
+  }
   ```
-
-  At `debug` level so it doesn't clutter normal logs. Visible with
-  `RUST_LOG=llm_wiki=debug`.
 
 #### Tests
 
-- No test needed (background timer).
+- `tests/config.rs` — new tests:
+  - `serve_config_heartbeat_default` — assert default is 60.
+  - `set_global_config_value_sets_heartbeat` — set key, assert.
+  - `set_wiki_config_value_rejects_heartbeat` — per-wiki set → error.
+- No runtime heartbeat test (would require waiting for timer).
 
 #### Exit criteria
 
 - `RUST_LOG=llm_wiki=debug wiki serve` produces periodic heartbeat entries.
 - Default log level (`info`) does not show heartbeats.
+- `serve.heartbeat_secs = 0` disables the heartbeat.
+- `wiki config set serve.heartbeat_secs 30 --global` works.
+- `wiki config set serve.heartbeat_secs 30 --wiki research` → error.
 - `cargo test` passes.
 
 ---

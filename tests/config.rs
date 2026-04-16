@@ -241,3 +241,25 @@ fn serve_config_defaults() {
     assert_eq!(cfg.max_restarts, 10);
     assert_eq!(cfg.restart_backoff, 1);
 }
+
+
+#[test]
+fn serve_config_heartbeat_default() {
+    let cfg = ServeConfig::default();
+    assert_eq!(cfg.heartbeat_secs, 60);
+}
+
+#[test]
+fn set_global_config_value_sets_heartbeat() {
+    let mut global = GlobalConfig::default();
+    set_global_config_value(&mut global, "serve.heartbeat_secs", "30").unwrap();
+    assert_eq!(global.serve.heartbeat_secs, 30);
+}
+
+#[test]
+fn set_wiki_config_value_rejects_heartbeat() {
+    let mut cfg = WikiConfig::default();
+    let result = set_wiki_config_value(&mut cfg, "serve.heartbeat_secs", "30");
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("global-only"));
+}
