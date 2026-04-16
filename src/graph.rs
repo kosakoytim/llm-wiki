@@ -32,7 +32,6 @@ pub struct GraphReport {
     pub nodes: usize,
     pub edges: usize,
     pub output: String,
-    pub committed: bool,
 }
 
 // ── build_graph ───────────────────────────────────────────────────────────────

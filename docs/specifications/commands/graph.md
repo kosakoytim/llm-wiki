@@ -77,8 +77,7 @@ graph TD
 ```
 
 `status: generated` marks the file as auto-generated — excluded from orphan
-detection and lint checks. If the output file is inside the wiki root, it is
-committed automatically: `graph: <date> — N nodes, M edges`.
+detection and lint checks. Use `llm-wiki commit` to commit the output file.
 
 ---
 
@@ -91,7 +90,7 @@ llm-wiki graph
           [--depth <n>]          # hop limit from root or global (default: from config)
           [--type <types>]       # comma-separated page types to include
           [--output <path>]      # file path or stdout if omitted (default: from config)
-          [--dry-run]            # print what would be written, no commit
+          [--dry-run]            # print what would be written
           [--wiki <name>]
 ```
 
@@ -103,7 +102,7 @@ llm-wiki graph --format dot                             # full graph, DOT
 llm-wiki graph --root concepts/mixture-of-experts       # subgraph from MoE, depth 3
 llm-wiki graph --root concepts/mixture-of-experts --depth 2
 llm-wiki graph --type concept,source                    # concepts and sources only
-llm-wiki graph --output graph.md                        # write to file, commit if in wiki root
+llm-wiki graph --output graph.md                        # write to file
 llm-wiki graph --output wiki://research/graph           # write to wiki page directly
 ```
 
@@ -138,6 +137,5 @@ pub struct GraphReport {
     pub nodes:   usize,
     pub edges:   usize,
     pub output:  String,    // "stdout" or file path
-    pub committed: bool,
 }
 ```

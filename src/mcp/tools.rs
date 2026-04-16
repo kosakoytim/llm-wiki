@@ -120,7 +120,7 @@ pub fn tool_list() -> Vec<Tool> {
             schema(
                 json!({
                     "path": str_prop("File or folder path, relative to wiki root"),
-                    "dry_run": opt_bool("Show what would be committed without committing"),
+                    "dry_run": opt_bool("Show what would be created without creating"),
                     "wiki": opt_str("Target wiki name"),
                 }),
                 &["path"],
@@ -760,7 +760,7 @@ fn handle_graph(server: &WikiServer, args: &Map<String, Value>) -> ToolHandlerRe
         _ => graph::render_mermaid(&g),
     };
 
-    let (out, committed) = if let Some(out_path) = arg_str(args, "output") {
+    let out = if let Some(out_path) = arg_str(args, "output") {
         let content = if out_path.ends_with(".md") {
             graph::wrap_graph_md(&rendered, &fmt, &filter)
         } else {
@@ -769,36 +769,15 @@ fn handle_graph(server: &WikiServer, args: &Map<String, Value>) -> ToolHandlerRe
         if let Err(e) = std::fs::write(&out_path, &content) {
             tracing::warn!(path = %out_path, error = %e, "graph output write failed");
         }
-
-        // Auto-commit if inside repo root
-        let out_canonical = std::fs::canonicalize(&out_path).ok();
-        let repo_canonical = entry_path.canonicalize().ok();
-        let did_commit = if let (Some(out_c), Some(repo_c)) = (out_canonical, repo_canonical) {
-            if out_c.starts_with(&repo_c) {
-                let date = chrono::Local::now().format("%Y-%m-%d");
-                let msg = format!(
-                    "graph: {date} \u{2014} {} nodes, {} edges",
-                    g.node_count(),
-                    g.edge_count()
-                );
-                git::commit(&entry_path, &msg).is_ok()
-            } else {
-                false
-            }
-        } else {
-            false
-        };
-
-        (out_path, did_commit)
+        out_path
     } else {
-        ("stdout".to_string(), false)
+        "stdout".to_string()
     };
 
     let report = graph::GraphReport {
         nodes: g.node_count(),
         edges: g.edge_count(),
         output: out,
-        committed,
     };
     let s = serde_json::to_string_pretty(&report).map_err(|e| format!("{e}"))?;
     ok_text(s)

@@ -131,6 +131,7 @@ llm-wiki new page   → creates scaffold, no commit
 llm-wiki new section → creates scaffold, no commit
 llm-wiki lint       → writes LINT.md, no commit
 llm-wiki lint fix   → creates stubs, no commit
+llm-wiki graph      → writes graph output, no commit
 llm-wiki ingest     → validates + indexes; commits only if auto_commit = true
 llm-wiki commit     → always commits
 ```
