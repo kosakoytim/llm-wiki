@@ -38,10 +38,10 @@ Reference: agentctl already has all of the below working — align llm-wiki.
 - [x] Pass `CARGO_TOKEN` via `--token` flag instead of env var (match agentctl style)
 
 ### Cargo.toml
-- [ ] Add `rust-version` field (agentctl has `"1.75"`)
-- [ ] Add `homepage`, `documentation`, `keywords`, `categories` fields
-- [ ] Add `exclude` for `.github/`, `tests/`, `docs/`
-- [ ] Add `panic = "abort"` to `[profile.release]` (agentctl has it)
+- [x] Add `rust-version` field (agentctl has `"1.75"`)
+- [x] Add `homepage`, `documentation`, `keywords`, `categories` fields
+- [x] Add `exclude` for `.github/`, `tests/`, `docs/`
+- [x] Add `panic = "abort"` to `[profile.release]` (agentctl has it)
 
 ### Distribution channels (new repos/configs needed)
 - [ ] Homebrew formula in `homebrew-agent` tap (`Formula/llm-wiki.rb` or `Formula/wiki.rb`)
