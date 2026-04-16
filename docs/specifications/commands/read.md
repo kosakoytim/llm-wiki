@@ -43,7 +43,41 @@ Resolution order:
 
 ---
 
-## 2. Output
+## 2. Slug vs Asset Resolution
+
+After extracting the slug from the input (§1), the engine determines whether
+it refers to a page or a co-located asset:
+
+```
+1. Try resolve_slug(slug).
+   → Success: it is a page. Return page content.
+
+2. If resolve_slug fails, check the last path segment for a non-.md
+   file extension (contains a dot, extension is not "md").
+   → No extension: error — page not found.
+   → Has non-.md extension: split slug at the last "/" into
+     (parent_slug, filename). Call read_asset(parent_slug, filename).
+     → Success: return asset content.
+     → Failure: error — asset not found.
+```
+
+This works because:
+- Page slugs never contain file extensions — the engine strips `.md` on
+  slug derivation.
+- Asset filenames always have a non-`.md` extension (images, YAML, etc.).
+- The split at the last `/` maps exactly to the bundle directory structure:
+  `concepts/moe/diagram.png` → bundle `concepts/moe`, asset `diagram.png`.
+
+Edge cases:
+- `concepts/moe/index.md` — `resolve_slug("concepts/moe")` succeeds at
+  step 1 (bundle page), so step 2 is never reached.
+- `concepts/v2.0-release` — no extension after the last `/`, so step 2
+  correctly falls through to "page not found" (the dot is in a path
+  segment, not a file extension).
+
+---
+
+## 3. Output
 
 ### Page content (default)
 
@@ -89,7 +123,7 @@ wiki read wiki://research/skills/semantic-commit/lifecycle.yaml
 
 ---
 
-## 3. CLI Interface
+## 4. CLI Interface
 
 ```
 wiki read <slug|uri>
@@ -109,7 +143,7 @@ wiki read wiki://research/concepts/mixture-of-experts/moe-routing.png
 
 ---
 
-## 4. MCP Tool
+## 5. MCP Tool
 
 ```rust
 #[tool(description = "Read a wiki page or asset by slug or wiki:// URI")]
@@ -124,7 +158,7 @@ async fn wiki_read(
 
 ---
 
-## 5. Error Cases
+## 6. Error Cases
 
 | Condition | Error |
 |-----------|-------|

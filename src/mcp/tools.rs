@@ -551,11 +551,22 @@ fn handle_read(server: &WikiServer, args: &Map<String, Value>) -> ToolHandlerRes
         return ok_text(assets.join("\n"));
     }
 
-    let wiki_cfg = config::load_wiki(&PathBuf::from(&entry.path)).unwrap_or_default();
-    let resolved = config::resolve(&global, &wiki_cfg);
-    let strip = arg_bool(args, "no_frontmatter") || resolved.read.no_frontmatter;
-    let content = markdown::read_page(&slug, &wiki_root, strip).map_err(|e| format!("{e}"))?;
-    ok_text(content)
+    match markdown::resolve_read_target(&slug, &wiki_root).map_err(|e| format!("{e}"))? {
+        markdown::ReadTarget::Page(_) => {
+            let wiki_cfg = config::load_wiki(&PathBuf::from(&entry.path)).unwrap_or_default();
+            let resolved = config::resolve(&global, &wiki_cfg);
+            let strip = arg_bool(args, "no_frontmatter") || resolved.read.no_frontmatter;
+            let content = markdown::read_page(&slug, &wiki_root, strip).map_err(|e| format!("{e}"))?;
+            ok_text(content)
+        }
+        markdown::ReadTarget::Asset(parent_slug, filename) => {
+            let bytes = markdown::read_asset(&parent_slug, &filename, &wiki_root).map_err(|e| format!("{e}"))?;
+            match String::from_utf8(bytes) {
+                Ok(text) => ok_text(text),
+                Err(_) => Err(format!("asset {slug} is binary — access it directly from the filesystem")),
+            }
+        }
+    }
 }
 
 fn handle_list(server: &WikiServer, args: &Map<String, Value>) -> ToolHandlerResult {

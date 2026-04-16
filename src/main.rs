@@ -317,11 +317,20 @@ fn main() -> Result<()> {
                     println!("{a}");
                 }
             } else {
-                let wiki_cfg = config::load_wiki(&PathBuf::from(&entry.path))?;
-                let resolved = config::resolve(&global, &wiki_cfg);
-                let strip = no_frontmatter || resolved.read.no_frontmatter;
-                let content = markdown::read_page(&slug, &wiki_root, strip)?;
-                print!("{content}");
+                match markdown::resolve_read_target(&slug, &wiki_root)? {
+                    markdown::ReadTarget::Page(_) => {
+                        let wiki_cfg = config::load_wiki(&PathBuf::from(&entry.path))?;
+                        let resolved = config::resolve(&global, &wiki_cfg);
+                        let strip = no_frontmatter || resolved.read.no_frontmatter;
+                        let content = markdown::read_page(&slug, &wiki_root, strip)?;
+                        print!("{content}");
+                    }
+                    markdown::ReadTarget::Asset(parent_slug, filename) => {
+                        let bytes = markdown::read_asset(&parent_slug, &filename, &wiki_root)?;
+                        use std::io::Write;
+                        std::io::stdout().write_all(&bytes)?;
+                    }
+                }
             }
         }
         Commands::List {

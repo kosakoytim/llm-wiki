@@ -25,6 +25,44 @@ pub fn resolve_slug(slug: &str, wiki_root: &Path) -> Result<PathBuf> {
     bail!("page not found for slug: {slug}")
 }
 
+/// Result of slug vs asset resolution (read.md §2).
+#[derive(Debug)]
+pub enum ReadTarget {
+    /// Slug resolved to a page.
+    Page(PathBuf),
+    /// Slug resolved to a co-located asset: (parent_slug, filename).
+    Asset(String, String),
+}
+
+/// Two-step resolution: try page first, then asset fallback.
+pub fn resolve_read_target(slug: &str, wiki_root: &Path) -> Result<ReadTarget> {
+    // Step 1: try as page
+    if let Ok(path) = resolve_slug(slug, wiki_root) {
+        return Ok(ReadTarget::Page(path));
+    }
+
+    // Step 2: check last segment for non-.md extension
+    if let Some(pos) = slug.rfind('/') {
+        let filename = &slug[pos + 1..];
+        if let Some(dot) = filename.rfind('.') {
+            let ext = &filename[dot + 1..];
+            if !ext.is_empty() && ext != "md" {
+                let parent_slug = &slug[..pos];
+                let path = wiki_root.join(parent_slug).join(filename);
+                if path.is_file() {
+                    return Ok(ReadTarget::Asset(
+                        parent_slug.to_string(),
+                        filename.to_string(),
+                    ));
+                }
+                bail!("asset not found: {slug}");
+            }
+        }
+    }
+
+    bail!("page not found for slug: {slug}")
+}
+
 pub fn read_page(slug: &str, wiki_root: &Path, no_frontmatter: bool) -> Result<String> {
     let path = resolve_slug(slug, wiki_root)?;
     let content = std::fs::read_to_string(&path)?;

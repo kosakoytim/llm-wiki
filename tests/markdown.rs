@@ -212,3 +212,81 @@ fn create_section_creates_index_md_with_section_frontmatter() {
     assert_eq!(fm.r#type, "section");
     assert_eq!(fm.status, "draft");
 }
+
+
+// ── resolve_read_target ───────────────────────────────────────────────────────
+
+#[test]
+fn resolve_read_target_returns_page_for_flat_slug() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_wiki(dir.path());
+    write_page(&wiki_root, "concepts/foo.md", SAMPLE_PAGE);
+
+    match resolve_read_target("concepts/foo", &wiki_root).unwrap() {
+        ReadTarget::Page(path) => assert_eq!(path, wiki_root.join("concepts/foo.md")),
+        ReadTarget::Asset(_, _) => panic!("expected Page, got Asset"),
+    }
+}
+
+#[test]
+fn resolve_read_target_returns_page_for_bundle_slug() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_wiki(dir.path());
+    write_page(&wiki_root, "concepts/moe/index.md", SAMPLE_PAGE);
+
+    match resolve_read_target("concepts/moe", &wiki_root).unwrap() {
+        ReadTarget::Page(path) => assert_eq!(path, wiki_root.join("concepts/moe/index.md")),
+        ReadTarget::Asset(_, _) => panic!("expected Page, got Asset"),
+    }
+}
+
+#[test]
+fn resolve_read_target_returns_asset_for_bundle_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_wiki(dir.path());
+    write_page(&wiki_root, "concepts/moe/index.md", SAMPLE_PAGE);
+    fs::write(wiki_root.join("concepts/moe/diagram.png"), b"fake png").unwrap();
+
+    match resolve_read_target("concepts/moe/diagram.png", &wiki_root).unwrap() {
+        ReadTarget::Asset(parent, filename) => {
+            assert_eq!(parent, "concepts/moe");
+            assert_eq!(filename, "diagram.png");
+        }
+        ReadTarget::Page(_) => panic!("expected Asset, got Page"),
+    }
+}
+
+#[test]
+fn resolve_read_target_returns_error_for_missing_page() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_wiki(dir.path());
+
+    let result = resolve_read_target("concepts/missing", &wiki_root);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("page not found"));
+}
+
+#[test]
+fn resolve_read_target_returns_error_for_missing_asset() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_wiki(dir.path());
+    write_page(&wiki_root, "concepts/moe/index.md", SAMPLE_PAGE);
+
+    let result = resolve_read_target("concepts/moe/missing.png", &wiki_root);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("asset not found"));
+}
+
+#[test]
+fn resolve_read_target_page_wins_over_asset_for_bundle_slug() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_wiki(dir.path());
+    write_page(&wiki_root, "concepts/moe/index.md", SAMPLE_PAGE);
+    fs::write(wiki_root.join("concepts/moe/diagram.png"), b"fake").unwrap();
+
+    // "concepts/moe" should resolve as page (step 1), not try asset path
+    match resolve_read_target("concepts/moe", &wiki_root).unwrap() {
+        ReadTarget::Page(_) => {}
+        ReadTarget::Asset(_, _) => panic!("expected Page, got Asset"),
+    }
+}

@@ -140,32 +140,54 @@ The flag is parsed by clap (`_all`) but unused. Same for MCP `all` parameter.
 **Gap:** read.md §1-2 says asset URIs return raw bytes. `markdown::read_asset()`
 exists but CLI and MCP handlers don't route to it.
 
+**Spec update:** read.md §2 "Slug vs Asset Resolution" added to document the
+engine-internal detection algorithm.
+
+### Resolution algorithm (from spec §2)
+
+1. Try `resolve_slug(slug)` → success: it's a page, return content.
+2. If that fails, check the **last path segment** for a non-`.md` extension:
+   - No extension → error: page not found (original error).
+   - Has non-`.md` extension → split at last `/` into `(parent_slug, filename)`.
+     Call `read_asset(parent_slug, filename)` → success: return bytes.
+     Failure: error: asset not found.
+
+Why this is solid:
+- Page slugs never have extensions (engine strips `.md` on derivation).
+- Assets always have non-`.md` extensions.
+- Split at last `/` maps exactly to bundle directory structure.
+- `concepts/moe/index.md` resolves as page at step 1 (never reaches step 2).
+- `concepts/v2.0-release` has no extension in the last segment, so step 2
+  correctly falls through.
+
 ### Code changes
 
-- `src/main.rs` — in `Commands::Read`: after resolving the slug, check if
-  the path resolves to a non-.md file (asset). If so, call
-  `markdown::read_asset()` and write raw bytes to stdout.
+- `src/markdown.rs` — add `resolve_slug_or_asset(slug, wiki_root) -> ReadTarget`
+  enum that returns either `Page(PathBuf)` or `Asset(String, String)` (parent
+  slug + filename). Encapsulates the two-step resolution.
+- `src/main.rs` — in `Commands::Read`: use `resolve_slug_or_asset`. If
+  `Asset`, call `read_asset` and write raw bytes to stdout.
 - `src/mcp/tools.rs` — in `handle_read`: same detection. If asset, return
-  base64-encoded content (or text if UTF-8). Use `Content::text` for text
-  assets, note limitation for binary.
-
-### Detection logic
-
-If `resolve_slug()` fails and the slug contains a file extension (e.g.
-`concepts/moe/diagram.png`), split into parent slug + filename, call
-`read_asset(parent_slug, filename, wiki_root)`.
+  base64-encoded content for binary, or text content for UTF-8 assets.
 
 ### Tests
 
-- `tests/markdown.rs` — new test: `read_asset_returns_file_content` — create
-  a bundle with an asset, call `read_asset`, assert content matches.
-- Integration: `tests/search.rs` or new `tests/read.rs` — test the routing
-  logic if extracted to a helper.
+- `tests/markdown.rs` — new tests:
+  - `resolve_slug_or_asset_returns_page_for_valid_slug` — flat and bundle.
+  - `resolve_slug_or_asset_returns_asset_for_bundle_file` — e.g.
+    `concepts/moe/diagram.png` → `Asset("concepts/moe", "diagram.png")`.
+  - `resolve_slug_or_asset_returns_error_for_missing_page_without_extension`
+    — `concepts/missing` → error.
+  - `resolve_slug_or_asset_returns_error_for_missing_asset` —
+    `concepts/moe/missing.png` → error.
 
 ### Exit criteria
 
 - `wiki read concepts/moe/diagram.png` returns the file content.
 - MCP `wiki_read { uri: "concepts/moe/diagram.png" }` returns content.
+- `wiki read concepts/moe` still returns the page (step 1 wins).
+- `wiki read concepts/missing` returns "page not found" error.
+- Spec read.md §2 documents the resolution algorithm.
 - `cargo test` passes.
 
 ---
