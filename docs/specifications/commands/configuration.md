@@ -1,11 +1,11 @@
 ---
 title: "Configuration"
-summary: "Two-level config — global config at ~/.wiki/config.toml and per-wiki config at wiki.toml in the repo root. wiki config command for reading and writing both levels."
+summary: "Two-level config — global config at ~/.llm-wiki/config.toml and per-wiki config at wiki.toml in the repo root. llm-wiki config command for reading and writing both levels."
 read_when:
   - Implementing or extending the configuration system
   - Adding a new configurable default (search, page creation, etc.)
   - Understanding the difference between global and per-wiki config
-  - Using wiki config to inspect or change settings
+  - Using llm-wiki config to inspect or change settings
 status: draft
 last_updated: "2025-07-15"
 ---
@@ -14,7 +14,7 @@ last_updated: "2025-07-15"
 
 Two config files, two scopes:
 
-- `~/.wiki/config.toml` — global: wiki spaces, global defaults
+- `~/.llm-wiki/config.toml` — global: llm-wiki spaces, global defaults
 - `wiki.toml` — per-wiki: identity, overrides, wiki-specific defaults
 
 Per-wiki values take precedence over global values. CLI flags take precedence
@@ -22,7 +22,7 @@ over both.
 
 ---
 
-## 1. Global Config — `~/.wiki/config.toml`
+## 1. Global Config — `~/.llm-wiki/config.toml`
 
 ```toml
 # ── Global settings ────────────────────────────────────────────────────────────
@@ -44,17 +44,18 @@ remote = "git@github.com:org/work-wiki.git"
 # ── Global defaults (apply to all wikis unless overridden) ─────────────────────
 
 [defaults]
-search_top_k      = 10     # default --top-k for wiki search
+search_top_k      = 10     # default --top-k for llm-wiki search
 search_excerpt    = true   # false to default to --no-excerpt behavior
 search_sections   = false  # true to include section index pages in results
 page_mode         = "flat" # default page creation mode: flat | bundle
-list_page_size    = 20     # default page size for wiki list pagination
+list_page_size    = 20     # default page size for llm-wiki list pagination
 
 [read]
-no_frontmatter = false  # true to strip frontmatter from wiki read output by default
+no_frontmatter = false  # true to strip frontmatter from llm-wiki read output by default
 
 [index]
-auto_rebuild = false  # true to rebuild stale index automatically before search/list
+auto_rebuild  = false  # true to rebuild stale index automatically before search/list
+auto_recovery = true   # true to rebuild corrupt index on open failure
 
 [graph]
 format  = "mermaid"  # mermaid | dot
@@ -63,12 +64,21 @@ type    = []         # empty = all types; e.g. ["concept", "source"]
 output  = ""         # empty = stdout; path or wiki:// URI
 
 [serve]
-sse      = false    # enable SSE transport by default
-sse_port = 8080     # SSE port
-acp      = false    # enable ACP transport by default
+sse              = false    # enable SSE transport by default
+sse_port         = 8080     # SSE port
+acp              = false    # enable ACP transport by default
+max_restarts     = 10       # max transport restarts before exit; 0 = no restart
+restart_backoff  = 1        # initial backoff seconds; doubles each restart, cap 30s
+heartbeat_secs   = 60       # heartbeat log interval; 0 = disabled
 
 [validation]
 type_strictness = "loose"  # strict | loose
+
+[logging]
+log_path      = "~/.llm-wiki/logs"  # log file directory; empty = disable file logging
+log_rotation  = "daily"             # daily | hourly | never
+log_max_files = 7                   # max rotated files; 0 = unlimited
+log_format    = "text"              # text | json
 
 [lint]
 fix_missing_stubs   = true   # auto-create scaffold pages for missing stubs
@@ -110,12 +120,12 @@ fix_missing_stubs  = false  # do not auto-create stubs for this wiki
 | Key | Scope | Default | Description |
 |-----|-------|---------|-------------|
 | `global.default_wiki` | global only | — | Wiki name used when no `--wiki` flag or `wiki://` name is given |
-| `defaults.search_top_k` | global / per-wiki | `10` | Default result count for `wiki search` |
+| `defaults.search_top_k` | global / per-wiki | `10` | Default result count for `llm-wiki search` |
 | `defaults.search_excerpt` | global / per-wiki | `true` | Include excerpts by default; `false` behaves like `--no-excerpt` |
 | `defaults.search_sections` | global / per-wiki | `false` | Include section index pages in results; `true` behaves like `--include-sections` |
 | `defaults.page_mode` | global / per-wiki | `flat` | Default page creation mode: `flat` or `bundle` |
-| `defaults.list_page_size` | global / per-wiki | `20` | Default page size for `wiki list` pagination |
-| `read.no_frontmatter` | global / per-wiki | `false` | Strip frontmatter from `wiki read` output by default |
+| `defaults.list_page_size` | global / per-wiki | `20` | Default page size for `llm-wiki list` pagination |
+| `read.no_frontmatter` | global / per-wiki | `false` | Strip frontmatter from `llm-wiki read` output by default |
 | `index.auto_rebuild` | global only | `false` | Automatically rebuild stale index before search/list |
 | `index.auto_recovery` | global only | `true` | Automatically rebuild corrupt index on open failure |
 | `graph.format` | global / per-wiki | `mermaid` | Default output format: `mermaid` or `dot` |
@@ -129,21 +139,21 @@ fix_missing_stubs  = false  # do not auto-create stubs for this wiki
 | `serve.max_restarts` | global only | `10` | Max transport restarts before exit. `0` = no restart (crash exits). |
 | `serve.restart_backoff` | global only | `1` | Initial backoff in seconds. Doubles on each restart, capped at 30s. |
 | `serve.heartbeat_secs` | global only | `60` | Heartbeat log interval in seconds. `0` = disabled. |
-| `logging.log_path` | global only | `~/.wiki/logs` | Log file directory. Empty string disables file logging. |
+| `logging.log_path` | global only | `~/.llm-wiki/logs` | Log file directory. Empty string disables file logging. |
 | `logging.log_rotation` | global only | `daily` | Rotation schedule: `daily`, `hourly`, `never` |
 | `logging.log_max_files` | global only | `7` | Max rotated log files. `0` = unlimited. |
 | `logging.log_format` | global only | `text` | Output format: `text` or `json` |
-| `lint.fix_missing_stubs` | global / per-wiki | `true` | Auto-create scaffold pages for missing stubs on `wiki lint fix` |
-| `lint.fix_empty_sections` | global / per-wiki | `true` | Auto-create `index.md` for empty sections on `wiki lint fix` |
+| `lint.fix_missing_stubs` | global / per-wiki | `true` | Auto-create scaffold pages for missing stubs on `llm-wiki lint fix` |
+| `lint.fix_empty_sections` | global / per-wiki | `true` | Auto-create `index.md` for empty sections on `llm-wiki lint fix` |
 
 ---
 
-## 4. CLI — `wiki config`
+## 4. CLI — `llm-wiki config`
 
 ```
-wiki config get <key>                  # print a config value
-wiki config set <key> <value>          # set a config value
-wiki config list                       # print all resolved config (global + per-wiki merged)
+llm-wiki config get <key>                  # print a config value
+llm-wiki config set <key> <value>          # set a config value
+llm-wiki config list                       # print all resolved config (global + per-wiki merged)
              [--global]                # global config only
              [--wiki <name>]           # per-wiki config only
 ```
@@ -152,23 +162,23 @@ wiki config list                       # print all resolved config (global + per
 
 ```bash
 # Read resolved value (per-wiki overrides global)
-wiki config get defaults.search_top_k
+llm-wiki config get defaults.search_top_k
 
 # Set a global default
-wiki config set defaults.search_top_k 15 --global
+llm-wiki config set defaults.search_top_k 15 --global
 
 # Set a per-wiki override
-wiki config set defaults.page_mode bundle --wiki research
+llm-wiki config set defaults.page_mode bundle --wiki research
 
 # Inspect everything
-wiki config list
-wiki config list --global
-wiki config list --wiki research
+llm-wiki config list
+llm-wiki config list --global
+llm-wiki config list --wiki research
 ```
 
-`wiki config set` without `--global` writes to the per-wiki `wiki.toml` of
+`llm-wiki config set` without `--global` writes to the per-wiki `wiki.toml` of
 the default wiki (or `--wiki <name>` target). With `--global` it writes to
-`~/.wiki/config.toml`.
+`~/.llm-wiki/config.toml`.
 
 ---
 
@@ -179,7 +189,7 @@ For any config key, the resolved value is the first match in this order:
 ```
 1. CLI flag          (e.g. --top-k 20)
 2. Per-wiki config   (wiki.toml)
-3. Global config     (~/.wiki/config.toml)
+3. Global config     (~/.llm-wiki/config.toml)
 4. Built-in default  (hardcoded in config.rs)
 ```
 
@@ -188,7 +198,7 @@ For any config key, the resolved value is the first match in this order:
 ## 6. MCP Tool
 
 ```rust
-#[tool(description = "Get or set wiki configuration values")]
+#[tool(description = "Get or set llm-wiki configuration values")]
 async fn wiki_config(
     &self,
     #[tool(param)] action: String,       // "get" | "set" | "list"

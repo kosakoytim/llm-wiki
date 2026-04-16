@@ -4,14 +4,14 @@ summary: "Start the wiki MCP/ACP server — serves all registered wikis, support
 read_when:
   - Implementing or extending the serve command
   - Understanding transport modes and multi-wiki exposure
-  - Configuring wiki serve defaults
+  - Configuring llm-wiki serve defaults
 status: draft
 last_updated: "2025-07-15"
 ---
 
 # Serve
 
-`wiki serve` starts the wiki server. It mounts all registered wikis at startup
+`llm-wiki serve` starts the llm-wiki server. It mounts all registered wikis at startup
 and exposes them via MCP tools and resources. stdio is always active. SSE and
 ACP are opt-in and can run simultaneously.
 
@@ -32,7 +32,7 @@ any transport sees the same pages and state.
 
 ## 2. Multi-Wiki
 
-All wikis registered in `~/.wiki/config.toml` are mounted at startup. No
+All wikis registered in `~/.llm-wiki/config.toml` are mounted at startup. No
 `--wiki` flag — the server is a spaces-wide service.
 
 MCP resources are namespaced by wiki name:
@@ -50,7 +50,7 @@ When omitted, the default wiki (`global.default_wiki`) is used.
 ## 3. CLI Interface
 
 ```
-wiki serve
+llm-wiki serve
           [--sse [:<port>]]    # enable SSE transport (default port: from config)
           [--acp]              # enable ACP transport
           [--dry-run]          # print what would be started, no server
@@ -59,12 +59,12 @@ wiki serve
 ### Examples
 
 ```bash
-wiki serve                     # stdio only
-wiki serve --sse               # stdio + SSE on default port
-wiki serve --sse :9090         # stdio + SSE on port 9090
-wiki serve --acp               # stdio + ACP
-wiki serve --sse --acp         # stdio + SSE + ACP
-wiki serve --sse :8080 --acp   # all three, SSE on 8080
+llm-wiki serve                     # stdio only
+llm-wiki serve --sse               # stdio + SSE on default port
+llm-wiki serve --sse :9090         # stdio + SSE on port 9090
+llm-wiki serve --acp               # stdio + ACP
+llm-wiki serve --sse --acp         # stdio + SSE + ACP
+llm-wiki serve --sse :8080 --acp   # all three, SSE on 8080
 ```
 
 ---
@@ -72,13 +72,13 @@ wiki serve --sse :8080 --acp   # all three, SSE on 8080
 ## 4. Startup Sequence
 
 ```
-1. Load ~/.wiki/config.toml — spaces + global config
+1. Load ~/.llm-wiki/config.toml — spaces + global config
 2. Mount all registered wikis
 3. Check index staleness for each wiki (warn if stale, auto-rebuild if config says so)
 4. Start stdio MCP server (always)
 5. If --sse: start SSE listener on configured port
 6. If --acp: start ACP stdio server
-7. Log: "wiki serve — N wikis mounted [stdio] [sse :8080] [acp]"
+7. Log: "llm-wiki serve — N wikis mounted [stdio] [sse :8080] [acp]"
 ```
 
 ---

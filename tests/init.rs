@@ -37,7 +37,7 @@ fn init_creates_logs_directory() {
     init(&wiki_path, "research", None, false, false, &cfg).unwrap();
 
     let logs_dir = cfg.parent().unwrap().join("logs");
-    assert!(logs_dir.is_dir(), "~/.wiki/logs/ should be created by init");
+    assert!(logs_dir.is_dir(), "~/.llm-wiki/logs/ should be created by init");
 }
 
 #[test]

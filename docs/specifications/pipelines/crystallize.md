@@ -12,7 +12,7 @@ last_updated: "2025-07-15"
 # Crystallize
 
 Crystallize is an instruct workflow, not a separate engine command. The LLM
-writes directly into the wiki tree and runs `wiki ingest` to validate,
+writes directly into the wiki tree and runs `llm-wiki ingest` to validate,
 commit, and index. The workflow guides the LLM on *what to extract* from a
 session and *where to put it*.
 
@@ -29,8 +29,8 @@ Crystallize closes the loop: the wiki compounds from both sources and
 conversations.
 
 ```
-Sources  → LLM reads, writes pages into wiki tree  → wiki ingest → committed pages
-Chats    → crystallize workflow (LLM writes pages)  → wiki ingest → committed pages
+Sources  → LLM reads, writes pages into wiki tree  → llm-wiki ingest → committed pages
+Chats    → crystallize workflow (LLM writes pages)  → llm-wiki ingest → committed pages
 ```
 
 ---
@@ -200,21 +200,21 @@ Added to `.claude-plugin/commands/`:
 /llm-wiki:crystallize
 ```
 
-Fetches workflow instructions from `wiki instruct crystallize` and guides the
+Fetches workflow instructions from `llm-wiki instruct crystallize` and guides the
 LLM through the crystallize flow.
 
 ---
 
 ## 8. Why Not a Separate Command?
 
-The previous design had `wiki crystallize` as a separate CLI command with a
+The previous design had `llm-wiki crystallize` as a separate CLI command with a
 `CrystallizeRequest` JSON schema. This is removed because:
 
 - The LLM writes directly into the wiki tree
 - A separate JSON schema adds complexity for no gain
 - The value of crystallize is the *workflow guidance* (what to extract, where
   to put it), not a distinct engine operation
-- `wiki ingest` validates and commits whatever is on disk
+- `llm-wiki ingest` validates and commits whatever is on disk
 
 Crystallize is a workflow, not a tool. The tools are `wiki_write` + `wiki_ingest`.
 

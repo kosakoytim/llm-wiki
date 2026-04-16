@@ -35,18 +35,18 @@ One file per CLI command.
 | Document | Command |
 |----------|---------|
 | [cli.md](commands/cli.md) | All commands, subcommands, and flags |
-| [init.md](commands/init.md) | `wiki init` |
-| [spaces.md](commands/spaces.md) | `wiki spaces` |
-| [configuration.md](commands/configuration.md) | `wiki config` |
-| [page-creation.md](commands/page-creation.md) | `wiki new page` / `wiki new section` |
-| [read.md](commands/read.md) | `wiki read` |
-| [list.md](commands/list.md) | `wiki list` |
-| [search.md](commands/search.md) | `wiki search` |
-| [graph.md](commands/graph.md) | `wiki graph` |
-| [lint.md](commands/lint.md) | `wiki lint` |
-| [index.md](commands/index.md) | `wiki index` |
-| [serve.md](commands/serve.md) | `wiki serve` |
-| [instruct.md](commands/instruct.md) | `wiki instruct` |
+| [init.md](commands/init.md) | `llm-wiki init` |
+| [spaces.md](commands/spaces.md) | `llm-wiki spaces` |
+| [configuration.md](commands/configuration.md) | `llm-wiki config` |
+| [page-creation.md](commands/page-creation.md) | `llm-wiki new page` / `llm-wiki new section` |
+| [read.md](commands/read.md) | `llm-wiki read` |
+| [list.md](commands/list.md) | `llm-wiki list` |
+| [search.md](commands/search.md) | `llm-wiki search` |
+| [graph.md](commands/graph.md) | `llm-wiki graph` |
+| [lint.md](commands/lint.md) | `llm-wiki lint` |
+| [index.md](commands/index.md) | `llm-wiki index` |
+| [serve.md](commands/serve.md) | `llm-wiki serve` |
+| [instruct.md](commands/instruct.md) | `llm-wiki instruct` |
 
 ---
 
@@ -71,7 +71,7 @@ LLM-facing behavior and workflows.
 | [session-bootstrap.md](llm/session-bootstrap.md) | How the LLM orients itself at session start |
 | [backlink-quality.md](llm/backlink-quality.md) | Linking policy and missing connection detection |
 
-See also [commands/instruct.md](commands/instruct.md) for the `wiki instruct` command that delivers these workflows.
+See also [commands/instruct.md](commands/instruct.md) for the `llm-wiki instruct` command that delivers these workflows.
 
 ---
 

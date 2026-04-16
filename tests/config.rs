@@ -187,7 +187,7 @@ fn set_global_config_value_sets_key() {
 #[test]
 fn logging_config_defaults() {
     let cfg = LoggingConfig::default();
-    assert!(cfg.log_path.ends_with(".wiki/logs"));
+    assert!(cfg.log_path.ends_with(".llm-wiki/logs"));
     assert_eq!(cfg.log_rotation, "daily");
     assert_eq!(cfg.log_max_files, 7);
     assert_eq!(cfg.log_format, "text");

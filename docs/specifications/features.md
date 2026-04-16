@@ -18,23 +18,23 @@ tracked per-feature in the individual specification docs.
 
 ## Wiki Management
 
-- Initialize a new wiki with default directory structure and git repo (`wiki init`)
-- Register wiki automatically in `~/.wiki/config.toml` on init
-- List all registered wikis (`wiki spaces list`)
-- Remove a wiki from the spaces, optionally deleting local files (`wiki spaces remove`)
-- Set the default wiki (`wiki spaces set-default`)
+- Initialize a new wiki with default directory structure and git repo (`llm-wiki init`)
+- Register wiki automatically in `~/.llm-wiki/config.toml` on init
+- List all registered wikis (`llm-wiki spaces list`)
+- Remove a wiki from the spaces, optionally deleting local files (`llm-wiki spaces remove`)
+- Set the default wiki (`llm-wiki spaces set-default`)
 - Multi-wiki support — one process manages all registered wikis
-- Per-wiki config at `wiki.toml` in repo root, global config at `~/.wiki/config.toml`
+- Per-wiki config at `wiki.toml` in repo root, global config at `~/.llm-wiki/config.toml`
 - Two-level config resolution: CLI flag → per-wiki → global → built-in default
-- `wiki config get/set/list` for reading and writing config
+- `llm-wiki config get/set/list` for reading and writing config
 
 ---
 
 ## Page and Section Creation
 
-- Create a flat page with scaffolded frontmatter (`wiki new page <slug>`)
-- Create a bundle page with `index.md` and folder (`wiki new page <slug> --bundle`)
-- Create a section with `index.md` (`wiki new section <slug>`)
+- Create a flat page with scaffolded frontmatter (`llm-wiki new page <slug>`)
+- Create a bundle page with `index.md` and folder (`llm-wiki new page <slug> --bundle`)
+- Create a section with `index.md` (`llm-wiki new section <slug>`)
 - Auto-create missing parent sections when creating a page
 - Configurable default page mode: `flat` or `bundle`
 
@@ -42,7 +42,7 @@ tracked per-feature in the individual specification docs.
 
 ## Ingest
 
-- Validate, commit, and index files already in the wiki tree (`wiki ingest <path>`)
+- Validate, commit, and index files already in the wiki tree (`llm-wiki ingest <path>`)
 - File ingest — single Markdown file
 - Folder ingest — recursive, all `.md` files and co-located assets
 - Engine validates frontmatter, `git add`, commits, indexes
@@ -55,7 +55,7 @@ tracked per-feature in the individual specification docs.
 
 ## Search
 
-- Full-text BM25 search via tantivy (`wiki search "<query>"`)
+- Full-text BM25 search via tantivy (`llm-wiki search "<query>"`)
 - Excerpts included by default, omitted with `--no-excerpt`
 - Section pages excluded by default, included with `--include-sections`
 - Configurable default `--top-k`
@@ -67,7 +67,7 @@ tracked per-feature in the individual specification docs.
 
 ## Read
 
-- Fetch full Markdown content of a page by slug or `wiki://` URI (`wiki read`)
+- Fetch full Markdown content of a page by slug or `wiki://` URI (`llm-wiki read`)
 - Short URI form for default wiki: `wiki://<slug>`
 - Strip frontmatter from output (`--no-frontmatter`)
 - Configurable default `no_frontmatter`
@@ -76,9 +76,9 @@ tracked per-feature in the individual specification docs.
 
 ## Index Management
 
-- Explicit index rebuild from committed Markdown (`wiki index rebuild`)
-- Index status inspection — built date, page count, staleness (`wiki index status`)
-- Indexes stored in `~/.wiki/indexes/<name>/` — outside the wiki repo
+- Explicit index rebuild from committed Markdown (`llm-wiki index rebuild`)
+- Index status inspection — built date, page count, staleness (`llm-wiki index status`)
+- Indexes stored in `~/.llm-wiki/indexes/<name>/` — outside the wiki repo
 - Staleness detection: compare indexed commit hash in `state.toml` against `git HEAD`
 - Auto-rebuild on stale index before search/list (configurable, default off)
 
@@ -86,7 +86,7 @@ tracked per-feature in the individual specification docs.
 
 ## List
 
-- Paginated enumeration of wiki pages (`wiki list`)
+- Paginated enumeration of wiki pages (`llm-wiki list`)
 - Filter by `type` and `status` frontmatter fields
 - Offset-based pagination backed by tantivy index
 - Configurable default page size
@@ -95,11 +95,11 @@ tracked per-feature in the individual specification docs.
 
 ## Lint
 
-- Structural audit: orphan pages, missing stubs, empty sections (`wiki lint`)
+- Structural audit: orphan pages, missing stubs, empty sections (`llm-wiki lint`)
 - `LINT.md` written and committed on every lint run
 - `LINT.md` has no frontmatter — excluded from indexing and orphan detection
-- Auto-fix missing stubs: create scaffold pages (`wiki lint fix`)
-- Auto-fix empty sections: create `index.md` (`wiki lint fix`)
+- Auto-fix missing stubs: create scaffold pages (`llm-wiki lint fix`)
+- Auto-fix empty sections: create `index.md` (`llm-wiki lint fix`)
 - `--only` flag to run a single fix
 - Configurable auto-fix defaults per check
 
@@ -107,7 +107,7 @@ tracked per-feature in the individual specification docs.
 
 ## Graph
 
-- Concept graph from frontmatter links and body `[[links]]` (`wiki graph`)
+- Concept graph from frontmatter links and body `[[links]]` (`llm-wiki graph`)
 - Mermaid output (default) or DOT
 - Full graph or subgraph from a root node with depth limit
 - Filter by page type
@@ -119,9 +119,9 @@ tracked per-feature in the individual specification docs.
 
 ## Serve
 
-- MCP server on stdio — always active (`wiki serve`)
-- MCP server on SSE — opt-in, multi-client (`wiki serve --sse`)
-- ACP agent on stdio — opt-in, streaming, session-oriented (`wiki serve --acp`)
+- MCP server on stdio — always active (`llm-wiki serve`)
+- MCP server on SSE — opt-in, multi-client (`llm-wiki serve --sse`)
+- ACP agent on stdio — opt-in, streaming, session-oriented (`llm-wiki serve --acp`)
 - SSE and ACP can run simultaneously alongside stdio
 - All registered wikis mounted at startup — no `--wiki` flag on serve
 - MCP resources namespaced by wiki name: `wiki://<name>/<slug>`
@@ -145,8 +145,9 @@ tracked per-feature in the individual specification docs.
 | `wiki_graph` | Generate concept graph, returns `GraphReport` |
 | `wiki_index_rebuild` | Rebuild tantivy index |
 | `wiki_index_status` | Inspect index health |
+| `wiki_index_check` | Read-only integrity check on the search index |
 | `wiki_config` | Get or set config values |
-| `wiki_spaces_list` | List registered wiki spaces |
+| `wiki_spaces_list` | List registered llm-wiki spaces |
 | `wiki_spaces_remove` | Remove a wiki space |
 | `wiki_spaces_set_default` | Set the default wiki space |
 | `wiki_init` | Initialize a new wiki |
@@ -156,7 +157,7 @@ tracked per-feature in the individual specification docs.
 ## Crystallize
 
 - Instruct workflow for distilling chat sessions into wiki pages
-- LLM writes complete Markdown file, ingests via `wiki ingest`
+- LLM writes complete Markdown file, ingests via `llm-wiki ingest`
 - Guides the LLM on what to extract (decisions, findings, open questions)
 - Prefers updating existing hub pages over creating new orphans
 - Suggested body structure: Summary, Decisions, Findings, Open Questions
@@ -187,19 +188,19 @@ tracked per-feature in the individual specification docs.
 - Source types folded into the `type` field: `paper`, `article`, `documentation`, `clipping`, `transcript`, `note`, `data`, `book-chapter`, `thread`
 - No separate `classification` field — `type` is the single axis
 - Custom types defined in `schema.md`, validated by engine on ingest
-- `--type paper` filters directly in `wiki search` and `wiki list`
+- `--type paper` filters directly in `llm-wiki search` and `llm-wiki list`
 - Lint flags source pages with missing or deprecated `source-summary` type
 ---
 
 ## Instructions
 
-- Print embedded workflow instructions (`wiki instruct`)
+- Print embedded workflow instructions (`llm-wiki instruct`)
 - Per-workflow instructions: `help`, `ingest`, `research`, `lint`, `crystallize`, `frontmatter`
 - Session orientation preamble: search + read hub pages before any workflow
 - Linking policy preamble: quality test for all link additions
 - Frontmatter authoring guide: per-field, per-type reference for LLM-produced values
 - Instructions injected at MCP server start and ACP `initialize`
-- Binary is the single source of truth — plugin files delegate to `wiki instruct`
+- Binary is the single source of truth — plugin files delegate to `llm-wiki instruct`
 
 ---
 
@@ -210,9 +211,9 @@ tracked per-feature in the individual specification docs.
 - Folder structure defined by `schema.md` — no engine-enforced categories
 - Default `schema.md` suggests `concepts/`, `sources/`, `queries/` as conventions
 - Epistemic distinctions carried by `type` field, not by folder
-- User-defined sections created on demand via `wiki new section`
-- `LINT.md` at repository root — committed by `wiki lint`
-- Indexes stored in `~/.wiki/indexes/<name>/` — outside the repo
+- User-defined sections created on demand via `llm-wiki new section`
+- `LINT.md` at repository root — committed by `llm-wiki lint`
+- Indexes stored in `~/.llm-wiki/indexes/<name>/` — outside the repo
 
 ---
 

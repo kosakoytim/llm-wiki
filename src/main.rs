@@ -22,13 +22,13 @@ fn global_config_path() -> PathBuf {
 
 fn dirs_path() -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-    PathBuf::from(home).join(".wiki").join("config.toml")
+    PathBuf::from(home).join(".llm-wiki").join("config.toml")
 }
 
 fn index_path_for(wiki_name: &str) -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
     PathBuf::from(home)
-        .join(".wiki")
+        .join(".llm-wiki")
         .join("indexes")
         .join(wiki_name)
 }

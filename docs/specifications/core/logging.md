@@ -1,10 +1,10 @@
 ---
 title: "Logging"
-summary: "Structured logging via tracing — stderr for all commands, file rotation for wiki serve, configurable via [logging] section."
+summary: "Structured logging via tracing — stderr for all commands, file rotation for llm-wiki serve, configurable via [logging] section."
 read_when:
   - Implementing or extending the logging system
   - Adding tracing calls to a new module
-  - Debugging wiki serve in production
+  - Debugging llm-wiki serve in production
   - Understanding the separation between CLI output and operational logs
 status: draft
 last_updated: "2025-07-17"
@@ -13,8 +13,8 @@ last_updated: "2025-07-17"
 # Logging
 
 Structured logging via `tracing` and `tracing-subscriber`. All operational
-logs go to stderr. Long-running `wiki serve` also writes to rotating log
-files under `~/.wiki/logs/`.
+logs go to stderr. Long-running `llm-wiki serve` also writes to rotating log
+files under `~/.llm-wiki/logs/`.
 
 ---
 
@@ -51,9 +51,9 @@ Default filter: `llm_wiki=info,warn`. Override with `RUST_LOG` environment
 variable:
 
 ```bash
-RUST_LOG=llm_wiki=debug wiki serve     # verbose
-RUST_LOG=llm_wiki=trace wiki serve     # maximum detail
-RUST_LOG=warn wiki serve               # quiet — errors and warnings only
+RUST_LOG=llm_wiki=debug llm-wiki serve     # verbose
+RUST_LOG=llm_wiki=trace llm-wiki serve     # maximum detail
+RUST_LOG=warn llm-wiki serve               # quiet — errors and warnings only
 ```
 
 ---
@@ -76,7 +76,7 @@ single operation:
 
 ### Default behavior
 
-`wiki serve` writes rotating log files to `~/.wiki/logs/`. The directory
+`llm-wiki serve` writes rotating log files to `~/.llm-wiki/logs/`. The directory
 is created automatically on first use.
 
 CLI commands (init, search, lint, etc.) log to stderr only — they are
@@ -86,7 +86,7 @@ short-lived and don't need file persistence.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `log_path` | `~/.wiki/logs` | Directory for log files. Empty string disables file logging. |
+| `log_path` | `~/.llm-wiki/logs` | Directory for log files. Empty string disables file logging. |
 | `log_rotation` | `daily` | Rotation schedule: `daily`, `hourly`, or `never` |
 | `log_max_files` | `7` | Maximum number of rotated files. `0` = no limit. |
 | `log_format` | `text` | Output format: `text` (human-readable) or `json` (machine-parseable) |
@@ -137,11 +137,11 @@ and closes the writer.
 ## 5. Configuration
 
 Logging config lives in the `[logging]` section of the global config
-(`~/.wiki/config.toml`). It is **global-only** — not per-wiki.
+(`~/.llm-wiki/config.toml`). It is **global-only** — not per-wiki.
 
 ```toml
 [logging]
-log_path = "~/.wiki/logs"   # directory for log files (empty = stderr only)
+log_path = "~/.llm-wiki/logs"   # directory for log files (empty = stderr only)
 log_rotation = "daily"       # daily | hourly | never
 log_max_files = 7            # max rotated files (0 = no limit)
 log_format = "text"          # text | json
@@ -151,7 +151,7 @@ log_format = "text"          # text | json
 
 | Key | Scope | Default | Description |
 |-----|-------|---------|-------------|
-| `logging.log_path` | global only | `~/.wiki/logs` | Log file directory. Empty string disables file logging. |
+| `logging.log_path` | global only | `~/.llm-wiki/logs` | Log file directory. Empty string disables file logging. |
 | `logging.log_rotation` | global only | `daily` | Rotation schedule: `daily`, `hourly`, `never` |
 | `logging.log_max_files` | global only | `7` | Max rotated log files. `0` = unlimited. |
 | `logging.log_format` | global only | `text` | Output format: `text` or `json` |
@@ -162,7 +162,7 @@ Logging config does not participate in per-wiki resolution. It is read
 once at startup from the global config. `RUST_LOG` overrides the log level
 filter but not the file output settings.
 
-`wiki config set logging.* --wiki <name>` is rejected with an error:
+`llm-wiki config set logging.* --wiki <name>` is rejected with an error:
 `"logging.* is a global-only key — use --global"`. Same behavior as
 `serve.*` keys.
 

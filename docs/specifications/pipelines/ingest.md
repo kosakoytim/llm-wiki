@@ -11,7 +11,7 @@ last_updated: "2025-07-15"
 
 # Ingest
 
-`wiki ingest` validates files already in the wiki tree, commits them to git,
+`llm-wiki ingest` validates files already in the wiki tree, commits them to git,
 and updates the search index. It does not move, copy, or place files — the
 author (human or LLM) writes directly into the wiki.
 
@@ -60,7 +60,7 @@ When `index.auto_rebuild` is `true`, the tantivy search index is rebuilt
 after commit. All frontmatter fields and body content are indexed.
 
 When `index.auto_rebuild` is `false` (the default), the engine emits a
-warning: `"search index is stale — run `wiki index rebuild`"`. The commit
+warning: `"search index is stale — run `llm-wiki index rebuild`"`. The commit
 still succeeds — the index update is never a gate on ingest.
 
 ---
@@ -74,10 +74,10 @@ validate and commit.
 
 ```bash
 # human writes wiki/concepts/mixture-of-experts.md
-wiki ingest wiki/concepts/mixture-of-experts.md
+llm-wiki ingest wiki/concepts/mixture-of-experts.md
 
 # human drops a folder of markdown files
-wiki ingest wiki/sources/moe-papers/
+llm-wiki ingest wiki/sources/moe-papers/
 ```
 
 Frontmatter preserved if present; minimal frontmatter generated if absent
@@ -88,7 +88,7 @@ Frontmatter preserved if present; minimal frontmatter generated if absent
 The LLM writes directly into the wiki tree, then calls ingest.
 
 ```
-1. LLM searches for existing wiki context:
+1. LLM searches for existing llm-wiki context:
    wiki_search("<topic>")           → Vec<PageRef>
    wiki_read(<relevant slugs>)     → existing page content
 
@@ -122,7 +122,7 @@ before writing.
 
 ## 5. Files Without Frontmatter
 
-When `wiki ingest` processes a file with no frontmatter block, minimal
+When `llm-wiki ingest` processes a file with no frontmatter block, minimal
 frontmatter is generated:
 
 | Field | Value |
@@ -141,7 +141,7 @@ The body is preserved exactly as found.
 ## 6. CLI Interface
 
 ```
-wiki ingest <path>           # file or folder, relative to wiki root
+llm-wiki ingest <path>           # file or folder, relative to wiki root
             [--dry-run]      # show what would be committed, no commit
 ```
 

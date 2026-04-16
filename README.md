@@ -64,13 +64,13 @@ flowchart LR
 cargo install llm-wiki
 
 # Initialize a wiki
-wiki init ~/wikis/research --name research
+llm-wiki init ~/wikis/research --name research
 
 # Start the MCP server
-wiki serve
+llm-wiki serve
 ```
 
-Connect an MCP client (see [setup](#mcp-client-setup)), then use the wiki
+Connect an MCP client (see [setup](#mcp-client-setup)), then use the
 tools to create pages, ingest sources, search, and build knowledge.
 
 ---
@@ -266,7 +266,7 @@ accumulator. The LLM is stateless — the wiki is not.
   addresses a page in the `research` wiki. `wiki://concepts/moe` uses the
   default wiki.
 - **Ingest** — validate, commit, and index files already in the wiki tree.
-  Authors write directly into `wiki/`, then run `wiki ingest`.
+  Authors write directly into `wiki/`, then run `llm-wiki ingest`.
 - **Search** — full-text BM25 search via tantivy, returning ranked results
   with `wiki://` URIs.
 
@@ -305,22 +305,23 @@ See [docs/specifications/commands/cli.md](docs/specifications/commands/cli.md)
 for the full command reference. Summary:
 
 ```
-wiki init <path> --name <name>       Initialize a new wiki
-wiki new page <uri> [--bundle]       Create a page with scaffolded frontmatter
-wiki new section <uri>               Create a section
-wiki ingest <path> [--dry-run]       Validate, commit, and index
-wiki search "<query>"                Full-text BM25 search
-wiki read <slug|uri>                 Fetch page content
-wiki list [--type] [--status]        Paginated page listing
-wiki lint                            Structural audit
-wiki lint fix                        Auto-fix missing stubs and empty sections
-wiki graph [--format mermaid|dot]    Concept graph
-wiki index rebuild                   Rebuild search index
-wiki index status                    Check index health
-wiki config get|set|list             Read/write configuration
-wiki spaces list|remove|set-default  Manage wiki spaces
-wiki serve [--sse] [--acp]           Start MCP/ACP server
-wiki instruct [<workflow>]           Print workflow instructions
+llm-wiki init <path> --name <name>       Initialize a new wiki
+llm-wiki new page <uri> [--bundle]       Create a page with scaffolded frontmatter
+llm-wiki new section <uri>               Create a section
+llm-wiki ingest <path> [--dry-run]       Validate, commit, and index
+llm-wiki search "<query>"                Full-text BM25 search
+llm-wiki read <slug|uri>                 Fetch page content
+llm-wiki list [--type] [--status]        Paginated page listing
+llm-wiki lint                            Structural audit
+llm-wiki lint fix                        Auto-fix missing stubs and empty sections
+llm-wiki graph [--format mermaid|dot]    Concept graph
+llm-wiki index rebuild                   Rebuild search index
+llm-wiki index status                    Check index health
+llm-wiki index check                     Index integrity check
+llm-wiki config get|set|list             Read/write configuration
+llm-wiki spaces list|remove|set-default  Manage wiki spaces
+llm-wiki serve [--sse] [--acp]           Start MCP/ACP server
+llm-wiki instruct [<workflow>]           Print workflow instructions
 ```
 
 ---
@@ -346,8 +347,8 @@ Add to `.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "wiki": {
-      "command": "wiki",
+    "llm-wiki": {
+      "command": "llm-wiki",
       "args": ["serve"]
     }
   }
@@ -364,9 +365,9 @@ Add to `.vscode/mcp.json`:
 ```json
 {
   "servers": {
-    "wiki": {
+    "llm-wiki": {
       "type": "stdio",
-      "command": "wiki",
+      "command": "llm-wiki",
       "args": ["serve"]
     }
   }
@@ -383,8 +384,8 @@ Add to the Windsurf MCP config:
 ```json
 {
   "mcpServers": {
-    "wiki": {
-      "command": "wiki",
+    "llm-wiki": {
+      "command": "llm-wiki",
       "args": ["serve"]
     }
   }

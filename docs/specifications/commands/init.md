@@ -1,9 +1,9 @@
 ---
 title: "Init"
-summary: "Initialize a new wiki — create directory structure, git repo, and register in ~/.wiki/config.toml. Safe to re-run."
+summary: "Initialize a new wiki — create directory structure, git repo, and register in ~/.llm-wiki/config.toml. Safe to re-run."
 read_when:
   - Implementing or extending the init command
-  - Understanding what wiki init creates and registers
+  - Understanding what llm-wiki init creates and registers
   - Setting up a new wiki from scratch
 status: draft
 last_updated: "2025-07-15"
@@ -11,9 +11,9 @@ last_updated: "2025-07-15"
 
 # Init
 
-`wiki init` creates a new wiki at a given path, initializes a git repository,
+`llm-wiki init` creates a new wiki at a given path, initializes a git repository,
 creates the default directory structure, writes an initial commit, and
-registers the wiki in `~/.wiki/config.toml`. Safe to re-run.
+registers the wiki in `~/.llm-wiki/config.toml`. Safe to re-run.
 
 ---
 
@@ -30,21 +30,21 @@ registers the wiki in `~/.wiki/config.toml`. Safe to re-run.
 ```
 
 No hidden directories. No `.gitignore` needed for engine artifacts — indexes
-live in `~/.wiki/indexes/<name>/`, logs in `~/.wiki/logs/`.
+live in `~/.llm-wiki/indexes/<name>/`, logs in `~/.llm-wiki/logs/`.
 
 ### Global engine directories
 
-On the first `wiki init`, the engine also ensures the global `~/.wiki/`
+On the first `llm-wiki init`, the engine also ensures the global `~/.llm-wiki/`
 infrastructure exists:
 
 ```
-~/.wiki/
+~/.llm-wiki/
 ├── config.toml     ← global config (created by spaces::register)
 ├── indexes/        ← search indexes, one per wiki
-└── logs/           ← rotating log files for wiki serve
+└── logs/           ← rotating log files for llm-wiki serve
 ```
 
-`~/.wiki/logs/` is created alongside `config.toml` so that `wiki serve`
+`~/.llm-wiki/logs/` is created alongside `config.toml` so that `llm-wiki serve`
 can write log files without additional setup.
 
 Initial git commit: `init: <name>`
@@ -54,20 +54,20 @@ Initial git commit: `init: <name>`
 ## 2. CLI Interface
 
 ```
-wiki init <path>
+llm-wiki init <path>
           --name <name>              # wiki name — required, used in wiki:// URIs
           [--description <text>]     # optional one-line description
           [--force]                  # update space entry if name differs from existing
-          [--set-default]            # set as default_wiki in ~/.wiki/config.toml
+          [--set-default]            # set as default_wiki in ~/.llm-wiki/config.toml
 ```
 
 ### Examples
 
 ```bash
-wiki init ~/wikis/research --name research
-wiki init ~/wikis/research --name research --description "ML research knowledge base"
-wiki init ~/wikis/research --name research --set-default
-wiki init ~/wikis/research --name research-v2 --force   # rename in spaces
+llm-wiki init ~/wikis/research --name research
+llm-wiki init ~/wikis/research --name research --description "ML research knowledge base"
+llm-wiki init ~/wikis/research --name research --set-default
+llm-wiki init ~/wikis/research --name research-v2 --force   # rename in spaces
 ```
 
 ---
@@ -78,7 +78,7 @@ wiki init ~/wikis/research --name research-v2 --force   # rename in spaces
 |-----------|----------|
 | Path does not exist | Create directory, git repo, structure, commit, register |
 | Path exists, not a git repo | `git init`, create missing dirs, commit, register |
-| Path exists, git repo, not registered | Register in `~/.wiki/config.toml` |
+| Path exists, git repo, not registered | Register in `~/.llm-wiki/config.toml` |
 | Path exists, registered, same name | Skip silently — already initialized |
 | Path exists, registered, different name | Error: `wiki already registered as "<old-name>". Use --force to rename.` |
 | `--force` with different name | Update space entry with new name |
@@ -88,7 +88,7 @@ wiki init ~/wikis/research --name research-v2 --force   # rename in spaces
 
 ## 4. Space Entry Written
 
-Appended to `~/.wiki/config.toml`:
+Appended to `~/.llm-wiki/config.toml`:
 
 ```toml
 [[wikis]]
@@ -117,7 +117,7 @@ If `[global]` already exists, only `default_wiki` is updated.
 
 ML research knowledge base
 
-Managed by [llm-wiki](https://github.com/…). Run `wiki serve` to start the MCP server.
+Managed by [llm-wiki](https://github.com/…). Run `llm-wiki serve` to start the MCP server.
 ```
 
 Title from `--name`, description from `--description` (omitted if not

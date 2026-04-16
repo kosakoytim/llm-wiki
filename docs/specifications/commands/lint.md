@@ -3,15 +3,15 @@ title: "Lint"
 summary: "Structural audit of the wiki — orphan pages, missing stubs, empty sections, missing connections, and untyped sources. Produces a LintReport and commits LINT.md."
 read_when:
   - Implementing or extending the lint pipeline
-  - Understanding what wiki lint checks and reports
-  - Integrating wiki lint into an LLM maintenance workflow
+  - Understanding what llm-wiki lint checks and reports
+  - Integrating llm-wiki lint into an LLM maintenance workflow
 status: draft
 last_updated: "2025-07-15"
 ---
 
 # Lint
 
-`wiki lint` is a structural audit. It walks the wiki, checks five things, and
+`llm-wiki lint` is a structural audit. It walks the wiki, checks five things, and
 produces a `LintReport`. The report is written to `LINT.md` and committed. The
 wiki binary makes no content judgments — it surfaces structural problems and
 hands them to the LLM.
@@ -77,7 +77,7 @@ score. Score is always `0.0` for lint results (not a search ranking).
 
 ## 3. `LINT.md` Format Specification
 
-`wiki lint` overwrites `LINT.md` at the repository root and commits it. Git history
+`llm-wiki lint` overwrites `LINT.md` at the repository root and commits it. Git history
 is the archive — no previous report is preserved in the file itself.
 
 ### Structure
@@ -232,8 +232,8 @@ Five checks, always run:
 | Check | Auto-fixable |
 |-------|--------------|
 | Orphan pages | No — requires content judgment |
-| Missing stubs | Yes — `wiki new page <slug>` |
-| Empty sections | Yes — `wiki new section <slug>` |
+| Missing stubs | Yes — `llm-wiki new page <slug>` |
+| Empty sections | Yes — `llm-wiki new section <slug>` |
 | Missing connections | No — requires quality judgment |
 | Untyped sources | No — requires type assignment |
 
@@ -242,14 +242,14 @@ Five checks, always run:
 ## 5. CLI Interface
 
 ```
-wiki lint                          # audit + write LINT.md
-wiki lint fix                      # run all enabled auto-fixes (from config)
+llm-wiki lint                          # audit + write LINT.md
+llm-wiki lint fix                      # run all enabled auto-fixes (from config)
              [--only <check>]      # missing-stubs | empty-sections
              [--dry-run]           # show what would be fixed, no commit
              [--wiki <name>]
 ```
 
-`wiki lint fix` reads `[lint]` config to determine which fixes are enabled.
+`llm-wiki lint fix` reads `[lint]` config to determine which fixes are enabled.
 CLI flags override config per-call.
 
 Git commit for fix: `lint(fix): <date> — +N stubs, +M sections`
@@ -271,7 +271,7 @@ async fn wiki_lint(
 
 ## 7. LLM Workflow
 
-`wiki lint` surfaces structural problems — it never auto-resolves them. The
+`llm-wiki lint` surfaces structural problems — it never auto-resolves them. The
 LLM reads the `LintReport` and decides what to act on:
 
 - **Orphans** — search for related concept pages and add links, or decide the
@@ -285,5 +285,5 @@ LLM reads the `LintReport` and decides what to act on:
 - **Untyped sources** — assign the correct source type (`paper`, `article`,
   `documentation`, etc.) and re-ingest
 
-All decisions are delegated to the LLM. The wiki instruct `lint` workflow
+All decisions are delegated to the LLM. The llm-wiki instruct `lint` workflow
 guides the LLM through this sequence step by step.

@@ -1,9 +1,9 @@
 ---
 title: "Page Creation"
-summary: "How to create new wiki pages and sections — wiki new takes a wiki:// URI as target, scaffolds frontmatter, and commits."
+summary: "How to create new wiki pages and sections — llm-wiki new takes a wiki:// URI as target, scaffolds frontmatter, and commits."
 read_when:
   - Adding a new page, bundle, or section to the wiki
-  - Implementing the wiki new subcommand
+  - Implementing the llm-wiki new subcommand
   - Understanding the difference between page creation and ingest
 status: draft
 last_updated: "2025-07-15"
@@ -11,7 +11,7 @@ last_updated: "2025-07-15"
 
 # Page Creation
 
-`wiki new` creates pages and sections inside a target wiki. The target is
+`llm-wiki new` creates pages and sections inside a target wiki. The target is
 always a `wiki://` URI — it encodes both the wiki name and the slug in one
 argument.
 
@@ -24,8 +24,8 @@ argument.
 A Markdown file with frontmatter. Either a flat file or a bundle (page + assets).
 
 ```bash
-wiki new page wiki://research/concepts/mixture-of-experts          # flat page
-wiki new page wiki://research/concepts/mixture-of-experts --bundle # bundle
+llm-wiki new page wiki://research/concepts/mixture-of-experts          # flat page
+llm-wiki new page wiki://research/concepts/mixture-of-experts --bundle # bundle
 ```
 
 Generates a minimal frontmatter scaffold and commits:
@@ -51,7 +51,7 @@ appropriate type after creation.
 A directory that groups related pages, always with an `index.md`.
 
 ```bash
-wiki new section wiki://research/skills
+llm-wiki new section wiki://research/skills
 ```
 
 Creates `skills/index.md` with frontmatter:
@@ -74,8 +74,8 @@ When the wiki name is omitted from the URI, the default wiki
 (`global.default_wiki`) is used:
 
 ```bash
-wiki new page wiki://concepts/mixture-of-experts     # default wiki
-wiki new section wiki://skills                        # default wiki
+llm-wiki new page wiki://concepts/mixture-of-experts     # default wiki
+llm-wiki new section wiki://skills                        # default wiki
 ```
 
 ---
@@ -86,7 +86,7 @@ If a parent section does not exist, it is created automatically with its
 `index.md`:
 
 ```bash
-wiki new page wiki://research/a/b/c
+llm-wiki new page wiki://research/a/b/c
 # wiki://research/a       does not exist → create a/index.md
 # wiki://research/a/b     does not exist → create a/b/index.md
 # create a/b/c.md
@@ -105,7 +105,7 @@ All created files are included in the same commit.
 | Assets | None | Co-located beside `index.md` |
 | When to use | Text-only content | Page has diagrams, configs, scripts |
 
-A flat page can be promoted to a bundle later — `wiki ingest` handles the
+A flat page can be promoted to a bundle later — `llm-wiki ingest` handles the
 `{slug}.md` → `{slug}/index.md` promotion automatically when the first asset
 is co-located. See [asset-ingest.md](asset-ingest.md).
 
@@ -114,11 +114,11 @@ is co-located. See [asset-ingest.md](asset-ingest.md).
 ## 5. CLI Interface
 
 ```
-wiki new page <wiki:// URI>     # flat page with minimal frontmatter
+llm-wiki new page <wiki:// URI>     # flat page with minimal frontmatter
              [--bundle]         # bundle folder + index.md instead
              [--dry-run]
 
-wiki new section <wiki:// URI>  # directory + index.md with frontmatter
+llm-wiki new section <wiki:// URI>  # directory + index.md with frontmatter
                 [--dry-run]
 ```
 
@@ -154,7 +154,7 @@ it directly for subsequent `wiki_read` or `wiki_ingest` calls.
 
 ## 7. Relationship to Ingest
 
-| | `wiki new` | `wiki ingest` |
+| | `llm-wiki new` | `llm-wiki ingest` |
 |---|---|---|
 | Purpose | Create an empty page or section | Validate, commit, and index files in the wiki tree |
 | Input | A `wiki://` URI | A path relative to wiki root |
@@ -164,8 +164,8 @@ it directly for subsequent `wiki_read` or `wiki_ingest` calls.
 Typical authoring flow:
 
 ```bash
-wiki new page wiki://research/concepts/mixture-of-experts
-wiki read wiki://research/concepts/mixture-of-experts   # LLM reads scaffold
+llm-wiki new page wiki://research/concepts/mixture-of-experts
+llm-wiki read wiki://research/concepts/mixture-of-experts   # LLM reads scaffold
 # LLM writes updated content via wiki_write
-wiki ingest concepts/mixture-of-experts.md
+llm-wiki ingest concepts/mixture-of-experts.md
 ```

@@ -62,7 +62,7 @@ types:
 Custom types are additive — they extend the built-in list. The engine
 validates `type` against the combined list (built-in + custom) on ingest,
 according to the `validation.type_strictness` setting in `wiki.toml` or
-`~/.wiki/config.toml`:
+`~/.llm-wiki/config.toml`:
 
 | Strictness | Unknown type behavior |
 |------------|----------------------|
@@ -75,12 +75,12 @@ See [configuration.md](../commands/configuration.md) for the full config referen
 
 ## 3. Search and List Integration
 
-`wiki search` and `wiki list` filter by `type` directly:
+`llm-wiki search` and `llm-wiki list` filter by `type` directly:
 
 ```bash
-wiki search "MoE scaling" --type paper
-wiki list --type documentation
-wiki list --type paper,article          # multiple types
+llm-wiki search "MoE scaling" --type paper
+llm-wiki list --type documentation
+llm-wiki list --type paper,article          # multiple types
 ```
 
 No separate `--classification` flag needed.
@@ -145,5 +145,5 @@ provenance role regardless of which folder they live in. The type field
 carries both the epistemic role (it's a source) and the source nature
 (it's a paper) in one value.
 
-To query "all sources": `wiki list --type paper,article,documentation,clipping,transcript,note,data,book-chapter,thread`
+To query "all sources": `llm-wiki list --type paper,article,documentation,clipping,transcript,note,data,book-chapter,thread`
 or filter by whatever folder convention the wiki uses.

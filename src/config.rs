@@ -273,7 +273,7 @@ fn default_type_strictness() -> String {
 fn default_log_path() -> String {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
     std::path::PathBuf::from(home)
-        .join(".wiki")
+        .join(".llm-wiki")
         .join("logs")
         .to_string_lossy()
         .into()

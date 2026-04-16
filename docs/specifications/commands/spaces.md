@@ -1,30 +1,30 @@
 ---
 title: "Spaces"
-summary: "Manage wiki spaces — list registered wikis, remove entries, and set the default wiki."
+summary: "Manage llm-wiki spaces — list registered wikis, remove entries, and set the default wiki."
 read_when:
   - Implementing or extending the spaces command
   - Listing, removing, or changing the default wiki
-  - Understanding how spaces relate to ~/.wiki/config.toml
+  - Understanding how spaces relate to ~/.llm-wiki/config.toml
 status: draft
 last_updated: "2025-07-15"
 ---
 
 # Spaces
 
-`wiki spaces` manages the wiki spaces registered in `~/.wiki/config.toml`.
+`llm-wiki spaces` manages the llm-wiki spaces registered in `~/.llm-wiki/config.toml`.
 It provides subcommands to list spaces, remove entries, and set the default.
 
 ---
 
 ## 1. Subcommands
 
-### `wiki spaces list`
+### `llm-wiki spaces list`
 
 Prints all registered wikis with their name, path, description, and whether
 they are the current default.
 
 ```bash
-wiki spaces list
+llm-wiki spaces list
 ```
 
 Output:
@@ -40,20 +40,20 @@ Output:
 
 ---
 
-### `wiki spaces remove <name>`
+### `llm-wiki spaces remove <name>`
 
-Removes a wiki entry from `~/.wiki/config.toml`. Refuses if the wiki is the
-current default — set a new default first with `wiki spaces set-default`.
+Removes a wiki entry from `~/.llm-wiki/config.toml`. Refuses if the wiki is the
+current default — set a new default first with `llm-wiki spaces set-default`.
 
 ```bash
-wiki spaces remove work
-wiki spaces remove work --delete   # also delete the local directory
+llm-wiki spaces remove work
+llm-wiki spaces remove work --delete   # also delete the local directory
 ```
 
 Flags:
 
 ```
-wiki spaces remove <name>
+llm-wiki spaces remove <name>
                    [--delete]   # also delete the wiki directory from disk
 ```
 
@@ -69,12 +69,12 @@ Git commit is not made — space changes are local only.
 
 ---
 
-### `wiki spaces set-default <name>`
+### `llm-wiki spaces set-default <name>`
 
-Sets the default wiki. Thin alias for `wiki config set global.default_wiki <name>`.
+Sets the default wiki. Thin alias for `llm-wiki config set global.default_wiki <name>`.
 
 ```bash
-wiki spaces set-default research
+llm-wiki spaces set-default research
 ```
 
 Errors:
@@ -88,7 +88,7 @@ Errors:
 ## 2. MCP Tools
 
 ```rust
-#[tool(description = "List all registered wiki spaces")]
+#[tool(description = "List all registered llm-wiki spaces")]
 async fn wiki_spaces_list(&self) -> Vec<SpaceEntry> { ... }
 
 #[tool(description = "Remove a wiki space")]
@@ -98,7 +98,7 @@ async fn wiki_spaces_remove(
     #[tool(param)] delete: Option<bool>,
 ) -> String { ... }
 
-#[tool(description = "Set the default wiki space — alias for wiki config set global.default_wiki")]
+#[tool(description = "Set the default wiki space — alias for llm-wiki config set global.default_wiki")]
 async fn wiki_spaces_set_default(
     &self,
     #[tool(param)] name: String,

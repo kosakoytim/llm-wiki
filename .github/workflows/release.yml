@@ -58,9 +58,9 @@ jobs:
         run: |
           cd target/${{ matrix.target }}/release
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            7z a ../../../${{ matrix.target }}.zip wiki.exe
+            7z a ../../../${{ matrix.target }}.zip llm-wiki.exe
           else
-            tar czf ../../../${{ matrix.target }}.tar.gz wiki
+            tar czf ../../../${{ matrix.target }}.tar.gz llm-wiki
           fi
 
       - uses: actions/upload-artifact@v7

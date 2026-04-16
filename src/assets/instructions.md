@@ -80,7 +80,7 @@ Run structural checks and fix issues.
 3. Fix: address findings — add links to orphans, create stubs, set proper types.
 4. Commit fixes: `wiki_ingest(<path>)` for each changed file.
 
-Use `wiki lint fix` to auto-create missing stubs and empty section indexes.
+Use `llm-wiki lint fix` to auto-create missing stubs and empty section indexes.
 
 ## crystallize
 

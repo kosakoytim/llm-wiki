@@ -2,7 +2,7 @@
 title: "ACP Transport"
 summary: "How llm-wiki exposes an ACP server for IDE integration — session-oriented, streaming, with instructions injected at initialize."
 read_when:
-  - Implementing wiki serve --acp for Zed or VS Code integration
+  - Implementing llm-wiki serve --acp for Zed or VS Code integration
   - Understanding why ACP adds value over MCP for interactive workflows
   - Designing the ACP session → wiki workflow mapping
 status: draft
@@ -12,7 +12,7 @@ last_updated: "2025-07-15"
 # ACP Transport
 
 ACP (Agent Client Protocol) is a session-oriented, streaming protocol over
-stdio/NDJSON. Adding `wiki serve --acp` makes llm-wiki a first-class IDE
+stdio/NDJSON. Adding `llm-wiki serve --acp` makes llm-wiki a first-class IDE
 agent with zero MCP configuration required.
 
 ---
@@ -43,7 +43,7 @@ User: "ingest this folder"
 | Streaming workflow steps | not visible | streams as events |
 | Session continuity | stateless | named sessions |
 | Cancel mid-workflow | not supported | `cancel` message |
-| Instructions at connect | via `wiki instruct` tool call | injected at `initialize` |
+| Instructions at connect | via `llm-wiki instruct` tool call | injected at `initialize` |
 | Batch pipelines | right tool | wrong tool |
 
 ---
@@ -90,7 +90,7 @@ via `wiki_ingest`.
 
 On `initialize`, the wiki injects `src/instructions.md` as system context.
 The LLM starts every session already knowing the wiki workflows and
-conventions. No separate `wiki instruct` call needed.
+conventions. No separate `llm-wiki instruct` call needed.
 
 ```json
 {
@@ -250,7 +250,7 @@ agent-client-protocol-tokio = "0.1"
 ### 4.2 `Agent` Trait Implementation
 
 `WikiAgent` holds the full spaces config — all registered wikis are accessible
-per session, consistent with `wiki serve` mounting all wikis at startup.
+per session, consistent with `llm-wiki serve` mounting all wikis at startup.
 
 ```rust
 pub struct WikiAgent {
@@ -303,7 +303,7 @@ src/
   "agent_servers": {
     "llm-wiki": {
       "type": "custom",
-      "command": "wiki",
+      "command": "llm-wiki",
       "args": ["serve", "--acp"],
       "env": {}
     }
@@ -320,7 +320,7 @@ default wiki unless `meta.wiki` is set at `newSession`.
 
 - **MCP stdio** — agent pipelines, Claude Code tool calls, batch ingest
 - **MCP SSE** — remote multi-client access (ACP is stdio-only)
-- **`wiki instruct` CLI** — printing instructions outside of an ACP session
+- **`llm-wiki instruct` CLI** — printing instructions outside of an ACP session
 
 ---
 

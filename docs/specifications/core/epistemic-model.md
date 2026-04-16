@@ -64,7 +64,7 @@ said. These are different things:
 - `type: concept` — everything we know about MoE, from all sources
 - `type: paper` — what this one paper said about MoE
 
-Concept pages are the primary retrieval target for `wiki search`. They are
+Concept pages are the primary retrieval target for `llm-wiki search`. They are
 what an LLM reads to answer a question. Source pages are what an LLM reads
 to check provenance.
 
@@ -100,7 +100,7 @@ source type taxonomy.
 
 **What we concluded — reasoning output.**
 
-Saved Q&A results. When an LLM synthesizes an answer from wiki context,
+Saved Q&A results. When an LLM synthesizes an answer from llm-wiki context,
 that synthesis is itself knowledge worth preserving — especially when it
 draws on multiple concept pages.
 
@@ -132,8 +132,8 @@ redundant — the `type` field already carries the distinction.
 
 With type as the axis:
 
-- `wiki list --type concept` works regardless of folder
-- `wiki search --type paper` works regardless of folder
+- `llm-wiki list --type concept` works regardless of folder
+- `llm-wiki search --type paper` works regardless of folder
 - A wiki can organize by domain (`ml/`, `systems/`, `cooking/`) and still
   have clear epistemic distinctions via type
 - The default `schema.md` can *suggest* `concepts/`, `sources/`, `queries/`

@@ -7,7 +7,7 @@ config flag.
 
 ## Current Behavior
 
-Today, `wiki ingest` is an atomic validate → commit → index operation.
+Today, `llm-wiki ingest` is an atomic validate → commit → index operation.
 Every call produces a git commit unless `--dry-run` is passed. There is no
 middle ground — you either commit everything or nothing.
 
@@ -15,10 +15,10 @@ middle ground — you either commit everything or nothing.
 
 | Location | Trigger | Message format |
 |----------|---------|----------------|
-| `src/ingest.rs:81` | `wiki ingest <path>` | `ingest: <path> — +N pages, +M assets` |
-| `src/main.rs:196` | `wiki new page` (CLI) | `new: <uri>` |
-| `src/main.rs:209` | `wiki new section` (CLI) | `new: <uri>` |
-| `src/main.rs:427` | `wiki lint` (CLI) | `lint: <date> — N orphans, N stubs, N empty` |
+| `src/ingest.rs:81` | `llm-wiki ingest <path>` | `ingest: <path> — +N pages, +M assets` |
+| `src/main.rs:196` | `llm-wiki new page` (CLI) | `new: <uri>` |
+| `src/main.rs:209` | `llm-wiki new section` (CLI) | `new: <uri>` |
+| `src/main.rs:427` | `llm-wiki lint` (CLI) | `lint: <date> — N orphans, N stubs, N empty` |
 | `src/mcp/tools.rs:447` | `wiki_new_page` (MCP) | `new: <uri>` |
 | `src/mcp/tools.rs:458` | `wiki_new_section` (MCP) | `new: <uri>` |
 | `src/mcp/tools.rs:580` | `wiki_lint` (MCP) | `lint: <date> — ...` |
@@ -40,15 +40,15 @@ Add `ingest.auto_commit` config flag (default: `true` for backward
 compatibility).
 
 ```toml
-# ~/.wiki/config.toml
+# ~/.llm-wiki/config.toml
 [ingest]
 auto_commit = true   # default: current behavior
 ```
 
 When `auto_commit = false`:
-- `wiki ingest` validates and indexes, but does **not** commit
+- `llm-wiki ingest` validates and indexes, but does **not** commit
 - Files remain staged (or unstaged) in the git working tree
-- The user reviews, then explicitly commits (via `wiki commit` or `git commit`)
+- The user reviews, then explicitly commits (via `llm-wiki commit` or `git commit`)
 
 ---
 
@@ -119,14 +119,14 @@ human approval) can invoke.
 - `handle_new_section` — currently commits unconditionally
 - `handle_lint` — currently commits unconditionally
 
-### 4. New `wiki commit` command
+### 4. New `llm-wiki commit` command
 
 Needed when `auto_commit = false`. Stages and commits whatever is in the
 working tree.
 
 ```
-wiki commit [--message <msg>]     # explicit commit
-wiki commit --all                 # commit all pending changes
+llm-wiki commit [--message <msg>]     # explicit commit
+llm-wiki commit --all                 # commit all pending changes
 ```
 
 MCP tool:
@@ -138,7 +138,7 @@ wiki_commit(message?, wiki?)      # commit pending changes
 This is essentially a thin wrapper around `git::commit`, but it gives the
 human a deliberate approval point.
 
-### 5. `wiki new page` / `wiki new section`
+### 5. `llm-wiki new page` / `llm-wiki new section`
 
 These currently commit unconditionally (both CLI and MCP). With
 `auto_commit = false`, they should create the scaffold but not commit.
@@ -146,7 +146,7 @@ These currently commit unconditionally (both CLI and MCP). With
 The scaffold is useful to review — the user can see the generated frontmatter
 before committing.
 
-### 6. `wiki lint` / `wiki lint fix`
+### 6. `llm-wiki lint` / `llm-wiki lint fix`
 
 Lint writes `LINT.md` and commits. With `auto_commit = false`, it should
 write `LINT.md` but not commit. The user reviews the lint report, then
@@ -183,7 +183,7 @@ With `auto_commit = false`, Session N+1 can still read uncommitted files
 via `wiki_read` (it reads from disk, not from git). But the git history
 won't reflect the changes until the human commits. This means:
 
-- `wiki index status` shows stale (commit hash mismatch)
+- `llm-wiki index status` shows stale (commit hash mismatch)
 - `git log` doesn't show the work
 - If the user discards (`git checkout`), the work is lost
 
@@ -193,7 +193,7 @@ This is the intended behavior — the human is the gatekeeper.
 
 `git::commit` does `index.add_all(["*"])` — it stages everything. With
 `auto_commit = false`, the user might have multiple pending ingests before
-committing. When they finally run `wiki commit`, everything gets committed
+committing. When they finally run `llm-wiki commit`, everything gets committed
 in one batch.
 
 **This is actually better** for the review workflow: the LLM writes 5 pages,
@@ -232,7 +232,7 @@ personal notes wiki keeps `auto_commit = true`.
 | `src/git.rs` | No change (commit logic stays the same) |
 | `src/assets/instructions.md` | Conditional workflow steps for review mode |
 | `docs/specifications/pipelines/ingest.md` | Document both modes |
-| `docs/specifications/commands/cli.md` | Add `wiki commit` command |
+| `docs/specifications/commands/cli.md` | Add `llm-wiki commit` command |
 
 ---
 
@@ -242,7 +242,7 @@ personal notes wiki keeps `auto_commit = true`.
 
 ```
 LLM writes pages → wiki_ingest → committed + indexed → done
-Human writes pages → wiki ingest → committed + indexed → done
+Human writes pages → llm-wiki ingest → committed + indexed → done
 ```
 
 Single-step. No review gate. Fast. Suitable for trusted workflows or
@@ -253,7 +253,7 @@ personal wikis.
 ```
 LLM writes pages → wiki_ingest → validated + indexed (not committed)
 Human reviews working tree (git diff, read pages)
-Human runs: wiki commit --message "reviewed: MoE routing pages"
+Human runs: llm-wiki commit --message "reviewed: MoE routing pages"
 → committed → done
 ```
 
@@ -266,8 +266,8 @@ Consider a `--no-commit` / `--commit` CLI flag that overrides the config
 for a single invocation:
 
 ```bash
-wiki ingest wiki/concepts/moe.md --no-commit    # override auto_commit=true
-wiki ingest wiki/concepts/moe.md --commit        # override auto_commit=false
+llm-wiki ingest wiki/concepts/moe.md --no-commit    # override auto_commit=true
+llm-wiki ingest wiki/concepts/moe.md --commit        # override auto_commit=false
 ```
 
 This gives maximum flexibility without changing the default.

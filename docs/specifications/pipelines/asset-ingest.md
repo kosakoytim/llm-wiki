@@ -45,7 +45,7 @@ See [lifecycle.yaml](./lifecycle.yaml)
 
 ## 2. Direct Folder Ingest
 
-When `wiki ingest <folder>` encounters a non-Markdown file inside the wiki
+When `llm-wiki ingest <folder>` encounters a non-Markdown file inside the wiki
 tree, it is treated as a co-located asset of the folder's page:
 
 ```
@@ -92,7 +92,7 @@ file, then runs `wiki_ingest` on the bundle folder to validate and commit.
 ## 5. Ingest Pipeline
 
 ```
-wiki ingest <path>   (path is inside wiki tree)
+llm-wiki ingest <path>   (path is inside wiki tree)
   │
   ├─ validate .md files → frontmatter checks
   ├─ detect assets → non-.md files in bundle folders

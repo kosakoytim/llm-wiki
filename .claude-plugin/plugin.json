@@ -6,8 +6,8 @@
   "license": "MIT OR Apache-2.0",
   "commands": [],
   "mcpServers": {
-    "wiki": {
-      "command": "wiki",
+    "llm-wiki": {
+      "command": "llm-wiki",
       "args": ["serve"]
     }
   },

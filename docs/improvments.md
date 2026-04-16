@@ -19,32 +19,15 @@ parameter global only should not be updated locally
 - [ ] Replace agentctl-specific post-release steps (homebrew formula `agentctl.rb`, `agent-skills/agentctl`, `asdf-agentctl`, `chocolatey-agentctl`) with llm-wiki equivalents or remove if not applicable yet
 - [ ] Decide which distribution channels apply to llm-wiki (homebrew, asdf, chocolatey, cargo-binstall) and document only those
 
-## target & distribution
-
-Reference: agentctl already has all of the below working — align llm-wiki.
-
-### CI workflow (`ci.yml`)
-- [x] Upgrade actions to v6 (`actions/checkout@v6`)
-- [x] Add `feat/**` branch trigger (agentctl has it, llm-wiki only triggers on `main`)
-- [x] Use `cargo test --locked` instead of `cargo test --verbose`
-- [x] Use `rustsec/audit-check@v2` action instead of manual `cargo install cargo-audit`
-
-### Release workflow (`release.yml`)
-- [x] Add `aarch64-unknown-linux-gnu` target via `cross` (agentctl has it, llm-wiki doesn't)
-- [x] Add `x86_64-pc-windows-msvc` target (agentctl has it, llm-wiki doesn't)
-- [x] Upgrade actions to v6/v7/v8 (`checkout@v6`, `upload-artifact@v7`, `download-artifact@v8`, `action-gh-release@v2`)
-- [x] Add `--locked` flag to release build
-- [x] Package Windows build as `.zip` instead of `.tar.gz`
-- [x] Pass `CARGO_TOKEN` via `--token` flag instead of env var (match agentctl style)
-
-### Cargo.toml
-- [x] Add `rust-version` field (agentctl has `"1.75"`)
-- [x] Add `homepage`, `documentation`, `keywords`, `categories` fields
-- [x] Add `exclude` for `.github/`, `tests/`, `docs/`
-- [x] Add `panic = "abort"` to `[profile.release]` (agentctl has it)
 
 ### Distribution channels (new repos/configs needed)
 - [ ] Homebrew formula in `homebrew-agent` tap (`Formula/llm-wiki.rb` or `Formula/wiki.rb`)
 - [ ] asdf plugin (`asdf-llm-wiki`)
 - [ ] Chocolatey package (`chocolatey-llm-wiki`)
 - [ ] Verify `cargo-binstall` metadata works (already has `[package.metadata.binstall]`)
+
+
+
+## Graph
+
+ graph.type — documented but not yet implemented in set_global_config_value. A

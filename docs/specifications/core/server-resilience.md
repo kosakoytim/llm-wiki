@@ -1,18 +1,18 @@
 ---
 title: "Server Resilience"
-summary: "Failure isolation, transport supervision, and crash recovery guarantees for wiki serve."
+summary: "Failure isolation, transport supervision, and crash recovery guarantees for llm-wiki serve."
 read_when:
   - Implementing or extending transport supervision
   - Understanding what happens when a tool handler or transport crashes
   - Debugging server restarts or unexpected exits
-  - Adding a new transport to wiki serve
+  - Adding a new transport to llm-wiki serve
 status: draft
 last_updated: "2025-07-17"
 ---
 
 # Server Resilience
 
-`wiki serve` is a long-running process. It must tolerate failures in
+`llm-wiki serve` is a long-running process. It must tolerate failures in
 individual tool handlers and transports without crashing the entire
 process. This document specifies the failure isolation boundaries,
 supervision behavior, and recovery guarantees.
@@ -177,12 +177,12 @@ router customization.
 ## 5. Startup Sequence (updated)
 
 ```
-1. Load ~/.wiki/config.toml
+1. Load ~/.llm-wiki/config.toml
 2. Mount all registered wikis
 3. Check index staleness (warn or auto-rebuild)
 4. Start heartbeat task (debug level, 60s interval)
 5. Start stdio MCP server (always)
 6. If --sse: start SSE listener (retry on bind failure)
 7. If --acp: start ACP thread (supervision loop)
-8. Log: "wiki serve — N wikis mounted [stdio] [sse :8080] [acp]"
+8. Log: "llm-wiki serve — N wikis mounted [stdio] [sse :8080] [acp]"
 ```

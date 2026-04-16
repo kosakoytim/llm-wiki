@@ -59,9 +59,9 @@ my-wiki/
 ```
 
 The human drops files in `inbox/` for the LLM to process. The LLM reads
-them, writes pages directly into `wiki/`, and runs `wiki ingest` to validate,
+them, writes pages directly into `wiki/`, and runs `llm-wiki ingest` to validate,
 commit, and index. Originals can be archived to `raw/`. Git history is the
-activity log. Search indexes live in `~/.wiki/indexes/<name>/`, not in the repo.
+activity log. Search indexes live in `~/.llm-wiki/indexes/<name>/`, not in the repo.
 
 `schema.md` is the only configuration the LLM needs. It defines how *this
 wiki instance* is organized — categories, ingest depth, lint rules, domain
@@ -83,7 +83,7 @@ Human drops file in inbox/       LLM processes it
 inbox/my-article.md         →   reads schema.md (knows this wiki's conventions)
                                  reads inbox file
                                  writes pages directly into wiki/ tree
-                                 wiki ingest → validate, commit, index
+                                 llm-wiki ingest → validate, commit, index
 ```
 
 Authors (human or LLM) write directly into the wiki tree. The engine
@@ -138,7 +138,7 @@ either `concepts/mixture-of-experts.md` or `concepts/mixture-of-experts/index.md
 for the default wiki.
 
 **Write + Ingest** — the two-step pattern. The author writes a file into the
-wiki tree, then `wiki ingest` validates, commits, and indexes it. No file
+wiki tree, then `llm-wiki ingest` validates, commits, and indexes it. No file
 movement — the file is already where it belongs.
 
 ---
@@ -168,6 +168,6 @@ enforces nothing about folders inside `wiki/`. See
 ## Multi-Wiki
 
 A single `wiki` process manages multiple git repositories registered in
-`~/.wiki/config.toml`. All CLI commands and MCP tools accept `--wiki <name>`.
+`~/.llm-wiki/config.toml`. All CLI commands and MCP tools accept `--wiki <name>`.
 Pages are addressed as `wiki://<name>/<slug>` or `wiki://<slug>` for the
 default wiki. See [spaces.md](commands/spaces.md).

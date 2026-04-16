@@ -11,7 +11,7 @@ last_updated: "2025-07-15"
 
 # Graph
 
-`wiki graph` builds a directed graph from wiki page links and outputs it in
+`llm-wiki graph` builds a directed graph from wiki page links and outputs it in
 Mermaid or DOT format. The graph is built from frontmatter fields (`sources`,
 `concepts`) and body `[[links]]` via petgraph.
 
@@ -28,7 +28,7 @@ Edges are derived from:
 | Body `[[links]]` | page → linked page |
 
 Only pages that exist in the wiki are included. Broken references (missing
-stubs) are silently skipped — use `wiki lint` to surface them.
+stubs) are silently skipped — use `llm-wiki lint` to surface them.
 
 ---
 
@@ -85,7 +85,7 @@ committed automatically: `graph: <date> — N nodes, M edges`.
 ## 4. CLI Interface
 
 ```
-wiki graph
+llm-wiki graph
           [--format <fmt>]       # mermaid | dot (default: from config)
           [--root <slug|uri>]    # subgraph from this node (default: full graph)
           [--depth <n>]          # hop limit from root or global (default: from config)
@@ -98,13 +98,13 @@ wiki graph
 ### Examples
 
 ```bash
-wiki graph                                          # full graph, mermaid, stdout
-wiki graph --format dot                             # full graph, DOT
-wiki graph --root concepts/mixture-of-experts       # subgraph from MoE, depth 3
-wiki graph --root concepts/mixture-of-experts --depth 2
-wiki graph --type concept,source                    # concepts and sources only
-wiki graph --output graph.md                        # write to file, commit if in wiki root
-wiki graph --output wiki://research/graph           # write to wiki page directly
+llm-wiki graph                                          # full graph, mermaid, stdout
+llm-wiki graph --format dot                             # full graph, DOT
+llm-wiki graph --root concepts/mixture-of-experts       # subgraph from MoE, depth 3
+llm-wiki graph --root concepts/mixture-of-experts --depth 2
+llm-wiki graph --type concept,source                    # concepts and sources only
+llm-wiki graph --output graph.md                        # write to file, commit if in wiki root
+llm-wiki graph --output wiki://research/graph           # write to wiki page directly
 ```
 
 ---

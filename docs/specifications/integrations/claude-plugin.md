@@ -3,7 +3,7 @@ title: "Claude Plugin"
 summary: "How llm-wiki ships as a Claude Code plugin — plugin structure, slash commands, MCP wiring, and skill delegation."
 read_when:
   - Implementing or updating the Claude Code plugin
-  - Understanding how slash commands delegate to wiki instruct
+  - Understanding how slash commands delegate to llm-wiki instruct
   - Configuring the MCP server for Claude Code
 status: draft
 last_updated: "2025-07-15"
@@ -36,7 +36,7 @@ llm-wiki/
     │   └── hooks.json               # (reserved — no hooks in v0.1)
     └── skills/
         └── llm-wiki/
-            └── SKILL.md             # generic skill — delegates to wiki instruct
+            └── SKILL.md             # generic skill — delegates to llm-wiki instruct
 ```
 
 ---
@@ -52,8 +52,8 @@ llm-wiki/
   "license": "MIT OR Apache-2.0",
   "commands": [],
   "mcpServers": {
-    "wiki": {
-      "command": "wiki",
+    "llm-wiki": {
+      "command": "llm-wiki",
       "args": ["serve"]
     }
   },
@@ -86,12 +86,12 @@ llm-wiki/
 
 ## `.mcp.json`
 
-`wiki serve` mounts all registered wikis at startup — no `--wiki` flag needed.
+`llm-wiki serve` mounts all registered wikis at startup — no `--wiki` flag needed.
 
 ```json
 {
-  "wiki": {
-    "command": "wiki",
+  "llm-wiki": {
+    "command": "llm-wiki",
     "args": ["serve"]
   }
 }
@@ -118,7 +118,7 @@ claude plugin add /path/to/llm-wiki
 ## Slash Commands
 
 Each file in `commands/` becomes a `/llm-wiki:<name>` slash command.
-Commands delegate to `SKILL.md` which calls `wiki instruct <workflow>` —
+Commands delegate to `SKILL.md` which calls `llm-wiki instruct <workflow>` —
 the binary is the single source of truth for instructions.
 
 ### `/llm-wiki:help`
@@ -188,7 +188,7 @@ Invoke the llm-wiki skill with the `lint` command, then follow its instructions.
 ```markdown
 ---
 name: llm-wiki
-description: llm-wiki — git-backed wiki engine. Use when ingesting sources, creating pages, researching questions, enriching metadata, or running lint. Delegates to wiki instruct for dynamic instructions.
+description: llm-wiki — git-backed wiki engine. Use when ingesting sources, creating pages, researching questions, enriching metadata, or running lint. Delegates to llm-wiki instruct for dynamic instructions.
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep
 ---
 
@@ -198,7 +198,7 @@ A git-backed wiki engine. The wiki binary contains workflow instructions.
 To get instructions for any operation:
 
 ```bash
-wiki instruct <workflow>
+llm-wiki instruct <workflow>
 ```
 
 Where `<workflow>` is one of: `help`, `init`, `new`, `ingest`, `research`,
@@ -212,7 +212,7 @@ step by step.
 
 ## `src/instructions.md` — Instruction Source
 
-`wiki instruct` and the MCP server `instructions` field both read from
+`llm-wiki instruct` and the MCP server `instructions` field both read from
 `src/instructions.md` embedded at compile time. Plugin files stay thin and
 stable — updating instructions means releasing a new binary, not updating
 plugin files. See [instruct.md](instruct.md).

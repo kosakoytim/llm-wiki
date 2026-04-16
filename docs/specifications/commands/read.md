@@ -11,9 +11,9 @@ last_updated: "2025-07-15"
 
 # Read
 
-`wiki read` fetches the full Markdown content of a single page by slug or
+`llm-wiki read` fetches the full Markdown content of a single page by slug or
 `wiki://` URI. For bundle pages, it can also list and read co-located assets.
-It is the companion to `wiki search` — search returns `Vec<PageRef>`, read
+It is the companion to `llm-wiki search` — search returns `Vec<PageRef>`, read
 fetches the content of one.
 
 ---
@@ -24,15 +24,15 @@ Three forms, all resolved via the spaces config:
 
 ```bash
 # Read page content
-wiki read wiki://research/concepts/mixture-of-experts        # full URI
-wiki read wiki://concepts/mixture-of-experts                 # short URI — default wiki
-wiki read concepts/mixture-of-experts                        # slug — default wiki
+llm-wiki read wiki://research/concepts/mixture-of-experts        # full URI
+llm-wiki read wiki://concepts/mixture-of-experts                 # short URI — default wiki
+llm-wiki read concepts/mixture-of-experts                        # slug — default wiki
 
 # List assets of a bundle page
-wiki read wiki://research/concepts/mixture-of-experts --list-assets
+llm-wiki read wiki://research/concepts/mixture-of-experts --list-assets
 
 # Read a specific asset
-wiki read wiki://research/concepts/mixture-of-experts/moe-routing.png
+llm-wiki read wiki://research/concepts/mixture-of-experts/moe-routing.png
 ```
 
 Resolution order:
@@ -114,10 +114,10 @@ Returns empty list for flat pages (no assets).
 When the URI points to an asset file, returns raw bytes (text or binary):
 
 ```bash
-wiki read wiki://research/concepts/mixture-of-experts/moe-routing.png
+llm-wiki read wiki://research/concepts/mixture-of-experts/moe-routing.png
 # → raw PNG bytes
 
-wiki read wiki://research/skills/semantic-commit/lifecycle.yaml
+llm-wiki read wiki://research/skills/semantic-commit/lifecycle.yaml
 # → raw YAML text
 ```
 
@@ -126,7 +126,7 @@ wiki read wiki://research/skills/semantic-commit/lifecycle.yaml
 ## 4. CLI Interface
 
 ```
-wiki read <slug|uri>
+llm-wiki read <slug|uri>
           [--no-frontmatter]   # strip frontmatter from output (default: from config)
           [--list-assets]      # list co-located assets of a bundle page
           [--wiki <name>]      # override wiki (ignored if URI includes wiki name)
@@ -135,10 +135,10 @@ wiki read <slug|uri>
 ### Examples
 
 ```bash
-wiki read wiki://research/concepts/mixture-of-experts
-wiki read wiki://concepts/mixture-of-experts --no-frontmatter
-wiki read wiki://research/concepts/mixture-of-experts --list-assets
-wiki read wiki://research/concepts/mixture-of-experts/moe-routing.png
+llm-wiki read wiki://research/concepts/mixture-of-experts
+llm-wiki read wiki://concepts/mixture-of-experts --no-frontmatter
+llm-wiki read wiki://research/concepts/mixture-of-experts --list-assets
+llm-wiki read wiki://research/concepts/mixture-of-experts/moe-routing.png
 ```
 
 ---
@@ -165,5 +165,5 @@ async fn wiki_read(
 | Slug not found | `error: page not found: concepts/missing` |
 | Asset not found | `error: asset not found: wiki://research/concepts/mixture-of-experts/missing.png` |
 | Unknown wiki name in URI | `error: unknown wiki: "unknown"` |
-| No default wiki configured | `error: no default wiki set — use --wiki or set global.default_wiki` |
+| No default llm-wiki configured | `error: no default wiki set — use --wiki or set global.default_wiki` |
 | `--list-assets` on flat page | returns empty list, no error |

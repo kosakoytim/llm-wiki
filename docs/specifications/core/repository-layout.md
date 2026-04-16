@@ -37,7 +37,7 @@ my-wiki/                    ← git root
 ```
 
 No hidden directories in the repo. Search indexes and engine state live in
-`~/.wiki/indexes/<name>/`, outside the repository.
+`~/.llm-wiki/indexes/<name>/`, outside the repository.
 
 **Why this structure:**
 
@@ -68,7 +68,7 @@ the `type` field, not by folders.
 Two roots appear throughout the codebase and docs:
 
 **Repository root** — the git repository directory. Contains `wiki.toml`,
-`schema.md`, `inbox/`, `raw/`, and `wiki/`. This is what `wiki init` creates.
+`schema.md`, `inbox/`, `raw/`, and `wiki/`. This is what `llm-wiki init` creates.
 
 **Wiki root** — `<repo>/wiki/`. All page slugs and asset paths are relative
 to it. Passed as `wiki_root: &Path` to all engine functions.
@@ -77,7 +77,7 @@ to it. Passed as `wiki_root: &Path` to all engine functions.
 
 ## Directory Structure
 
-`wiki init` creates the repository skeleton and a default `schema.md`.
+`llm-wiki init` creates the repository skeleton and a default `schema.md`.
 The folder structure inside `wiki/` is defined by `schema.md` — the
 example below uses the default template conventions (`concepts/`, `sources/`,
 `queries/`), but these are suggestions, not engine-enforced categories.
@@ -102,14 +102,14 @@ my-wiki/                            ← git repository root
 │   │   └── switch-transformer-2021.md  (type: paper)
 │   ├── queries/                    ← schema convention, not engine-enforced
 │   │   └── moe-routing-comparison.md   (type: query-result)
-├── LINT.md                         ← committed by wiki lint
+├── LINT.md                         ← committed by llm-wiki lint
 └── .gitignore                      ← empty or user-managed
 ```
 
 Engine state lives outside the repo:
 
 ```
-~/.wiki/
+~/.llm-wiki/
 ├── config.toml                     ← global config + space registry
 └── indexes/
     └── research/                   ← per-space index

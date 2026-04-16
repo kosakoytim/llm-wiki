@@ -221,7 +221,7 @@ strip         = true
 ```toml
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/v{ version }/{ target }.tar.gz"
-bin-dir = "wiki"
+bin-dir = "llm-wiki"
 ```
 
 ### Steps

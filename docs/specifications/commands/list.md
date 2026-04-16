@@ -11,7 +11,7 @@ last_updated: "2025-07-15"
 
 # List
 
-`wiki list` enumerates pages from the tantivy index with optional type
+`llm-wiki list` enumerates pages from the tantivy index with optional type
 filtering and offset-based pagination. No search ranking — results are ordered
 by slug alphabetically.
 
@@ -55,7 +55,7 @@ pub struct PageList {
 ## 3. CLI Interface
 
 ```
-wiki list
+llm-wiki list
          [--type <type>]      # filter by frontmatter type field
          [--status <status>]  # filter by frontmatter status field
          [--page <n>]         # page number, 1-based (default: 1)
@@ -66,10 +66,10 @@ wiki list
 ### Examples
 
 ```bash
-wiki list                              # all pages, page 1
-wiki list --type concept               # concept pages only
-wiki list --type paper --status active
-wiki list --page 2 --page-size 20
+llm-wiki list                              # all pages, page 1
+llm-wiki list --type concept               # concept pages only
+llm-wiki list --type paper --status active
+llm-wiki list --page 2 --page-size 20
 ```
 
 ---

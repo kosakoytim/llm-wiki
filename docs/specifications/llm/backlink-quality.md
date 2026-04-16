@@ -53,7 +53,7 @@ tangential mention) → omit it.
 ### Frontmatter links
 
 Frontmatter links are structural — they define the knowledge graph edges that
-`wiki graph` and `wiki lint` traverse. They should be precise:
+`llm-wiki graph` and `llm-wiki lint` traverse. They should be precise:
 
 - `sources` — only pages that actually contributed claims to this page
 - `concepts` — only concepts this page directly discusses, not every concept
@@ -100,6 +100,6 @@ links over many weak ones.
 
 ## 6. Lint Integration
 
-`wiki lint` detects orphan pages, missing stubs, empty sections, missing
+`llm-wiki lint` detects orphan pages, missing stubs, empty sections, missing
 connection candidates, and untyped sources. See
 [lint.md](../commands/lint.md) for the full `LintReport` definition.

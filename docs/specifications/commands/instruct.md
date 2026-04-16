@@ -11,7 +11,7 @@ last_updated: "2025-07-15"
 
 # Instruct
 
-`wiki instruct` prints workflow instructions embedded in the binary at compile
+`llm-wiki instruct` prints workflow instructions embedded in the binary at compile
 time from `src/instructions.md`. It is the single source of truth for how an
 LLM should use the wiki — plugin files, slash commands, and ACP sessions all
 delegate here.
@@ -23,7 +23,7 @@ delegate here.
 Instructions live in the binary, not in plugin files or external docs. This means:
 
 - Updating instructions = releasing a new binary
-- Plugin files stay as thin one-liners that call `wiki instruct`
+- Plugin files stay as thin one-liners that call `llm-wiki instruct`
 - ACP sessions inject instructions at `initialize` without a separate call
 - MCP server exposes instructions via the `instructions` field on the server handler
 
@@ -64,7 +64,7 @@ Structured as named workflow sections:
 ...
 ```
 
-Each section is self-contained — `wiki instruct ingest` prints only the
+Each section is self-contained — `llm-wiki instruct ingest` prints only the
 `## ingest` section.
 
 ---
@@ -72,8 +72,8 @@ Each section is self-contained — `wiki instruct ingest` prints only the
 ## 3. CLI Interface
 
 ```
-wiki instruct                  # print all instructions
-wiki instruct <workflow>       # print instructions for a specific workflow
+llm-wiki instruct                  # print all instructions
+llm-wiki instruct <workflow>       # print instructions for a specific workflow
 ```
 
 Available workflows:
@@ -91,13 +91,13 @@ Available workflows:
 ### Examples
 
 ```bash
-wiki instruct                  # full instructions
-wiki instruct new              # page/section creation workflow
-wiki instruct ingest           # ingest workflow
-wiki instruct research         # research workflow
-wiki instruct lint             # lint workflow
-wiki instruct crystallize      # crystallize workflow
-wiki instruct frontmatter      # frontmatter authoring reference
+llm-wiki instruct                  # full instructions
+llm-wiki instruct new              # page/section creation workflow
+llm-wiki instruct ingest           # ingest workflow
+llm-wiki instruct research         # research workflow
+llm-wiki instruct lint             # lint workflow
+llm-wiki instruct crystallize      # crystallize workflow
+llm-wiki instruct frontmatter      # frontmatter authoring reference
 ```
 
 ---
@@ -108,7 +108,7 @@ The MCP server exposes instructions via the `instructions` field:
 
 ```rust
 #[tool_handler(
-    name = "wiki",
+    name = "llm-wiki",
     version = "0.1.0",
     instructions = include_str!("instructions.md")
 )]
@@ -116,7 +116,7 @@ impl ServerHandler for WikiServer {}
 ```
 
 The full instructions are sent to the LLM at MCP session start — no explicit
-`wiki instruct` call needed in MCP workflows.
+`llm-wiki instruct` call needed in MCP workflows.
 
 ---
 

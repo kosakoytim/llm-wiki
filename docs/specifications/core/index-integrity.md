@@ -13,7 +13,7 @@ last_updated: "2025-07-17"
 # Index Integrity
 
 The tantivy search index is a local build artifact at
-`~/.wiki/indexes/<name>/`. It can become corrupt (disk failure, partial
+`~/.llm-wiki/indexes/<name>/`. It can become corrupt (disk failure, partial
 write) or incompatible (schema change between versions). This document
 specifies how the engine detects and recovers from these conditions.
 
@@ -35,7 +35,7 @@ All five modes should result in a recoverable state, not an opaque error.
 
 ## 2. state.toml
 
-Written to `~/.wiki/indexes/<name>/state.toml` on every rebuild:
+Written to `~/.llm-wiki/indexes/<name>/state.toml` on every rebuild:
 
 ```toml
 schema_version = 1
@@ -152,7 +152,7 @@ index (e.g. disk full), the error propagates.
 ## 5. Configuration
 
 All index configuration is **global-only**. Indexes are global engine
-infrastructure (`~/.wiki/indexes/`), not per-wiki state.
+infrastructure (`~/.llm-wiki/indexes/`), not per-wiki state.
 
 ```toml
 [index]
@@ -165,7 +165,7 @@ auto_recovery = true    # rebuild corrupt index on open failure
 | `index.auto_rebuild` | global only | `false` | Rebuild stale index before search/list |
 | `index.auto_recovery` | global only | `true` | Rebuild corrupt index on open failure |
 
-`wiki config set index.* --wiki <name>` is rejected with
+`llm-wiki config set index.* --wiki <name>` is rejected with
 `"index.* is a global-only key — use --global"`.
 
 ### Why different defaults
@@ -179,7 +179,7 @@ auto_recovery = true    # rebuild corrupt index on open failure
 
 ## 6. Health Check
 
-`wiki index check` performs a read-only integrity check:
+`llm-wiki index check` performs a read-only integrity check:
 
 1. Parse `state.toml` — exists? valid? schema version current?
 2. Open index — `Index::open()` succeeds?
@@ -199,7 +199,7 @@ pub struct IndexCheckReport {
 }
 ```
 
-Available as CLI (`wiki index check`) and MCP tool (`wiki_index_check`).
+Available as CLI (`llm-wiki index check`) and MCP tool (`wiki_index_check`).
 Does not modify the index or trigger any rebuild.
 
 ---
@@ -224,9 +224,9 @@ All recovery actions are logged:
 
 | Limitation | Reason | Impact |
 |------------|--------|--------|
-| Partial corruption may not be detected | Tantivy can serve queries from remaining healthy segments. Detection depends on which files are damaged. | Silently wrong results possible. Use `wiki index check` to verify. |
+| Partial corruption may not be detected | Tantivy can serve queries from remaining healthy segments. Detection depends on which files are damaged. | Silently wrong results possible. Use `llm-wiki index check` to verify. |
 | Cross-wiki search (`--all`) does not attempt recovery | `search_all` skips broken wikis. Per-wiki `wiki_root`/`repo_root` not available in the cross-wiki path. | Broken wiki silently excluded from results. |
-| ACP research workflow does not attempt recovery | ACP workflow dispatch has no access to resolved config. | User gets "Search failed" message. Manual `wiki index rebuild` needed. |
+| ACP research workflow does not attempt recovery | ACP workflow dispatch has no access to resolved config. | User gets "Search failed" message. Manual `llm-wiki index rebuild` needed. |
 | No concurrent recovery protection | If two MCP calls detect corruption simultaneously, both may attempt delete + rebuild. | Unlikely with single-threaded MCP. Second rebuild is a no-op (fresh index). |
 | Recovery deletes the entire index directory | No incremental repair — full rebuild from wiki markdown. | Rebuild time proportional to wiki size. |
 | `remove_dir_all` failure is non-fatal | Logged at `warn` level. Rebuild proceeds but may fail if corrupt files remain. | Manual cleanup needed if permissions prevent deletion. |

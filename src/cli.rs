@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "wiki", about = "Git-backed wiki engine with MCP server")]
+#[command(name = "llm-wiki", about = "Git-backed wiki engine with MCP server")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -26,7 +26,7 @@ pub enum Commands {
         /// Update space entry if name differs from existing
         #[arg(long)]
         force: bool,
-        /// Set as default_wiki in ~/.wiki/config.toml
+        /// Set as default_wiki in ~/.llm-wiki/config.toml
         #[arg(long)]
         set_default: bool,
     },
@@ -188,7 +188,7 @@ pub enum ConfigAction {
         key: String,
         /// Config value
         value: String,
-        /// Write to ~/.wiki/config.toml
+        /// Write to ~/.llm-wiki/config.toml
         #[arg(long)]
         global: bool,
         /// Write to per-wiki config

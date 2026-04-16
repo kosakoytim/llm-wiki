@@ -50,7 +50,7 @@ Layer 3: Orientation      ← what the wiki currently knows (hub pages)
 `src/instructions.md` is injected at:
 - MCP server start → `instructions` field on the server handler
 - ACP `initialize` → system context
-- Plugin slash commands → `wiki instruct <workflow>`
+- Plugin slash commands → `llm-wiki instruct <workflow>`
 
 No LLM action required. This is handled by the engine.
 

@@ -11,7 +11,7 @@ last_updated: "2025-07-15"
 
 # MCP Clients
 
-Any MCP-compatible client connects to llm-wiki by pointing at `wiki serve`.
+Any MCP-compatible client connects to llm-wiki by pointing at `llm-wiki serve`.
 stdio is always active — no flags needed. The wiki mounts all registered
 wikis at startup and exposes all tools and resources.
 
@@ -27,8 +27,8 @@ Add to `.cursor/mcp.json` at the project or user level:
 ```json
 {
   "mcpServers": {
-    "wiki": {
-      "command": "wiki",
+    "llm-wiki": {
+      "command": "llm-wiki",
       "args": ["serve"]
     }
   }
@@ -47,9 +47,9 @@ Add to `.vscode/mcp.json`:
 ```json
 {
   "servers": {
-    "wiki": {
+    "llm-wiki": {
       "type": "stdio",
-      "command": "wiki",
+      "command": "llm-wiki",
       "args": ["serve"]
     }
   }
@@ -65,8 +65,8 @@ Add to the Windsurf MCP config (global or workspace):
 ```json
 {
   "mcpServers": {
-    "wiki": {
-      "command": "wiki",
+    "llm-wiki": {
+      "command": "llm-wiki",
       "args": ["serve"]
     }
   }
@@ -98,7 +98,7 @@ endpoint: http://localhost:8080/sse
 
 - All clients share the same tool surface — see [features.md](../features.md)
   for the full MCP tools table
-- `wiki serve` with no flags starts stdio only — safe to run as a background
+- `llm-wiki serve` with no flags starts stdio only — safe to run as a background
   process for any client
 - For Claude Code, use the plugin instead — see
   [claude-plugin.md](claude-plugin.md)

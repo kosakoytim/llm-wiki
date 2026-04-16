@@ -107,7 +107,7 @@ wiki. The engine does not merge, rewrite, or reformat frontmatter or body.
 
 ## 4. Files Without Frontmatter
 
-When `wiki ingest` processes a file with no frontmatter block, minimal
+When `llm-wiki ingest` processes a file with no frontmatter block, minimal
 frontmatter is generated:
 
 | Field | Value |

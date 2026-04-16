@@ -24,12 +24,12 @@ wiki [--wiki <name>]    # target a specific wiki (default: global.default_wiki)
 
 ---
 
-## `wiki init`
+## `llm-wiki init`
 
 Initialize a new wiki repository.
 
 ```
-wiki init <path>
+llm-wiki init <path>
           --name <name>              # wiki name — required
           [--description <text>]     # one-line description
           [--force]                  # update space entry if name differs
@@ -40,16 +40,16 @@ See [init.md](init.md).
 
 ---
 
-## `wiki new`
+## `llm-wiki new`
 
 Create pages and sections with scaffolded frontmatter.
 
 ```
-wiki new page <wiki:// URI>     # flat page with minimal frontmatter
+llm-wiki new page <wiki:// URI>     # flat page with minimal frontmatter
              [--bundle]         # bundle folder + index.md instead
              [--dry-run]
 
-wiki new section <wiki:// URI>  # directory + index.md with frontmatter
+llm-wiki new section <wiki:// URI>  # directory + index.md with frontmatter
                 [--dry-run]
 ```
 
@@ -59,12 +59,12 @@ See [page-creation.md](page-creation.md).
 
 ---
 
-## `wiki ingest`
+## `llm-wiki ingest`
 
 Validate, commit, and index files already in the wiki tree.
 
 ```
-wiki ingest <path>                    # file or folder, relative to wiki root
+llm-wiki ingest <path>                    # file or folder, relative to wiki root
             [--dry-run]
 ```
 
@@ -72,12 +72,12 @@ See [ingest.md](ingest.md).
 
 ---
 
-## `wiki read`
+## `llm-wiki read`
 
 Fetch the full content of a single page.
 
 ```
-wiki read <slug|uri>
+llm-wiki read <slug|uri>
           [--no-frontmatter]        # strip frontmatter from output
           [--wiki <name>]
 ```
@@ -88,12 +88,12 @@ for the default wiki). See [read.md](read.md).
 
 ---
 
-## `wiki search`
+## `llm-wiki search`
 
 Full-text BM25 search.
 
 ```
-wiki search "<query>"
+llm-wiki search "<query>"
             [--no-excerpt]          # refs only, no excerpt
             [--top-k <n>]           # default: from config (built-in: 10)
             [--include-sections]    # include section index pages
@@ -107,12 +107,12 @@ See [search.md](search.md).
 
 ---
 
-## `wiki list`
+## `llm-wiki list`
 
 Paginated enumeration of wiki pages.
 
 ```
-wiki list
+llm-wiki list
          [--type <type>]            # filter by frontmatter type
          [--status <status>]        # filter by frontmatter status
          [--page <n>]               # page number, 1-based (default: 1)
@@ -124,16 +124,16 @@ See [list.md](list.md).
 
 ---
 
-## `wiki lint`
+## `llm-wiki lint`
 
 Structural audit of the wiki.
 
 ```
-wiki lint
+llm-wiki lint
          [--wiki <name>]
          [--dry-run]
 
-wiki lint fix
+llm-wiki lint fix
              [--only <check>]       # missing-stubs | empty-sections
              [--dry-run]
              [--wiki <name>]
@@ -144,12 +144,12 @@ Checks: orphan pages, missing stubs, empty sections. Writes and commits
 
 ---
 
-## `wiki graph`
+## `llm-wiki graph`
 
 Generate a concept graph.
 
 ```
-wiki graph
+llm-wiki graph
           [--format <fmt>]          # mermaid | dot (default: from config)
           [--root <slug|uri>]       # subgraph from this node
           [--depth <n>]             # hop limit (default: from config)
@@ -163,16 +163,19 @@ See [graph.md](graph.md).
 
 ---
 
-## `wiki index`
+## `llm-wiki index`
 
 Manage the tantivy search index.
 
 ```
-wiki index rebuild
+llm-wiki index rebuild
                [--wiki <name>]
                [--dry-run]
 
-wiki index status
+llm-wiki index status
+               [--wiki <name>]
+
+llm-wiki index check
                [--wiki <name>]
 ```
 
@@ -180,16 +183,16 @@ See [index.md](index.md).
 
 ---
 
-## `wiki config`
+## `llm-wiki config`
 
 Read and write configuration.
 
 ```
-wiki config get <key>
-wiki config set <key> <value>
-                [--global]          # write to ~/.wiki/config.toml
+llm-wiki config get <key>
+llm-wiki config set <key> <value>
+                [--global]          # write to ~/.llm-wiki/config.toml
                 [--wiki <name>]     # write to per-wiki config
-wiki config list
+llm-wiki config list
              [--global]
              [--wiki <name>]
 ```
@@ -198,29 +201,29 @@ See [configuration.md](configuration.md).
 
 ---
 
-## `wiki spaces`
+## `llm-wiki spaces`
 
 Manage wiki spaces.
 
 ```
-wiki spaces list
+llm-wiki spaces list
 
-wiki spaces remove <name>
+llm-wiki spaces remove <name>
                    [--delete]     # also delete local directory
 
-wiki spaces set-default <name>    # alias for wiki config set global.default_wiki
+llm-wiki spaces set-default <name>    # alias for llm-wiki config set global.default_wiki
 ```
 
 See [spaces.md](spaces.md).
 
 ---
 
-## `wiki serve`
+## `llm-wiki serve`
 
-Start the wiki server.
+Start the llm-wiki server.
 
 ```
-wiki serve
+llm-wiki serve
           [--sse [:<port>]]         # enable SSE transport (default port: from config)
           [--acp]                   # enable ACP transport
           [--dry-run]
@@ -231,13 +234,13 @@ All registered wikis are mounted at startup. See [serve.md](serve.md).
 
 ---
 
-## `wiki instruct`
+## `llm-wiki instruct`
 
 Print embedded workflow instructions.
 
 ```
-wiki instruct                       # all instructions
-wiki instruct <workflow>            # help | ingest | research | lint | crystallize | frontmatter
+llm-wiki instruct                       # all instructions
+llm-wiki instruct <workflow>            # help | ingest | research | lint | crystallize | frontmatter
 ```
 
 See [instruct.md](instruct.md).

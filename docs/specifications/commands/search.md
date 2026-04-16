@@ -1,22 +1,22 @@
 ---
 title: "Search"
-summary: "How wiki search works — single BM25 command with --no-excerpt for reference-only output. Unified PageRef return type. Replaces the separate wiki context command."
+summary: "How llm-wiki search works — single BM25 command with --no-excerpt for reference-only output. Unified PageRef return type. Replaces the separate llm-wiki context command."
 read_when:
   - Implementing or extending the search pipeline
   - Understanding the PageRef return type and output modes
-  - Integrating wiki search into an LLM workflow
-  - Deciding whether wiki context is still needed
+  - Integrating llm-wiki search into an LLM workflow
+  - Deciding whether llm-wiki context is still needed
 status: draft
 last_updated: "2025-07-15"
 ---
 
 # Search
 
-`wiki search` is the single entry point for all retrieval. Full-text BM25
+`llm-wiki search` is the single entry point for all retrieval. Full-text BM25
 search, always returning `Vec<PageRef>`. Excerpts included by default;
 `--no-excerpt` omits them for LLM-oriented workflows.
 
-`wiki context` is superseded by `wiki search --no-excerpt`.
+`llm-wiki context` is superseded by `llm-wiki search --no-excerpt`.
 
 ---
 
@@ -34,7 +34,7 @@ pub struct PageRef {
 ```
 
 `path` is not included — it is machine-local and always derivable from `uri`
-via the spaces config. Use `wiki read <uri>` to fetch the file content.
+via the spaces config. Use `llm-wiki read <uri>` to fetch the file content.
 
 ---
 
@@ -43,8 +43,8 @@ via the spaces config. Use `wiki read <uri>` to fetch the file content.
 ### Default — with excerpt
 
 ```bash
-wiki search "mixture of experts"
-wiki search "MoE scaling 2021"
+llm-wiki search "mixture of experts"
+llm-wiki search "MoE scaling 2021"
 ```
 
 ```
@@ -64,12 +64,12 @@ excerpt: Switch Transformer scales to trillion parameters using sparse MoE...
 ### Reference-only — `--no-excerpt`
 
 ```bash
-wiki search "how does MoE reduce compute?" --no-excerpt
-wiki search "MoE scaling efficiency" --no-excerpt --top-k 3
+llm-wiki search "how does MoE reduce compute?" --no-excerpt
+llm-wiki search "MoE scaling efficiency" --no-excerpt --top-k 3
 ```
 
 Same results, excerpt omitted. Designed for LLM workflows where the LLM
-reviews the reference list and fetches only the pages it needs via `wiki read`.
+reviews the reference list and fetches only the pages it needs via `llm-wiki read`.
 
 ```
 slug:  concepts/mixture-of-experts
@@ -88,7 +88,7 @@ score: 0.87
 ## 3. CLI Interface
 
 ```
-wiki search "<query>"
+llm-wiki search "<query>"
             [--no-excerpt]        # omit excerpts — refs only
             [--top-k <n>]         # default: from config (built-in: 10)
             [--include-sections]  # include section index pages in results
