@@ -152,3 +152,107 @@ fn commit_paths_commits_section_with_nested_pages() {
     assert!(files.iter().any(|f| f.ends_with("concepts/moe/diagram.png")));
     assert!(!files.iter().any(|f| f.ends_with("other.txt")));
 }
+
+#[test]
+fn changed_wiki_files_detects_new_file() {
+    let dir = tempfile::tempdir().unwrap();
+    git::init_repo(dir.path()).unwrap();
+
+    // Initial commit
+    let wiki = dir.path().join("wiki");
+    fs::create_dir_all(&wiki).unwrap();
+    fs::write(wiki.join("init.md"), "---\ntitle: Init\n---\n").unwrap();
+    git::commit(dir.path(), "initial").unwrap();
+
+    // New uncommitted file
+    fs::write(wiki.join("new-page.md"), "---\ntitle: New\n---\n").unwrap();
+
+    let changes = git::changed_wiki_files(dir.path(), &wiki).unwrap();
+    assert!(changes.iter().any(|c| c.path.ends_with("new-page.md")
+        && matches!(c.status, git2::Delta::Untracked | git2::Delta::Added)));
+}
+
+#[test]
+fn changed_wiki_files_detects_modified_file() {
+    let dir = tempfile::tempdir().unwrap();
+    git::init_repo(dir.path()).unwrap();
+
+    let wiki = dir.path().join("wiki");
+    fs::create_dir_all(&wiki).unwrap();
+    fs::write(wiki.join("page.md"), "---\ntitle: Old\n---\n").unwrap();
+    git::commit(dir.path(), "initial").unwrap();
+
+    // Modify
+    fs::write(wiki.join("page.md"), "---\ntitle: New\n---\n").unwrap();
+
+    let changes = git::changed_wiki_files(dir.path(), &wiki).unwrap();
+    assert!(changes.iter().any(|c| c.path.ends_with("page.md")
+        && c.status == git2::Delta::Modified));
+}
+
+#[test]
+fn changed_wiki_files_detects_deleted_file() {
+    let dir = tempfile::tempdir().unwrap();
+    git::init_repo(dir.path()).unwrap();
+
+    let wiki = dir.path().join("wiki");
+    fs::create_dir_all(&wiki).unwrap();
+    fs::write(wiki.join("page.md"), "---\ntitle: Gone\n---\n").unwrap();
+    git::commit(dir.path(), "initial").unwrap();
+
+    fs::remove_file(wiki.join("page.md")).unwrap();
+
+    let changes = git::changed_wiki_files(dir.path(), &wiki).unwrap();
+    assert!(changes.iter().any(|c| c.path.ends_with("page.md")
+        && c.status == git2::Delta::Deleted));
+}
+
+#[test]
+fn changed_wiki_files_ignores_non_md() {
+    let dir = tempfile::tempdir().unwrap();
+    git::init_repo(dir.path()).unwrap();
+
+    let wiki = dir.path().join("wiki");
+    fs::create_dir_all(&wiki).unwrap();
+    fs::write(wiki.join("init.md"), "---\ntitle: Init\n---\n").unwrap();
+    git::commit(dir.path(), "initial").unwrap();
+
+    fs::write(wiki.join("image.png"), "fake-png").unwrap();
+
+    let changes = git::changed_wiki_files(dir.path(), &wiki).unwrap();
+    assert!(!changes.iter().any(|c| c.path.ends_with("image.png")));
+}
+
+#[test]
+fn changed_wiki_files_ignores_files_outside_wiki() {
+    let dir = tempfile::tempdir().unwrap();
+    git::init_repo(dir.path()).unwrap();
+
+    let wiki = dir.path().join("wiki");
+    fs::create_dir_all(&wiki).unwrap();
+    fs::write(wiki.join("init.md"), "---\ntitle: Init\n---\n").unwrap();
+    git::commit(dir.path(), "initial").unwrap();
+
+    fs::write(dir.path().join("README.md"), "# Hello").unwrap();
+
+    let changes = git::changed_wiki_files(dir.path(), &wiki).unwrap();
+    assert!(!changes.iter().any(|c| c.path.ends_with("README.md")));
+}
+
+#[test]
+fn changed_since_commit_detects_gap() {
+    let dir = tempfile::tempdir().unwrap();
+    git::init_repo(dir.path()).unwrap();
+
+    let wiki = dir.path().join("wiki");
+    fs::create_dir_all(&wiki).unwrap();
+    fs::write(wiki.join("page-a.md"), "---\ntitle: A\n---\n").unwrap();
+    let first = git::commit(dir.path(), "first").unwrap();
+
+    fs::write(wiki.join("page-b.md"), "---\ntitle: B\n---\n").unwrap();
+    git::commit(dir.path(), "second").unwrap();
+
+    let changes = git::changed_since_commit(dir.path(), &wiki, &first).unwrap();
+    assert!(changes.iter().any(|c| c.path.ends_with("page-b.md")));
+    assert!(!changes.iter().any(|c| c.path.ends_with("page-a.md")));
+}

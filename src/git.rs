@@ -1,7 +1,7 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
-use git2::{Repository, Signature};
+use git2::{Delta, Repository, Signature};
 
 pub fn init_repo(path: &Path) -> Result<()> {
     Repository::init(path)
@@ -79,4 +79,80 @@ pub fn diff_last(repo_root: &Path) -> Result<Vec<String>> {
     )?;
 
     Ok(files)
+}
+
+// ── Change detection ──────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone)]
+pub struct ChangedFile {
+    pub path: PathBuf,
+    pub status: Delta,
+}
+
+/// Detect changed `.md` files under `wiki/` in the working tree vs HEAD.
+pub fn changed_wiki_files(repo_root: &Path, wiki_root: &Path) -> Result<Vec<ChangedFile>> {
+    let repo = Repository::open(repo_root)
+        .with_context(|| format!("failed to open repo at {}", repo_root.display()))?;
+    let head_tree = repo
+        .head()
+        .and_then(|h| h.peel_to_tree())
+        .context("no HEAD commit")?;
+    let mut opts = git2::DiffOptions::new();
+    opts.include_untracked(true)
+        .recurse_untracked_dirs(true);
+    let diff = repo.diff_tree_to_workdir_with_index(Some(&head_tree), Some(&mut opts))?;
+    let prefix = wiki_root
+        .strip_prefix(repo_root)
+        .unwrap_or(Path::new("wiki"));
+    Ok(collect_md_changes(&diff, prefix))
+}
+
+/// Detect changed `.md` files under `wiki/` between a past commit and HEAD.
+pub fn changed_since_commit(
+    repo_root: &Path,
+    wiki_root: &Path,
+    from_commit: &str,
+) -> Result<Vec<ChangedFile>> {
+    let repo = Repository::open(repo_root)
+        .with_context(|| format!("failed to open repo at {}", repo_root.display()))?;
+    let from_oid = git2::Oid::from_str(from_commit)
+        .with_context(|| format!("invalid commit hash: {from_commit}"))?;
+    let from_tree = repo.find_commit(from_oid)?.tree()?;
+    let head_tree = repo
+        .head()
+        .and_then(|h| h.peel_to_tree())
+        .context("no HEAD commit")?;
+    let diff = repo.diff_tree_to_tree(Some(&from_tree), Some(&head_tree), None)?;
+    let prefix = wiki_root
+        .strip_prefix(repo_root)
+        .unwrap_or(Path::new("wiki"));
+    Ok(collect_md_changes(&diff, prefix))
+}
+
+fn collect_md_changes(diff: &git2::Diff, wiki_prefix: &Path) -> Vec<ChangedFile> {
+    let mut changes = Vec::new();
+    diff.foreach(
+        &mut |delta, _| {
+            let path = delta
+                .new_file()
+                .path()
+                .or_else(|| delta.old_file().path());
+            if let Some(p) = path {
+                if p.starts_with(wiki_prefix)
+                    && p.extension().and_then(|e| e.to_str()) == Some("md")
+                {
+                    changes.push(ChangedFile {
+                        path: p.to_path_buf(),
+                        status: delta.status(),
+                    });
+                }
+            }
+            true
+        },
+        None,
+        None,
+        None,
+    )
+    .ok();
+    changes
 }

@@ -674,3 +674,192 @@ fn index_check_reports_corrupt_index() {
     // state.toml is still valid (we only corrupted the index files)
     assert!(report.state_valid);
 }
+
+// ── collect_changed_files ─────────────────────────────────────────────────────
+
+#[test]
+fn collect_changed_files_merges_both_diffs() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+
+    // Write page A and commit (this moves HEAD past "init")
+    write_page(&wiki_root, "concepts/a.md", &concept_page("A", "body a"));
+    let first = git::commit(dir.path(), "add a").unwrap();
+
+    // Write page B and commit (HEAD moves again)
+    write_page(&wiki_root, "concepts/b.md", &concept_page("B", "body b"));
+    git::commit(dir.path(), "add b").unwrap();
+
+    // Write page C uncommitted (working tree change)
+    write_page(&wiki_root, "concepts/c.md", &concept_page("C", "body c"));
+
+    // collect with last_indexed_commit = first commit
+    // B should come from diff B (first..HEAD), C from diff A (working tree)
+    let changes = collect_changed_files(dir.path(), &wiki_root, Some(&first)).unwrap();
+    assert!(changes.keys().any(|p| p.ends_with("b.md")));
+    assert!(changes.keys().any(|p| p.ends_with("c.md")));
+}
+
+#[test]
+fn collect_changed_files_deduplicates() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+
+    // Write page, commit
+    write_page(&wiki_root, "concepts/dup.md", &concept_page("Dup", "v1"));
+    let first = git::commit(dir.path(), "add dup").unwrap();
+
+    // Modify and commit (appears in diff B)
+    write_page(&wiki_root, "concepts/dup.md", &concept_page("Dup", "v2"));
+    git::commit(dir.path(), "update dup").unwrap();
+
+    // Modify again in working tree (appears in diff A)
+    write_page(&wiki_root, "concepts/dup.md", &concept_page("Dup", "v3"));
+
+    let changes = collect_changed_files(dir.path(), &wiki_root, Some(&first)).unwrap();
+    let dup_entries: Vec<_> = changes.keys().filter(|p| p.ends_with("dup.md")).collect();
+    assert_eq!(dup_entries.len(), 1);
+}
+
+#[test]
+fn collect_changed_files_skips_diff_b_when_no_commit() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+
+    // Uncommitted file only
+    write_page(&wiki_root, "concepts/new.md", &concept_page("New", "body"));
+
+    let changes = collect_changed_files(dir.path(), &wiki_root, None).unwrap();
+    assert!(changes.keys().any(|p| p.ends_with("new.md")));
+}
+
+#[test]
+fn collect_changed_files_graceful_on_missing_commit() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+
+    // Uncommitted file
+    write_page(&wiki_root, "concepts/new.md", &concept_page("New", "body"));
+
+    // Pass a nonexistent commit hash — should not error, just skip diff B
+    let changes = collect_changed_files(
+        dir.path(),
+        &wiki_root,
+        Some("0000000000000000000000000000000000000000"),
+    )
+    .unwrap();
+    assert!(changes.keys().any(|p| p.ends_with("new.md")));
+}
+
+// ── update_index ──────────────────────────────────────────────────────────────
+
+#[test]
+fn update_index_adds_new_page() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    let index_path = dir.path().join("index-store");
+
+    // Build empty index
+    rebuild_index(&wiki_root, &index_path, "test", dir.path()).unwrap();
+
+    // Write a new page (uncommitted)
+    write_page(&wiki_root, "concepts/new.md", &concept_page("NewPage", "new body"));
+
+    let report = update_index(&wiki_root, &index_path, dir.path(), None).unwrap();
+    assert_eq!(report.updated, 1);
+    assert_eq!(report.deleted, 0);
+
+    // Search should find it
+    let opts = SearchOptions::default();
+    let results = search("NewPage", &opts, &index_path, "test", None).unwrap();
+    assert!(results.iter().any(|r| r.title == "NewPage"));
+}
+
+#[test]
+fn update_index_updates_modified_page() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+
+    // Write page and build index
+    write_page(&wiki_root, "concepts/foo.md", &concept_page("OldTitle", "old body"));
+    let index_path = build_index(dir.path(), &wiki_root);
+
+    // Modify the page (uncommitted)
+    write_page(&wiki_root, "concepts/foo.md", &concept_page("NewTitle", "new body"));
+
+    let report = update_index(&wiki_root, &index_path, dir.path(), None).unwrap();
+    assert_eq!(report.updated, 1);
+
+    // Search for new title should find it
+    let opts = SearchOptions::default();
+    let results = search("NewTitle", &opts, &index_path, "test", None).unwrap();
+    assert!(results.iter().any(|r| r.title == "NewTitle"));
+
+    // Search for old title should not
+    let results = search("OldTitle", &opts, &index_path, "test", None).unwrap();
+    assert!(!results.iter().any(|r| r.title == "OldTitle"));
+}
+
+#[test]
+fn update_index_deletes_removed_page() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+
+    write_page(&wiki_root, "concepts/gone.md", &concept_page("Gone", "body"));
+    let index_path = build_index(dir.path(), &wiki_root);
+
+    // Delete the file
+    std::fs::remove_file(wiki_root.join("concepts/gone.md")).unwrap();
+
+    let report = update_index(&wiki_root, &index_path, dir.path(), None).unwrap();
+    assert_eq!(report.deleted, 1);
+
+    // Search should not find it
+    let opts = SearchOptions::default();
+    let results = search("Gone", &opts, &index_path, "test", None).unwrap();
+    assert!(!results.iter().any(|r| r.title == "Gone"));
+}
+
+#[test]
+fn update_index_noop_when_no_changes() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+
+    write_page(&wiki_root, "concepts/foo.md", &concept_page("Foo", "body"));
+    let index_path = build_index(dir.path(), &wiki_root);
+
+    // No changes since last commit
+    let report = update_index(&wiki_root, &index_path, dir.path(), None).unwrap();
+    assert_eq!(report.updated, 0);
+    assert_eq!(report.deleted, 0);
+}
+
+#[test]
+fn update_index_handles_multiple_changes() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+
+    write_page(&wiki_root, "concepts/a.md", &concept_page("A", "body a"));
+    write_page(&wiki_root, "concepts/b.md", &concept_page("B", "body b"));
+    let index_path = build_index(dir.path(), &wiki_root);
+
+    // Add new, modify existing, delete existing
+    write_page(&wiki_root, "concepts/c.md", &concept_page("C", "body c"));
+    write_page(&wiki_root, "concepts/a.md", &concept_page("A-Updated", "new a"));
+    std::fs::remove_file(wiki_root.join("concepts/b.md")).unwrap();
+
+    let report = update_index(&wiki_root, &index_path, dir.path(), None).unwrap();
+    assert_eq!(report.updated, 2); // c added, a modified
+    assert_eq!(report.deleted, 1); // b deleted
+
+    let opts = SearchOptions::default();
+
+    let results = search("C", &opts, &index_path, "test", None).unwrap();
+    assert!(results.iter().any(|r| r.title == "C"));
+
+    let results = search("A-Updated", &opts, &index_path, "test", None).unwrap();
+    assert!(results.iter().any(|r| r.title == "A-Updated"));
+
+    let results = search("B", &opts, &index_path, "test", None).unwrap();
+    assert!(!results.iter().any(|r| r.title == "B"));
+}

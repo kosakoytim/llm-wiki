@@ -487,17 +487,21 @@ fn handle_ingest(server: &WikiServer, args: &Map<String, Value>) -> ToolHandlerR
 
     // Index update after ingest
     if !dry_run {
-        if resolved.index.auto_rebuild {
-            let index_path = WikiServer::index_path_for(&entry.name);
-            let repo_root = PathBuf::from(&entry.path);
-            if let Err(e) = search::rebuild_index(&wiki_root, &index_path, &entry.name, &repo_root)
+        let index_path = WikiServer::index_path_for(&entry.name);
+        let repo_root = PathBuf::from(&entry.path);
+        let last_commit = search::last_indexed_commit(&index_path);
+        if let Err(e) = search::update_index(
+            &wiki_root,
+            &index_path,
+            &repo_root,
+            last_commit.as_deref(),
+        ) {
+            tracing::warn!(error = %e, "incremental index update failed, rebuilding");
+            if let Err(e) =
+                search::rebuild_index(&wiki_root, &index_path, &entry.name, &repo_root)
             {
                 report.warnings.push(format!("index rebuild failed: {e}"));
             }
-        } else {
-            report
-                .warnings
-                .push("search index is stale \u{2014} run wiki_index_rebuild".into());
         }
     }
 
@@ -565,10 +569,16 @@ fn handle_search(server: &WikiServer, args: &Map<String, Value>) -> ToolHandlerR
         if let Ok(status) = search::index_status(&entry.name, &index_path, &repo_root) {
             if status.stale && resolved.index.auto_rebuild {
                 let wiki_root = repo_root.join("wiki");
-                if let Err(e) =
-                    search::rebuild_index(&wiki_root, &index_path, &entry.name, &repo_root)
-                {
-                    tracing::warn!(wiki = %entry.name, error = %e, "search index rebuild failed");
+                let last_commit = search::last_indexed_commit(&index_path);
+                if let Err(e) = search::update_index(
+                    &wiki_root, &index_path, &repo_root, last_commit.as_deref(),
+                ) {
+                    tracing::warn!(wiki = %entry.name, error = %e, "incremental update failed, rebuilding");
+                    if let Err(e) =
+                        search::rebuild_index(&wiki_root, &index_path, &entry.name, &repo_root)
+                    {
+                        tracing::warn!(wiki = %entry.name, error = %e, "search index rebuild failed");
+                    }
                 }
             }
         }
@@ -648,9 +658,16 @@ fn handle_list(server: &WikiServer, args: &Map<String, Value>) -> ToolHandlerRes
     if let Ok(st) = search::index_status(&entry.name, &index_path, &repo_root) {
         if st.stale && resolved.index.auto_rebuild {
             let wiki_root = repo_root.join("wiki");
-            if let Err(e) = search::rebuild_index(&wiki_root, &index_path, &entry.name, &repo_root)
-            {
-                tracing::warn!(wiki = %entry.name, error = %e, "search index rebuild failed");
+            let last_commit = search::last_indexed_commit(&index_path);
+            if let Err(e) = search::update_index(
+                &wiki_root, &index_path, &repo_root, last_commit.as_deref(),
+            ) {
+                tracing::warn!(wiki = %entry.name, error = %e, "incremental update failed, rebuilding");
+                if let Err(e) =
+                    search::rebuild_index(&wiki_root, &index_path, &entry.name, &repo_root)
+                {
+                    tracing::warn!(wiki = %entry.name, error = %e, "search index rebuild failed");
+                }
             }
         }
     }

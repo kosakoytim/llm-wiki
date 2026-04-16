@@ -186,19 +186,32 @@ fn main() -> Result<()> {
             if dry_run {
                 println!("(dry run — nothing committed)");
             } else {
-                println!("Commit: {}", report.commit);
-                if resolved.index.auto_rebuild {
-                    let index_path = index_path_for(wiki_name);
-                    let repo_root = PathBuf::from(&entry.path);
-                    match search::rebuild_index(&wiki_root, &index_path, wiki_name, &repo_root) {
-                        Ok(r) => println!(
-                            "Index rebuilt: {} pages in {}ms",
-                            r.pages_indexed, r.duration_ms
-                        ),
-                        Err(e) => eprintln!("warning: index rebuild failed: {e}"),
+                if !report.commit.is_empty() {
+                    println!("Commit: {}", report.commit);
+                }
+                let index_path = index_path_for(wiki_name);
+                let repo_root = PathBuf::from(&entry.path);
+                let last_commit = search::last_indexed_commit(&index_path);
+                match search::update_index(
+                    &wiki_root,
+                    &index_path,
+                    &repo_root,
+                    last_commit.as_deref(),
+                ) {
+                    Ok(r) => println!(
+                        "Index updated: {} updated, {} deleted",
+                        r.updated, r.deleted
+                    ),
+                    Err(e) => {
+                        eprintln!("warning: incremental index update failed ({e}), rebuilding");
+                        match search::rebuild_index(&wiki_root, &index_path, wiki_name, &repo_root) {
+                            Ok(r) => println!(
+                                "Index rebuilt: {} pages in {}ms",
+                                r.pages_indexed, r.duration_ms
+                            ),
+                            Err(e) => eprintln!("warning: index rebuild failed: {e}"),
+                        }
                     }
-                } else {
-                    eprintln!("warning: search index is stale — run `wiki index rebuild`");
                 }
             }
         }
@@ -282,7 +295,13 @@ fn main() -> Result<()> {
                 if let Ok(status) = search::index_status(wiki_name, &index_path, &repo_root) {
                     if status.stale && resolved.index.auto_rebuild {
                         let wiki_root = repo_root.join("wiki");
-                        search::rebuild_index(&wiki_root, &index_path, wiki_name, &repo_root)?;
+                        let last_commit = search::last_indexed_commit(&index_path);
+                        if let Err(e) = search::update_index(
+                            &wiki_root, &index_path, &repo_root, last_commit.as_deref(),
+                        ) {
+                            eprintln!("warning: incremental index update failed ({e}), rebuilding");
+                            search::rebuild_index(&wiki_root, &index_path, wiki_name, &repo_root)?;
+                        }
                     } else if status.stale {
                         eprintln!("warning: search index is stale — run `wiki index rebuild`");
                     }
@@ -365,7 +384,13 @@ fn main() -> Result<()> {
             if let Ok(st) = search::index_status(wiki_name, &index_path, &repo_root) {
                 if st.stale && resolved.index.auto_rebuild {
                     let wiki_root = repo_root.join("wiki");
-                    search::rebuild_index(&wiki_root, &index_path, wiki_name, &repo_root)?;
+                    let last_commit = search::last_indexed_commit(&index_path);
+                    if let Err(e) = search::update_index(
+                        &wiki_root, &index_path, &repo_root, last_commit.as_deref(),
+                    ) {
+                        eprintln!("warning: incremental index update failed ({e}), rebuilding");
+                        search::rebuild_index(&wiki_root, &index_path, wiki_name, &repo_root)?;
+                    }
                 } else if st.stale {
                     eprintln!("warning: search index is stale — run `wiki index rebuild`");
                 }

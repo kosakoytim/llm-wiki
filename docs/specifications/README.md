@@ -25,6 +25,8 @@ Foundational data model and repository structure.
 | [frontmatter-authoring.md](core/frontmatter-authoring.md) | LLM-facing reference for writing frontmatter |
 | [epistemic-model.md](core/epistemic-model.md) | Why the type taxonomy carries epistemic distinctions |
 | [source-classification.md](core/source-classification.md) | How source types work within the type taxonomy |
+| [index-management.md](core/index-management.md) | How the search index is updated — full rebuild, incremental, delete+insert |
+| [index-integrity.md](core/index-integrity.md) | Corruption detection, auto-recovery, schema versioning |
 
 ---
 

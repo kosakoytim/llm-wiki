@@ -76,6 +76,18 @@ struct IndexState {
     commit: String,
 }
 
+/// Read the last indexed commit hash from state.toml, if available.
+pub fn last_indexed_commit(index_path: &Path) -> Option<String> {
+    let state_path = index_path.join("state.toml");
+    let content = std::fs::read_to_string(&state_path).ok()?;
+    let state: IndexState = toml::from_str(&content).ok()?;
+    if state.commit.is_empty() {
+        None
+    } else {
+        Some(state.commit)
+    }
+}
+
 // ── Search options ────────────────────────────────────────────────────────────
 
 pub struct SearchOptions {
@@ -144,6 +156,33 @@ fn build_schema() -> Schema {
     builder.build()
 }
 
+use crate::frontmatter::PageFrontmatter;
+
+fn build_document(
+    schema: &Schema,
+    slug: &str,
+    fm: &PageFrontmatter,
+    body: &str,
+) -> tantivy::TantivyDocument {
+    let f_slug = schema.get_field("slug").unwrap();
+    let f_title = schema.get_field("title").unwrap();
+    let f_summary = schema.get_field("summary").unwrap();
+    let f_body = schema.get_field("body").unwrap();
+    let f_type = schema.get_field("type").unwrap();
+    let f_status = schema.get_field("status").unwrap();
+    let f_tags = schema.get_field("tags").unwrap();
+
+    let mut doc = tantivy::TantivyDocument::default();
+    doc.add_text(f_slug, slug);
+    doc.add_text(f_title, &fm.title);
+    doc.add_text(f_summary, &fm.summary);
+    doc.add_text(f_body, body);
+    doc.add_text(f_type, &fm.r#type);
+    doc.add_text(f_status, &fm.status);
+    doc.add_text(f_tags, fm.tags.join(" "));
+    doc
+}
+
 /// Try to open the tantivy index. If it fails and recovery context is provided,
 /// delete corrupt files, rebuild, and retry once.
 fn open_index(
@@ -200,14 +239,6 @@ pub fn rebuild_index(
     let mut writer: IndexWriter = index.writer(50_000_000)?;
     writer.delete_all_documents()?;
 
-    let f_slug = schema.get_field("slug").unwrap();
-    let f_title = schema.get_field("title").unwrap();
-    let f_summary = schema.get_field("summary").unwrap();
-    let f_body = schema.get_field("body").unwrap();
-    let f_type = schema.get_field("type").unwrap();
-    let f_status = schema.get_field("status").unwrap();
-    let f_tags = schema.get_field("tags").unwrap();
-
     let mut pages = 0usize;
     let mut sections = 0usize;
 
@@ -229,17 +260,7 @@ pub fn rebuild_index(
             Err(_) => continue,
         };
 
-        let tags_str = fm.tags.join(" ");
-
-        let mut doc = tantivy::TantivyDocument::default();
-        doc.add_text(f_slug, &slug);
-        doc.add_text(f_title, &fm.title);
-        doc.add_text(f_summary, &fm.summary);
-        doc.add_text(f_body, &body);
-        doc.add_text(f_type, &fm.r#type);
-        doc.add_text(f_status, &fm.status);
-        doc.add_text(f_tags, &tags_str);
-        writer.add_document(doc)?;
+        writer.add_document(build_document(&schema, &slug, &fm, &body))?;
 
         if fm.r#type == "section" {
             sections += 1;
@@ -267,6 +288,95 @@ pub fn rebuild_index(
         pages_indexed: pages,
         duration_ms,
     })
+}
+
+// ── collect_changed_files ─────────────────────────────────────────────────────
+
+use std::collections::HashMap;
+use git2::Delta;
+
+/// Collect all changed `.md` files under `wiki/` by merging two git diffs:
+/// - Working tree vs HEAD (uncommitted changes)
+/// - `last_indexed_commit` vs HEAD (committed changes since last index update)
+///
+/// Returns a deduplicated map of path → delta status. Working tree entries
+/// win on duplicates (more recent state).
+pub fn collect_changed_files(
+    repo_root: &Path,
+    wiki_root: &Path,
+    last_indexed_commit: Option<&str>,
+) -> Result<HashMap<PathBuf, Delta>> {
+    let mut changes = HashMap::new();
+
+    // B: last indexed commit vs HEAD (insert first so A wins on duplicates)
+    if let Some(from_hash) = last_indexed_commit {
+        if let Ok(files) = git::changed_since_commit(repo_root, wiki_root, from_hash) {
+            for f in files {
+                changes.insert(f.path, f.status);
+            }
+        }
+    }
+
+    // A: working tree vs HEAD (overwrites B on duplicates)
+    if let Ok(files) = git::changed_wiki_files(repo_root, wiki_root) {
+        for f in files {
+            changes.insert(f.path, f.status);
+        }
+    }
+
+    Ok(changes)
+}
+
+// ── update_index ──────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UpdateReport {
+    pub updated: usize,
+    pub deleted: usize,
+}
+
+pub fn update_index(
+    wiki_root: &Path,
+    index_path: &Path,
+    repo_root: &Path,
+    last_indexed_commit: Option<&str>,
+) -> Result<UpdateReport> {
+    let changes = collect_changed_files(repo_root, wiki_root, last_indexed_commit)?;
+    if changes.is_empty() {
+        return Ok(UpdateReport::default());
+    }
+
+    let schema = build_schema();
+    let search_dir = index_path.join("search-index");
+    let dir = MmapDirectory::open(&search_dir)
+        .with_context(|| format!("failed to open index dir: {}", search_dir.display()))?;
+    let index = Index::open(dir).context("failed to open index")?;
+    let mut writer: IndexWriter = index.writer(50_000_000)?;
+
+    let f_slug = schema.get_field("slug").unwrap();
+    let mut updated = 0;
+    let mut deleted = 0;
+
+    for (path, status) in &changes {
+        let slug = slug_for(path, &PathBuf::from("wiki"));
+
+        writer.delete_term(Term::from_field_text(f_slug, &slug));
+
+        if *status == Delta::Deleted {
+            deleted += 1;
+        } else {
+            let full_path = repo_root.join(path);
+            if let Ok(content) = std::fs::read_to_string(&full_path) {
+                if let Ok((fm, body)) = parse_frontmatter(&content) {
+                    writer.add_document(build_document(&schema, &slug, &fm, &body))?;
+                    updated += 1;
+                }
+            }
+        }
+    }
+
+    writer.commit()?;
+    Ok(UpdateReport { updated, deleted })
 }
 
 // ── index_status ──────────────────────────────────────────────────────────────
