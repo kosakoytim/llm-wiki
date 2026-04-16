@@ -207,15 +207,24 @@ pub async fn serve(
 
     let server = WikiServer::new(global.clone(), config_path)?;
 
-    // Heartbeat task
+    // Heartbeat task with auto-restart
     if global.serve.heartbeat_secs > 0 {
         let interval_secs = global.serve.heartbeat_secs;
         tokio::spawn(async move {
-            let mut interval =
-                tokio::time::interval(std::time::Duration::from_secs(interval_secs as u64));
             loop {
-                interval.tick().await;
-                tracing::debug!("heartbeat");
+                let handle = tokio::spawn(async move {
+                    let mut interval =
+                        tokio::time::interval(std::time::Duration::from_secs(interval_secs as u64));
+                    loop {
+                        interval.tick().await;
+                        tracing::debug!("heartbeat");
+                    }
+                });
+                if let Err(e) = handle.await {
+                    tracing::warn!(error = %e, "heartbeat task crashed, restarting");
+                } else {
+                    break; // clean exit (shouldn't happen, but don't loop)
+                }
             }
         });
     }
