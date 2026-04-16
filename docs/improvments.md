@@ -30,17 +30,17 @@ Reference: agentctl already has all of the below working — align llm-wiki.
 - [x] Use `rustsec/audit-check@v2` action instead of manual `cargo install cargo-audit`
 
 ### Release workflow (`release.yml`)
-- [ ] Add `aarch64-unknown-linux-gnu` target via `cross` (agentctl has it, llm-wiki doesn't)
-- [ ] Add `x86_64-pc-windows-msvc` target (agentctl has it, llm-wiki doesn't)
-- [ ] Upgrade actions to v6/v7/v8 (`checkout@v6`, `upload-artifact@v7`, `download-artifact@v8`, `action-gh-release@v2`)
-- [ ] Add `--locked` flag to release build
-- [ ] Package Windows build as `.zip` instead of `.tar.gz`
-- [ ] Pass `CARGO_TOKEN` via `--token` flag instead of env var (match agentctl style)
+- [x] Add `aarch64-unknown-linux-gnu` target via `cross` (agentctl has it, llm-wiki doesn't)
+- [x] Add `x86_64-pc-windows-msvc` target (agentctl has it, llm-wiki doesn't)
+- [x] Upgrade actions to v6/v7/v8 (`checkout@v6`, `upload-artifact@v7`, `download-artifact@v8`, `action-gh-release@v2`)
+- [x] Add `--locked` flag to release build
+- [x] Package Windows build as `.zip` instead of `.tar.gz`
+- [x] Pass `CARGO_TOKEN` via `--token` flag instead of env var (match agentctl style)
 
 ### Cargo.toml
 - [ ] Add `rust-version` field (agentctl has `"1.75"`)
 - [ ] Add `homepage`, `documentation`, `keywords`, `categories` fields
-- [ ] Add `exclude` for `.github/`, `tests/`, `docs/`, `tests-beta/`, `src-beta/`
+- [ ] Add `exclude` for `.github/`, `tests/`, `docs/`
 - [ ] Add `panic = "abort"` to `[profile.release]` (agentctl has it)
 
 ### Distribution channels (new repos/configs needed)
