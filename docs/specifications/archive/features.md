@@ -236,3 +236,5 @@ See [frontmatter-authoring.md](specifications/frontmatter-authoring.md).
 | `sources` | no | Slugs of source pages |
 | `confidence` | no | `high`, `medium`, or `low` |
 | `claims` | no | Structured claims from enrichment |
+| `owner` | no | Person, team, or agent session responsible for this page |
+| `superseded_by` | no | Slug of the page that replaces this one |

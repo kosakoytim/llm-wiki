@@ -26,51 +26,43 @@ require an LLM to do the actual work.
 
 ---
 
-## 2. Slash Command Dispatch
+## 2. Prefix Command Dispatch
 
-The user (or the IDE) prefixes the prompt with a slash command:
+The user prefixes the prompt with a command:
 
 ```
-/llm-wiki:<workflow> [prompt text]
+llm-wiki:<workflow> [prompt text]
 ```
 
-This matches the Claude plugin convention (`/llm-wiki:ingest`,
-`/llm-wiki:research`, etc.) — consistent across ACP and Claude.
+No slash — avoids IDE interception. Mirrors the Claude plugin convention
+(`/llm-wiki:ingest`) without the slash, since ACP prompts are plain text
+that no IDE will intercept.
 
 ### Parsing
 
 ```rust
-fn parse_workflow(prompt: &str) -> (&str, &str) {
-    if let Some(rest) = prompt.strip_prefix("/llm-wiki:") {
+fn parse_dispatch(prompt: &str) -> (&str, &str) {
+    if let Some(rest) = prompt.strip_prefix("llm-wiki:") {
         let (cmd, text) = rest.split_once(' ').unwrap_or((rest, ""));
         (cmd.trim(), text.trim())
     } else {
-        ("research", prompt)  // default: research
+        // Fallback: keyword matching
+        let workflow = keyword_match(prompt);
+        (workflow, prompt)
     }
 }
 ```
 
 Examples:
-- `/llm-wiki:ingest the semantic-commit skill` → workflow `ingest`, text `the semantic-commit skill`
-- `/llm-wiki:lint` → workflow `lint`, text empty
-- `what do we know about MoE?` → workflow `research`, text `what do we know about MoE?`
+- `llm-wiki:ingest the semantic-commit skill` → workflow `ingest`, text `the semantic-commit skill`
+- `llm-wiki:lint` → workflow `lint`, text empty
+- `llm-wiki:research what is MoE?` → workflow `research`, text `what is MoE?`
+- `what do we know about MoE?` → fallback → keyword match → `research`
 
 ### Fallback
 
-When no slash command is present, fall back to keyword matching as today.
-This preserves backward compatibility — existing prompts still work.
-
-```rust
-fn dispatch_workflow(prompt: &str) -> (&str, &str) {
-    // Try slash command first
-    if prompt.starts_with("/llm-wiki:") {
-        return parse_slash_command(prompt);
-    }
-    // Fallback: keyword matching
-    let workflow = keyword_match(prompt);
-    (workflow, prompt)
-}
-```
+When no `llm-wiki:` prefix is present, fall back to keyword matching as
+today. This preserves backward compatibility — existing prompts still work.
 
 ---
 
@@ -145,16 +137,16 @@ the workflow using MCP tools.
 
 ## 5. Dispatch Table
 
-| Slash command | Type | Action |
-|--------------|------|--------|
-| `/llm-wiki:research` | Engine-executed | `run_research()` |
-| `/llm-wiki:lint` | Engine-executed | `run_lint()` |
-| `/llm-wiki:ingest` | Skill-delegated | Stream `instruct ingest` |
-| `/llm-wiki:crystallize` | Skill-delegated | Stream `instruct crystallize` |
-| `/llm-wiki:new` | Skill-delegated | Stream `instruct new` |
-| `/llm-wiki:commit` | Skill-delegated | Stream commit instructions |
-| `/llm-wiki:help` | Skill-delegated | Stream `instruct help` |
-| `/llm-wiki:frontmatter` | Skill-delegated | Stream `instruct frontmatter` |
+| Command | Type | Action |
+|---------|------|--------|
+| `llm-wiki:research` | Engine-executed | `run_research()` |
+| `llm-wiki:lint` | Engine-executed | `run_lint()` |
+| `llm-wiki:ingest` | Skill-delegated | Stream `instruct ingest` |
+| `llm-wiki:crystallize` | Skill-delegated | Stream `instruct crystallize` |
+| `llm-wiki:new` | Skill-delegated | Stream `instruct new` |
+| `llm-wiki:commit` | Skill-delegated | Stream commit instructions |
+| `llm-wiki:help` | Skill-delegated | Stream `instruct help` |
+| `llm-wiki:frontmatter` | Skill-delegated | Stream `instruct frontmatter` |
 | (no prefix) | Fallback | Keyword match → engine-executed or research default |
 
 ---
@@ -179,14 +171,14 @@ impl WikiAgent {
 
             // Skill-delegated
             "ingest" | "crystallize" | "new" | "help" | "frontmatter" | "commit" => {
-                self.run_skill(session_id, workflow).await
+                self.run_skill(session_id, workflow, text).await
             }
 
             // Unknown
             _ => {
                 self.send_message(
                     session_id,
-                    &format!("Unknown workflow: {workflow}. Use /llm-wiki:help for available commands."),
+                    &format!("Unknown workflow: {workflow}. Use llm-wiki:help for available commands."),
                 ).await?;
                 Ok(acp::PromptResponse::new(acp::StopReason::EndTurn))
             }
@@ -194,7 +186,7 @@ impl WikiAgent {
     }
 
     fn parse_dispatch(prompt: &str) -> (&str, &str) {
-        if let Some(rest) = prompt.strip_prefix("/llm-wiki:") {
+        if let Some(rest) = prompt.strip_prefix("llm-wiki:") {
             let (cmd, text) = rest.split_once(' ').unwrap_or((rest, ""));
             (cmd.trim(), text.trim())
         } else {
@@ -208,6 +200,7 @@ impl WikiAgent {
         &self,
         session_id: &acp::SessionId,
         workflow: &str,
+        target: &str,
     ) -> Result<acp::PromptResponse, acp::Error> {
         let instructions = crate::cli::extract_workflow(
             crate::cli::INSTRUCTIONS,
@@ -216,7 +209,14 @@ impl WikiAgent {
 
         match instructions {
             Some(text) => {
-                self.send_message(session_id, &text).await?;
+                if !target.is_empty() {
+                    self.send_message(
+                        session_id,
+                        &format!("Target: {target}\n\n{text}"),
+                    ).await?;
+                } else {
+                    self.send_message(session_id, &text).await?;
+                }
             }
             None => {
                 self.send_message(
@@ -244,18 +244,21 @@ impl WikiAgent {
 
 ---
 
-## 8. Open Questions
+## 8. Decisions
 
-1. **Should skill-delegated workflows also stream a ToolCall?**
-   E.g. `ToolCall("instruct: ingest", Execute)` before the instructions.
-   Pro: visible in IDE tool call panel. Con: it's not really a tool call.
+1. **No ToolCall for skill-delegated workflows.** The agent streams
+   instructions as `AgentMessageChunk` only. A `ToolCall` would appear in
+   the IDE tool call panel with no real tool execution behind it — misleading.
 
-2. **Should the prompt text be included in skill instructions?**
-   E.g. for `/llm-wiki:ingest the semantic-commit skill`, should the
-   instructions include "Target: the semantic-commit skill"? Or let the
-   IDE's LLM figure it out from context?
+2. **Include prompt text in skill instructions.** When the user provides a
+   target (e.g. `/llm-wiki:ingest the semantic-commit skill`), prepend it
+   to the streamed instructions so the IDE's LLM has the full context:
+   ```
+   Target: the semantic-commit skill
 
-3. **Should `/llm-wiki:research` accept the query in the same message?**
-   Currently research uses the full prompt as the query. With slash
-   commands: `/llm-wiki:research what is MoE?` → query is "what is MoE?".
-   This already works with the proposed parsing.
+   <instruct ingest output>
+   ```
+
+3. **Slash commands accept inline arguments.** `/llm-wiki:research what is MoE?`
+   uses "what is MoE?" as the query. Already handled by `parse_dispatch`
+   splitting on the first space.

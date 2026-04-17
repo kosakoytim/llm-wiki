@@ -2,6 +2,44 @@
 
 ## Roadmap
 
+# Indexation
+blacklist:
+  - Repositories\
+  - 
+index_excludes:
+  - raw\
+  - archive\
+  - ingested\
+
+# Skills
+
+Skill	What it does
+wiki-configure
+Updates the wiki configuration (config.toml) and restarts the server if needed; can be used to add new tools, update tool specs, or change global settings
+
+wiki-ingest	Processes files from raw/ into wiki pages; classifies, synthesises, cross-references, and moves each file to ingested/ as an atomic commit
+
+wiki-query	Answers questions by reading the wiki index and relevant pages; cites sources; can file valuable answers as new wiki pages
+
+wiki-lint	Health-checks the wiki: broken links, orphaned pages, missing index entries, unreferenced sources in ingested/
+
+wiki-integrate	Weaves a new or updated page into the knowledge graph by adding backlinks and index entries
+
+wiki-crystallize	Distils a working session or accumulated conversation into a structured wiki page (biased toward updating existing hubs and the overview.md, as the top level summary of everything that is known). You can teach your LLM to adopt a structure that serves your workflow.
+
+wiki-writer edit ?
+
+wiki-graph 
+
+
+https://github.com/anthropics/claude-plugins-official/tree/main/plugins/example-plugin
+
+-> skill format that replace command
+-> 
+
+https://modelcontextprotocol.io/specification/2025-11-25/server/resources ?
+https://modelcontextprotocol.io/specification/2025-11-25/server/prompts
+
 
 ### 2. ACP streaming
 

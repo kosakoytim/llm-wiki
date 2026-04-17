@@ -7,7 +7,7 @@ read_when:
   - Writing or reviewing the frontmatter section of src/instructions.md
   - Deciding which type to assign to a new page
 status: draft
-last_updated: "2025-07-15"
+last_updated: "2025-07-17"
 ---
 
 # Frontmatter Authoring Guide
@@ -43,6 +43,18 @@ type: concept
 | `status` | Always `active` for new pages. Use `draft` for incomplete work |
 | `last_updated` | Today's ISO 8601 date. Engine overwrites this on ingest anyway |
 | `type` | Page type from the unified taxonomy (see § 2) |
+
+```yaml
+---
+title: "Mixture of Experts"
+summary: "Sparse routing of tokens to expert subnetworks."
+read_when:
+  - "Reasoning about MoE architecture tradeoffs"
+status: active
+last_updated: "2025-07-17"
+type: concept
+---
+```
 
 ---
 
@@ -89,20 +101,6 @@ Classify by the source material's nature, not its topic. A blog post about
 academic research is `article`, not `paper`. A PDF of API docs is
 `documentation`, not `paper`.
 
-### Custom types
-
-Wiki owners can add domain-specific types in `schema.md`:
-
-```yaml
-types:
-  - patent
-  - legal-filing
-  - specification
-  - meeting-notes
-```
-
-Custom types are valid anywhere in the wiki tree. The engine validates against
-the combined list (built-in + custom).
 
 ---
 
@@ -119,6 +117,8 @@ tags: [mixture-of-experts, scaling, transformers]
 sources: [sources/switch-transformer-2021]
 concepts: [concepts/scaling-laws]
 confidence: high
+owner: geronimo
+superseded_by: concepts/sparse-mixture-of-experts
 ```
 
 ---
@@ -216,6 +216,41 @@ benefit from navigating there?
 
 Default to `medium`. Only set `high` or `low` with clear reason.
 
+### `owner`
+
+Who is responsible for this page — a person, team, or agent session ID.
+Useful in multi-contributor wikis to answer "who should review changes
+to this page?" and "who should I ask about this topic?"
+
+```yaml
+owner: geronimo
+```
+
+Optional. Omit for pages with no clear owner. The engine indexes this as
+a keyword field, filterable in `wiki_list`.
+
+### `superseded_by`
+
+Slug of the page that replaces this one. Knowledge evolves — a concept
+page may be split, merged, or replaced by a better synthesis.
+
+```yaml
+superseded_by: concepts/sparse-mixture-of-experts
+```
+
+When set:
+- `wiki_read` surfaces a notice: "This page has been superseded by X"
+- `wiki_graph` renders the edge as a directed supersession link
+- The page remains in the index and git history — no deletion needed
+
+This is how you deprecate without deleting. Use it when a page's content
+has been absorbed into another page or when a concept has been refined
+into a more precise formulation.
+
+Do not set `superseded_by` for minor updates — only when the page is
+effectively replaced. If you're just improving a page, update it in
+place.
+
 ### `claims`
 
 Structured claims extracted from sources:
@@ -243,12 +278,13 @@ tldr: "MoE reduces compute 8x at pre-training scale."
 read_when:
   - "Reasoning about MoE architecture tradeoffs"
 status: active
-last_updated: "2025-07-15"
+last_updated: "2025-07-17"
 type: concept
 tags: [mixture-of-experts, scaling, transformers]
 sources: [sources/switch-transformer-2021, sources/moe-survey-2023]
 concepts: [concepts/scaling-laws]
 confidence: high
+owner: geronimo
 claims:
   - text: "Sparse MoE reduces effective compute 8x"
     confidence: high
@@ -266,7 +302,7 @@ tldr: "Switch routing achieves 4x speedup over dense baselines."
 read_when:
   - "Looking for MoE benchmark results"
 status: active
-last_updated: "2025-07-15"
+last_updated: "2025-07-17"
 type: paper
 tags: [mixture-of-experts, switch-transformer, scaling]
 concepts: [concepts/mixture-of-experts, concepts/scaling-laws]
@@ -288,7 +324,7 @@ tldr: "MoE is becoming the default architecture for large-scale inference."
 read_when:
   - "Understanding MoE industry adoption"
 status: active
-last_updated: "2025-07-15"
+last_updated: "2025-07-17"
 type: article
 tags: [mixture-of-experts, industry, inference]
 concepts: [concepts/mixture-of-experts]
@@ -305,7 +341,7 @@ summary: "Official vLLM docs on configuring MoE model serving."
 read_when:
   - "Setting up MoE inference with vLLM"
 status: active
-last_updated: "2025-07-15"
+last_updated: "2025-07-17"
 type: documentation
 tags: [vllm, moe, inference, configuration]
 concepts: [concepts/mixture-of-experts]
@@ -323,12 +359,29 @@ tldr: "Expert-choice gives best quality/efficiency tradeoff above 10B."
 read_when:
   - "Reviewing MoE routing decisions"
 status: active
-last_updated: "2025-07-15"
+last_updated: "2025-07-17"
 type: query-result
 tags: [moe, routing, inference]
 sources: [sources/switch-transformer-2021]
 concepts: [concepts/mixture-of-experts]
 confidence: medium
+---
+```
+
+### Superseded page
+
+When a page is replaced by a better synthesis:
+
+```yaml
+---
+title: "Mixture of Experts (Original)"
+summary: "Early synthesis of MoE concepts — superseded."
+read_when:
+  - "Historical MoE synthesis"
+status: active
+last_updated: "2025-07-17"
+type: concept
+superseded_by: concepts/sparse-mixture-of-experts
 ---
 ```
 
