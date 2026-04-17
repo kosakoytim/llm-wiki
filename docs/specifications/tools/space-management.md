@@ -73,9 +73,36 @@ MCP tool: `wiki_spaces_list`
 
 ```
 llm-wiki spaces list
+             [--format <fmt>]     # text | json (default: text)
 ```
 
-Output marks the current default with `*`.
+Text (default):
+
+```
+* research    /Users/geronimo/wikis/research    ML research knowledge base
+  work        /Users/geronimo/wikis/work        —
+```
+
+`*` marks the current default.
+
+JSON (`--format json`):
+
+```json
+[
+  {
+    "name": "research",
+    "path": "/Users/geronimo/wikis/research",
+    "description": "ML research knowledge base",
+    "default": true
+  },
+  {
+    "name": "work",
+    "path": "/Users/geronimo/wikis/work",
+    "description": null,
+    "default": false
+  }
+]
+```
 
 ## spaces remove
 

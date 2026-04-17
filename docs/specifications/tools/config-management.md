@@ -33,6 +33,7 @@ llm-wiki config set <key> <value>
 llm-wiki config list
              [--global]
              [--wiki <name>]
+             [--format <fmt>]    # text | json (default: text)
 ```
 
 `set` without `--global` writes to the per-wiki `wiki.toml` of the
@@ -48,8 +49,28 @@ Global-only keys (`index.*`, `serve.*`, `logging.*`) reject
 llm-wiki config get defaults.search_top_k
 llm-wiki config set defaults.search_top_k 15 --global
 llm-wiki config set defaults.page_mode bundle --wiki research
-llm-wiki config set ingest.auto_commit false --wiki research
 llm-wiki config list
-llm-wiki config list --global
-llm-wiki config list --wiki research
+llm-wiki config list --global --format json
+```
+
+### config list output
+
+Text (default):
+
+```
+defaults.search_top_k    = 10
+defaults.page_mode       = flat
+ingest.auto_commit       = true
+validation.type_strictness = loose
+```
+
+JSON (`--format json`):
+
+```json
+{
+  "defaults.search_top_k": 10,
+  "defaults.page_mode": "flat",
+  "ingest.auto_commit": true,
+  "validation.type_strictness": "loose"
+}
 ```

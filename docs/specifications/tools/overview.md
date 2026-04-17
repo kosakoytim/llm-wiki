@@ -10,7 +10,7 @@ last_updated: "2025-07-17"
 
 # Tool Surface Overview
 
-The engine exposes 16 tools. Every tool is available via MCP
+The engine exposes 15 tools. Every tool is available via MCP
 (stdio + SSE), ACP, and CLI. Same tool surface, three transports.
 
 ## Design Principle
@@ -48,15 +48,14 @@ global).
 References:
 - [config-management.md](config-management.md)
 
-### Content operations (5 tools)
+### Content operations (4 tools)
 
 | Tool | Description |
 |------|-------------|
-| `wiki_read` | Read full page content by slug or `wiki://` URI |
-| `wiki_write` | Write a file into the wiki tree |
-| `wiki_new_page` | Create a page with scaffolded frontmatter |
-| `wiki_new_section` | Create a section directory with `index.md` |
-| `wiki_commit` | Commit pending changes to git |
+| `wiki_content_read` | Read full page content by slug or `wiki://` URI |
+| `wiki_content_write` | Write a file into the wiki tree |
+| `wiki_content_new` | Create a page or section with scaffolded frontmatter |
+| `wiki_content_commit` | Commit pending changes to git |
 
 References:
 - [content-operations.md](content-operations.md)

@@ -1,36 +1,38 @@
 ---
 title: "Content Operations"
-summary: "read, write, new page, new section, commit."
+summary: "read, write, new, commit."
 read_when:
   - Reading or writing wiki pages
   - Creating new pages or sections
   - Committing changes to git
-status: ready
+status: proposal
 last_updated: "2025-07-17"
 ---
 
 # Content Operations
 
-| Command       | MCP tool           | Description                                   |
-| ------------- | ------------------ | --------------------------------------------- |
-| `read`        | `wiki_read`        | Read a page or asset by slug or `wiki://` URI |
-| `write`       | `wiki_write`       | Write a file into the wiki tree               |
-| `new page`    | `wiki_new_page`    | Create a page with scaffolded frontmatter     |
-| `new section` | `wiki_new_section` | Create a section with `index.md`              |
-| `commit`      | `wiki_commit`      | Commit pending changes to git                 |
+All content operations live under `llm-wiki content`:
+
+| Subcommand | MCP tool | Description |
+|------------|----------|-------------|
+| `content read` | `wiki_content_read` | Read a page or asset by slug or `wiki://` URI |
+| `content write` | `wiki_content_write` | Write a file into the wiki tree |
+| `content new` | `wiki_content_new` | Create a page or section with scaffolded frontmatter |
+| `content commit` | `wiki_content_commit` | Commit pending changes to git |
 
 None of these tools validate or index — that's what `wiki_ingest` does.
-Only `wiki_commit` and `wiki_ingest` (when `auto_commit` is true) write
-to git.
+Only `content commit` and `wiki_ingest` (when `auto_commit` is true)
+write to git.
 
-## read
+## content read
 
-MCP tool: `wiki_read`
+MCP tool: `wiki_content_read`
 
 ```
-llm-wiki read <slug|uri>
+llm-wiki content read <slug|uri>
           [--no-frontmatter]        # strip frontmatter
           [--list-assets]           # list co-located assets of a bundle
+          [--format <fmt>]          # text | json (default: from config)
           [--wiki <name>]
 ```
 
@@ -41,13 +43,13 @@ full URI (`wiki://research/concepts/moe`). Also reads bundle assets
 When a page has `superseded_by` set, the output includes a notice
 pointing to the replacement.
 
-## write
+## content write
 
-MCP tool: `wiki_write`
+MCP tool: `wiki_content_write`
 
 ```
-llm-wiki write <slug|uri>                # read content from stdin
-          [--file <source>]             # read content from a file
+llm-wiki content write <slug|uri>        # read content from stdin
+          [--file <source>]              # read content from a file
           [--wiki <name>]
 ```
 
@@ -57,50 +59,43 @@ Accepts a bare slug or `wiki://` URI. When a `wiki://` URI is used,
 `--wiki` is ignored. Reads content from stdin by default, or from a
 file with `--file`.
 
-## new page
+## content new
 
-MCP tool: `wiki_new_page`
+MCP tool: `wiki_content_new`
 
 ```
-llm-wiki new page <slug|uri>
-             [--bundle]             # bundle folder + index.md
+llm-wiki content new <slug|uri>
+             [--section]            # create a section instead of a page
+             [--bundle]             # bundle folder + index.md (pages only)
+             [--name <title>]       # page title (default: derived from slug)
+             [--type <type>]        # page type (default: page, or section with --section)
              [--dry-run]
              [--wiki <name>]
 ```
 
-Creates a page with scaffolded frontmatter (title derived from slug,
-type defaults to `page`, status `draft`). Does not commit.
-
-Accepts a bare slug or `wiki://` URI. When a `wiki://` URI is used,
-`--wiki` is ignored.
-
-Missing parent sections are created automatically with their `index.md`.
-
-## new section
-
-MCP tool: `wiki_new_section`
-
-```
-llm-wiki new section <slug|uri>
-                [--dry-run]
-                [--wiki <name>]
-```
-
-Creates a section directory with `index.md` (`type: section`). Does not
+Creates a page by default, or a section with `--section`. Does not
 commit.
 
+Pages get scaffolded frontmatter (title derived from slug, type
+defaults to `page`, status `draft`). Sections get `type: section`.
+
+`--bundle` creates a folder with `index.md` instead of a flat file.
+Only valid for pages, not sections (sections are always directories).
+`--type` is ignored with `--section` (sections are always
+`type: section`).
+
 Accepts a bare slug or `wiki://` URI. When a `wiki://` URI is used,
 `--wiki` is ignored.
 
 Missing parent sections are created automatically with their `index.md`.
 
-## commit
+## content commit
 
-MCP tool: `wiki_commit`
+MCP tool: `wiki_content_commit`
 
 ```
-llm-wiki commit [<slug>...]             # commit specific pages
-            --all                       # commit all pending changes
+llm-wiki content commit [<slug>...]      # commit specific pages
+            --all                        # commit all pending changes
             [-m, --message <msg>]
             [--wiki <name>]
 ```
@@ -111,10 +106,10 @@ or `wiki://` URIs (`wiki://research/concepts/moe`). When a slug is a
 
 When committing by slug, the engine resolves what to stage:
 
-| Slug resolves to     | What gets staged                  |
-| -------------------- | --------------------------------- |
-| Flat page            | That single `.md` file            |
-| Bundle (`index.md`)  | Entire bundle folder recursively  |
+| Slug resolves to | What gets staged |
+|------------------|-----------------|
+| Flat page | That single `.md` file |
+| Bundle (`index.md`) | Entire bundle folder recursively |
 | Section (`index.md`) | Entire section folder recursively |
 
 Default message: `commit: <slug>, <slug>` or `commit: all`.
