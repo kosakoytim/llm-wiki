@@ -5,7 +5,7 @@ read_when:
   - Reading or writing wiki pages
   - Creating new pages or sections
   - Committing changes to git
-status: proposal
+status: ready
 last_updated: "2025-07-17"
 ---
 
