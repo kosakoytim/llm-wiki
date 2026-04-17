@@ -20,6 +20,7 @@ is local to the machine — never committed, never shared.
 ├── indexes/
 │   └── <name>/             ← per-wiki index
 │       ├── search-index/   ← tantivy files
+│       ├── schema.json     ← computed index schema
 │       └── state.toml      ← indexed commit, page count, built date
 └── logs/                   ← rotating log files for llm-wiki serve
 ```
