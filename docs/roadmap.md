@@ -267,7 +267,7 @@ Changes from code-ref:
   (no `[types.*]` until Phase 2)
 - Commit message: `create: <name>` (was `init: <name>`)
 
-### Step 12: engine.rs — Engine composition
+### Step 12: engine.rs — Engine composition ✓
 
 Modules: `src/engine.rs`, `src/lib.rs`
 Pulls from: nothing (new module)
