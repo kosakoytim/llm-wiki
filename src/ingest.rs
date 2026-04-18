@@ -1,0 +1,118 @@
+use std::path::Path;
+
+use anyhow::{bail, Result};
+use serde::{Deserialize, Serialize};
+use walkdir::WalkDir;
+
+use crate::config::ValidationConfig;
+use crate::frontmatter;
+use crate::git;
+use crate::type_registry::TypeRegistry;
+
+/// Normalize line endings: CRLF → LF, lone CR → LF.
+pub fn normalize_line_endings(input: &str) -> String {
+    input.replace("\r\n", "\n").replace('\r', "\n")
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct IngestOptions {
+    pub dry_run: bool,
+    pub auto_commit: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct IngestReport {
+    pub pages_validated: usize,
+    pub assets_found: usize,
+    pub warnings: Vec<String>,
+    pub commit: String,
+}
+
+pub fn ingest(
+    path: &Path,
+    options: &IngestOptions,
+    wiki_root: &Path,
+    registry: &TypeRegistry,
+    validation: &ValidationConfig,
+) -> Result<IngestReport> {
+    let repo_root = wiki_root
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("wiki_root has no parent"))?;
+
+    let full_path = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        wiki_root.join(path)
+    };
+
+    if !full_path.exists() {
+        bail!("path does not exist: {}", full_path.display());
+    }
+
+    // Reject path traversal
+    let canonical = full_path.canonicalize()?;
+    let canonical_root = wiki_root.canonicalize()?;
+    if !canonical.starts_with(&canonical_root) {
+        bail!("path is outside wiki root");
+    }
+
+    let mut report = IngestReport::default();
+
+    if full_path.is_file() {
+        validate_file(&full_path, registry, validation, &mut report)?;
+    } else {
+        for entry in WalkDir::new(&full_path).into_iter().filter_map(|e| e.ok()) {
+            let p = entry.path();
+            if p.is_file() {
+                if p.extension().and_then(|e| e.to_str()) == Some("md") {
+                    validate_file(p, registry, validation, &mut report)?;
+                } else {
+                    report.assets_found += 1;
+                }
+            }
+        }
+    }
+
+    if !options.dry_run && options.auto_commit {
+        let msg = format!(
+            "ingest: {} — +{} pages, +{} assets",
+            path.display(),
+            report.pages_validated,
+            report.assets_found
+        );
+        let hash = git::commit(repo_root, &msg)?;
+        report.commit = hash;
+    }
+
+    Ok(report)
+}
+
+fn validate_file(
+    path: &Path,
+    registry: &TypeRegistry,
+    validation: &ValidationConfig,
+    report: &mut IngestReport,
+) -> Result<()> {
+    let raw = std::fs::read_to_string(path)?;
+    let content = normalize_line_endings(&raw);
+
+    let page = frontmatter::parse(&content);
+
+    // No frontmatter — warn but count as validated
+    if page.frontmatter.is_empty() {
+        report
+            .warnings
+            .push(format!("{}: no frontmatter found", path.display()));
+        report.pages_validated += 1;
+        return Ok(());
+    }
+
+    // Validate base fields via type registry
+    let warnings = registry.validate(&page.frontmatter, &validation.type_strictness)?;
+    for w in warnings {
+        report.warnings.push(format!("{}: {}", path.display(), w));
+    }
+
+    report.pages_validated += 1;
+    Ok(())
+}

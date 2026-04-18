@@ -190,7 +190,7 @@ Commit: `feat: add index_schema.rs + search.rs — tantivy index and BM25 search
 - Add `body_links` field population at index time via
   `links::extract_wikilinks`
 
-### Step 8: ingest.rs — Ingest pipeline
+### Step 8: ingest.rs — Ingest pipeline ✓
 
 Modules: `src/ingest.rs`, `src/lib.rs`
 Pulls from: `code-ref/src/ingest.rs` (structure, normalize_line_endings,
