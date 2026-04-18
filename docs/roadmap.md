@@ -103,7 +103,7 @@ Changes from code-ref:
 - `write_frontmatter` serializes `BTreeMap` back to YAML
 - `generate_minimal_frontmatter` returns `BTreeMap`
 
-### Step 4: git.rs — Git operations
+### Step 4: git.rs — Git operations ✓
 
 Modules: `src/git.rs`, `src/lib.rs`
 Pulls from: `code-ref/src/git.rs` (all functions)
