@@ -8,6 +8,7 @@ pub mod graph;
 pub mod index_schema;
 pub mod ingest;
 pub mod links;
+pub mod markdown;
 pub mod search;
 pub mod slug;
 pub mod type_registry;

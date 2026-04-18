@@ -229,7 +229,7 @@ Changes from code-ref:
 - `GraphFilter` adds `relation: Option<String>` field
 - `--type` filter on nodes, `--relation` filter on edges
 
-### Step 10: markdown.rs — Page I/O
+### Step 10: markdown.rs — Page I/O ✓
 
 Modules: `src/markdown.rs`, `src/lib.rs`
 Pulls from: `code-ref/src/markdown.rs` (read_page, list_assets,
