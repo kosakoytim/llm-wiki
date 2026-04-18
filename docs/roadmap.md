@@ -31,7 +31,7 @@ Phase 1 uses base frontmatter fields only (`title`, `type`, `summary`,
 Schema validation, no `x-index-aliases`, no `x-graph-edges`, no skill
 registry features. The dynamic type system comes in Phase 2.
 
-### Step 0: Codebase reset
+### Step 0: Codebase reset ✓
 
 Modules: `code-ref/` (created), `src/` (emptied), `tests/` (emptied)
 Pulls from: nothing — this is a move
