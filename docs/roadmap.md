@@ -46,7 +46,7 @@ Commit: `chore: move src/ and tests/ to code-ref/, start fresh`
   keep all other deps
 - Verify `cargo check` passes
 
-### Step 1: slug.rs — Slug and WikiUri types
+### Step 1: slug.rs — Slug and WikiUri types ✓
 
 Modules: `src/slug.rs`, `src/lib.rs`
 Pulls from: `code-ref/src/markdown.rs` (slug_for, resolve_slug,
