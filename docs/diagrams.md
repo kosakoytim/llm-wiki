@@ -1,15 +1,17 @@
+---
+title: "Diagrams"
+summary: "Mermaid diagrams for llm-wiki architecture and flows."
+status: active
+last_updated: "2025-07-17"
+---
+
 # Diagrams
 
-Mermaid sources for all llm-wiki diagrams. Intended for inline use in the
-README and specification documents.
-
----
+Mermaid sources for llm-wiki diagrams.
 
 ## 1. Architecture Overview
 
 How the engine sits between humans, LLMs, and the wiki repository.
-
-→ [Overview](specifications/overview.md) · [Serve](specifications/commands/serve.md)
 
 ```mermaid
 graph LR
@@ -45,21 +47,20 @@ graph LR
     raw --> Git
 ```
 
----
+References:
+- [overview.md](overview.md)
+- [server.md](specifications/engine/server.md)
 
 ## 2. Repository Layers
 
-The four-layer structure of a wiki repository.
-
-→ [Repository layout](specifications/core/repository-layout.md)
+The structure of a wiki repository.
 
 ```mermaid
 graph TD
     Root["my-wiki/"]
 
-    Root --> README["README.md — for humans"]
-    Root --> Config["wiki.toml — per-wiki config"]
-    Root --> Schema["schema.md — categories, conventions"]
+    Root --> Config["wiki.toml — config + type registry"]
+    Root --> Schemas["schemas/ — JSON Schema per type"]
     Root --> Inbox["inbox/ — drop zone"]
     Root --> Raw["raw/ — immutable archive"]
     Root --> Wiki["wiki/ — compiled knowledge"]
@@ -73,13 +74,13 @@ graph TD
     style Wiki fill:#cce5ff
 ```
 
----
+References:
+- [wiki-repository-layout.md](specifications/model/wiki-repository-layout.md)
+- [wiki-toml.md](specifications/model/wiki-toml.md)
 
 ## 3. Ingest Pipeline
 
-How content enters the wiki — from source to validated, indexed knowledge.
-
-→ [Ingest](specifications/pipelines/ingest.md)
+How content enters the wiki.
 
 ```mermaid
 flowchart LR
@@ -96,13 +97,12 @@ flowchart LR
     style H fill:#d4edda
 ```
 
----
+References:
+- [ingest-pipeline.md](specifications/engine/ingest-pipeline.md)
 
 ## 4. LLM Ingest Workflow
 
 The full LLM-driven ingest loop via MCP tools.
-
-→ [Ingest](specifications/pipelines/ingest.md) · [MCP clients](specifications/integrations/mcp-clients.md)
 
 ```mermaid
 sequenceDiagram
@@ -113,12 +113,12 @@ sequenceDiagram
     LLM->>Engine: wiki_search("topic")
     Engine-->>LLM: related pages
 
-    LLM->>Engine: wiki_read(hub page)
+    LLM->>Engine: wiki_content_read(hub page)
     Engine-->>LLM: current knowledge
 
-    Note over LLM: reads schema.md<br/>reads inbox file<br/>synthesizes pages
+    Note over LLM: reads wiki.toml<br/>reads inbox file<br/>synthesizes pages
 
-    LLM->>Engine: wiki_write("concepts/topic.md", content)
+    LLM->>Engine: wiki_content_write("concepts/topic.md", content)
     Engine-->>LLM: ok
 
     LLM->>Engine: wiki_ingest("concepts/topic.md")
@@ -126,34 +126,13 @@ sequenceDiagram
     Engine-->>LLM: IngestReport
 ```
 
----
+References:
+- [ingest-pipeline.md](specifications/engine/ingest-pipeline.md)
+- [content-operations.md](specifications/tools/content-operations.md)
 
-## 5. Bootstrap / Crystallize Loop
-
-The compounding loop across sessions — each session starts richer than the last.
-
-→ [Session bootstrap](specifications/llm/session-bootstrap.md) · [Crystallize](specifications/pipelines/crystallize.md)
-
-```mermaid
-flowchart TD
-    B["bootstrap\nread hub pages"] --> W["work\nsearch, read, write"]
-    W --> C["crystallize\ndistil session into pages"]
-    C --> I["wiki ingest\nvalidate, index"]
-    I --> R["hub pages updated\nwiki is richer"]
-    R -->|"next session"| B
-
-    style B fill:#cce5ff
-    style C fill:#ffeeba
-    style R fill:#d4edda
-```
-
----
-
-## 6. Epistemic Model
+## 5. Epistemic Model
 
 The three epistemic roles and how they relate.
-
-→ [Epistemic model](specifications/core/epistemic-model.md) · [Source classification](specifications/core/source-classification.md)
 
 ```mermaid
 graph TD
@@ -173,13 +152,12 @@ graph TD
     style Q fill:#ffeeba
 ```
 
----
+References:
+- [epistemic-model.md](specifications/model/epistemic-model.md)
 
-## 7. RAG vs DKR
+## 6. RAG vs DKR
 
 Side-by-side comparison of the two approaches.
-
-→ [Overview](specifications/overview.md)
 
 ```mermaid
 flowchart LR
@@ -201,3 +179,6 @@ flowchart LR
     style RA fill:#f8d7da
     style DC fill:#d4edda
 ```
+
+References:
+- [overview.md](overview.md)
