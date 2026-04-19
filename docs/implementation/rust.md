@@ -22,9 +22,10 @@ llm-wiki/
 ├── rustfmt.toml
 ├── .tool-versions
 ├── src/
-│   ├── main.rs              # CLI dispatch only
+│   ├── main.rs              # CLI dispatch only — parse args, call ops, format output
 │   ├── lib.rs               # module declarations
 │   ├── cli.rs               # clap subcommand hierarchy
+│   ├── ops.rs               # shared business logic (CLI + MCP call this)
 │   ├── engine.rs            # Engine, EngineManager
 │   ├── config.rs            # GlobalConfig, WikiConfig, resolution
 │   ├── slug.rs              # Slug, WikiUri types and resolution
@@ -41,8 +42,10 @@ llm-wiki/
 │   ├── git.rs               # git2 wrappers (init, commit, diff)
 │   ├── server.rs            # serve command, transport startup
 │   ├── mcp/
-│   │   ├── mod.rs           # ServerHandler impl
-│   │   └── tools.rs         # tool definitions + handlers
+│   │   ├── mod.rs           # McpServer, ServerHandler impl
+│   │   ├── tools.rs         # tool definitions + dispatch
+│   │   ├── handlers.rs      # MCP-specific: parse args, call ops, wrap result
+│   │   └── helpers.rs       # arg helpers, ToolResult, collect_page_uris
 │   └── acp.rs               # WikiAgent, session management
 ├── tests/                   # integration tests
 ├── code-ref/                # previous implementation (reference)

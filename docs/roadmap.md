@@ -338,7 +338,7 @@ New hierarchy per implementation/cli.md:
 `main.rs` dispatches to engine via EngineManager. Pulls logging
 setup from code-ref/src/main.rs.
 
-### Step 14: mcp/ — MCP server with 15 tools
+### Step 14: mcp/ — MCP server with 15 tools ✓
 
 Modules: `src/mcp/mod.rs`, `src/mcp/tools.rs`, `src/lib.rs`
 Pulls from: `code-ref/src/mcp/mod.rs` (ServerHandler impl pattern,
@@ -362,6 +362,93 @@ Changes from code-ref:
 - Keep argument helpers (arg_str, arg_bool, arg_usize, arg_str_req)
 - Keep ToolResult struct and panic isolation
 - Remove prompt_list, get_prompt_content, INSTRUCTIONS injection
+
+### Step 14-bis: ops.rs — Shared business logic
+
+Modules: `src/ops.rs`, `src/mcp/handlers.rs`, `src/main.rs`, `src/lib.rs`
+Pulls from: `src/mcp/handlers.rs` (complete handler logic),
+`src/main.rs` (CLI dispatch logic)
+Tests: existing tests must still pass, add `tests/ops.rs` for
+direct ops function calls
+Commit: `refactor: extract ops.rs — shared business logic for CLI and MCP`
+
+CLI (`main.rs`) and MCP (`mcp/handlers.rs`) duplicate the same
+business logic — wiki resolution, config loading, module calls,
+EngineManager mutations. The only differences are argument parsing
+and output formatting. This step extracts the shared logic into
+`src/ops.rs` so both layers become thin adapters.
+
+See [decisions/ops-module.md](docs/decisions/ops-module.md)
+for the decision record.
+
+#### What moves to ops.rs
+
+Everything between "args parsed" and "result ready to format":
+
+```rust
+// Spaces
+pub fn spaces_create(path, name, desc, force, set_default, config_path) -> Result<CreateReport>
+pub fn spaces_list(config: &GlobalConfig) -> Vec<WikiEntry>
+pub fn spaces_remove(name, delete, config_path) -> Result<()>
+pub fn spaces_set_default(name, config_path) -> Result<()>
+
+// Config
+pub fn config_get(config_path, key) -> Result<String>
+pub fn config_set(config_path, key, value, global, wiki_name) -> Result<String>
+pub fn config_list(config_path, global) -> Result<String>
+
+// Content
+pub fn content_read(engine, uri, wiki_flag, no_frontmatter, list_assets) -> Result<ContentResult>
+pub fn content_write(engine, uri, wiki_flag, content) -> Result<WriteResult>
+pub fn content_new(engine, uri, wiki_flag, section, bundle, name, type_) -> Result<String>
+pub fn content_commit(engine, wiki_name, slugs, message) -> Result<String>
+
+// Search + List
+pub fn search(engine, query, type_, no_excerpt, top_k, include_sections, all, wiki_name) -> Result<Vec<PageRef>>
+pub fn list(engine, type_, status, page, page_size, wiki_name) -> Result<PageList>
+
+// Ingest (read + mutation)
+pub fn ingest(engine, manager, path, dry_run, wiki_name) -> Result<IngestResult>
+
+// Index
+pub fn index_rebuild(manager, wiki_name) -> Result<IndexReport>
+pub fn index_status(engine, wiki_name) -> Result<IndexStatus>
+
+// Graph
+pub fn graph_build(engine, wiki_name, format, root, depth, type_, relation) -> Result<GraphResult>
+```
+
+#### What stays in CLI (`main.rs`)
+
+- Argument parsing (clap structs)
+- `--format` text/json output switching
+- `println!` / `print!` output
+- `init_logging`
+- `EngineManager::build` (CLI builds per invocation)
+
+#### What stays in MCP (`mcp/handlers.rs`)
+
+- Argument parsing (JSON map → arg helpers)
+- `Content::text` wrapping
+- `collect_page_uris` + resource notifications
+- `ToolResult` / panic isolation
+
+#### Migration
+
+1. Create `src/ops.rs` — extract functions from `mcp/handlers.rs`
+   (MCP has the more complete logic, e.g. search recovery context)
+2. Update `src/mcp/handlers.rs` — parse args, call `ops::*`, wrap result
+3. Update `src/main.rs` — parse args, call `ops::*`, format output
+4. Fix CLI divergences as a side effect (search/list missing recovery)
+5. Add `tests/ops.rs` — test ops functions directly
+6. Rewrite `docs/implementation/cli-mcp-comparison.md` as
+   `docs/decisions/ops-module.md` — record the decision and final design
+7. Update `docs/implementation/rust.md` project layout
+
+#### Fixes included
+
+- CLI search and list gain auto-recovery (was missing, MCP had it)
+- Single source of truth for all business logic
 
 ### Step 15: acp.rs — ACP agent
 

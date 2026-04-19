@@ -1,20 +1,12 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::Parser;
 
-use llm_wiki::cli::{
-    Cli, Commands, ConfigAction, ContentAction, IndexAction, SpacesAction,
-};
+use llm_wiki::cli::{Cli, Commands, ConfigAction, ContentAction, IndexAction, SpacesAction};
 use llm_wiki::config;
 use llm_wiki::engine::EngineManager;
-use llm_wiki::git;
-use llm_wiki::graph;
-use llm_wiki::ingest;
-use llm_wiki::markdown;
-use llm_wiki::search;
-use llm_wiki::slug::{resolve_read_target, ReadTarget, Slug, WikiUri};
-use llm_wiki::spaces;
+use llm_wiki::ops;
 
 fn global_config_path() -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
@@ -37,7 +29,7 @@ fn main() -> Result<()> {
                 force,
                 set_default,
             } => {
-                let report = spaces::create(
+                let report = ops::spaces_create(
                     &PathBuf::from(&path),
                     &name,
                     description.as_deref(),
@@ -59,7 +51,7 @@ fn main() -> Result<()> {
             }
             SpacesAction::List { format } => {
                 let global = config::load_global(&config_path)?;
-                let entries = spaces::load_all(&global);
+                let entries = ops::spaces_list(&global);
                 if is_json(&format) {
                     println!("{}", serde_json::to_string_pretty(&entries)?);
                 } else if entries.is_empty() {
@@ -78,14 +70,14 @@ fn main() -> Result<()> {
                 }
             }
             SpacesAction::Remove { name, delete } => {
-                spaces::remove(&name, delete, &config_path)?;
+                ops::spaces_remove(&name, delete, &config_path)?;
                 println!("Removed wiki \"{name}\"");
                 if delete {
                     println!("Deleted wiki directory");
                 }
             }
             SpacesAction::SetDefault { name } => {
-                spaces::set_default_wiki(&name, &config_path)?;
+                ops::spaces_set_default(&name, &config_path)?;
                 println!("Default wiki set to \"{name}\"");
             }
         },
@@ -93,9 +85,8 @@ fn main() -> Result<()> {
         // ── Config ────────────────────────────────────────────────────
         Commands::Config { action } => match action {
             ConfigAction::Get { key } => {
-                let global = config::load_global(&config_path)?;
-                let resolved = config::resolve(&global, &config::WikiConfig::default());
-                println!("{}", config::get_config_value(&resolved, &global, &key));
+                let val = ops::config_get(&config_path, &key)?;
+                println!("{val}");
             }
             ConfigAction::Set {
                 key,
@@ -103,33 +94,20 @@ fn main() -> Result<()> {
                 global: is_global,
                 wiki: wiki_name,
             } => {
-                if is_global {
-                    let mut global = config::load_global(&config_path)?;
-                    config::set_global_config_value(&mut global, &key, &value)?;
-                    config::save_global(&global, &config_path)?;
-                    println!("Set {key} = {value} (global)");
-                } else {
-                    let global = config::load_global(&config_path)?;
-                    let name = wiki_name.as_deref().unwrap_or(&global.global.default_wiki);
-                    let entry = spaces::resolve_name(name, &global)?;
-                    let entry_path = PathBuf::from(&entry.path);
-                    let mut wiki_cfg = config::load_wiki(&entry_path)?;
-                    config::set_wiki_config_value(&mut wiki_cfg, &key, &value)?;
-                    config::save_wiki(&wiki_cfg, &entry_path)?;
-                    println!("Set {key} = {value} (wiki: {name})");
-                }
+                let msg =
+                    ops::config_set(&config_path, &key, &value, is_global, wiki_name.as_deref())?;
+                println!("{msg}");
             }
             ConfigAction::List {
                 global: is_global,
                 wiki: _,
                 format,
             } => {
-                let global = config::load_global(&config_path)?;
                 if is_global {
-                    let s = toml::to_string_pretty(&global)?;
+                    let s = ops::config_list_global(&config_path)?;
                     println!("{s}");
                 } else {
-                    let resolved = config::resolve(&global, &config::WikiConfig::default());
+                    let resolved = ops::config_list_resolved(&config_path)?;
                     if is_json(&format) {
                         println!("{}", serde_json::to_string_pretty(&resolved)?);
                     } else {
@@ -146,38 +124,30 @@ fn main() -> Result<()> {
                 no_frontmatter,
                 list_assets,
             } => {
-                let global = config::load_global(&config_path)?;
-                let (entry, slug) = WikiUri::resolve(&uri, cli.wiki.as_deref(), &global)?;
-                let wiki_root = PathBuf::from(&entry.path).join("wiki");
+                let manager = EngineManager::build(&config_path)?;
+                let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
 
-                if list_assets {
-                    let assets = markdown::list_assets(&slug, &wiki_root)?;
-                    for a in &assets {
-                        println!("{a}");
+                match ops::content_read(
+                    &engine,
+                    &uri,
+                    cli.wiki.as_deref(),
+                    no_frontmatter,
+                    list_assets,
+                )? {
+                    ops::ContentReadResult::Page(content) => print!("{content}"),
+                    ops::ContentReadResult::Assets(assets) => {
+                        for a in &assets {
+                            println!("{a}");
+                        }
                     }
-                } else {
-                    match resolve_read_target(slug.as_str(), &wiki_root)? {
-                        ReadTarget::Page(_) => {
-                            let wiki_cfg = config::load_wiki(&PathBuf::from(&entry.path))?;
-                            let resolved = config::resolve(&global, &wiki_cfg);
-                            let strip = no_frontmatter || resolved.read.no_frontmatter;
-                            let content = markdown::read_page(&slug, &wiki_root, strip)?;
-                            print!("{content}");
-                        }
-                        ReadTarget::Asset(parent_slug, filename) => {
-                            let parent = Slug::try_from(parent_slug.as_str())?;
-                            let bytes = markdown::read_asset(&parent, &filename, &wiki_root)?;
-                            use std::io::Write;
-                            std::io::stdout().write_all(&bytes)?;
-                        }
+                    ops::ContentReadResult::Binary => {
+                        anyhow::bail!(
+                            "asset is binary — access it directly from the filesystem"
+                        );
                     }
                 }
             }
             ContentAction::Write { uri, file } => {
-                let global = config::load_global(&config_path)?;
-                let (entry, _slug) = WikiUri::resolve(&uri, cli.wiki.as_deref(), &global)?;
-                let wiki_root = PathBuf::from(&entry.path).join("wiki");
-
                 let content = if let Some(ref path) = file {
                     std::fs::read_to_string(path)?
                 } else {
@@ -187,16 +157,14 @@ fn main() -> Result<()> {
                     buf
                 };
 
-                // Extract the slug part from the URI for write_page
-                let slug_str = if uri.starts_with("wiki://") {
-                    let parsed = WikiUri::parse(&uri)?;
-                    parsed.slug.as_str().to_string()
-                } else {
-                    uri.clone()
-                };
-
-                let path = markdown::write_page(&slug_str, &content, &wiki_root)?;
-                println!("Wrote {} bytes to {}", content.len(), path.display());
+                let manager = EngineManager::build(&config_path)?;
+                let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
+                let result = ops::content_write(&engine, &uri, cli.wiki.as_deref(), &content)?;
+                println!(
+                    "Wrote {} bytes to {}",
+                    result.bytes_written,
+                    result.path.display()
+                );
             }
             ContentAction::New {
                 uri,
@@ -206,25 +174,35 @@ fn main() -> Result<()> {
                 r#type,
                 dry_run,
             } => {
-                let global = config::load_global(&config_path)?;
-                let (entry, slug) = WikiUri::resolve(&uri, cli.wiki.as_deref(), &global)?;
-                let wiki_root = PathBuf::from(&entry.path).join("wiki");
-
                 if dry_run {
-                    let kind = if section { "section" } else if bundle { "bundle" } else { "flat" };
+                    let manager = EngineManager::build(&config_path)?;
+                    let engine =
+                        manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
+                    let global = &engine.config;
+                    let (entry, slug) =
+                        llm_wiki::slug::WikiUri::resolve(&uri, cli.wiki.as_deref(), global)?;
+                    let kind = if section {
+                        "section"
+                    } else if bundle {
+                        "bundle"
+                    } else {
+                        "flat"
+                    };
                     println!("Would create {kind} at wiki://{}/{slug}", entry.name);
-                } else if section {
-                    let path = markdown::create_section(&slug, &wiki_root)?;
-                    println!("Created: {}", path.display());
                 } else {
-                    let path = markdown::create_page(
-                        &slug,
+                    let manager = EngineManager::build(&config_path)?;
+                    let engine =
+                        manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
+                    let result_uri = ops::content_new(
+                        &engine,
+                        &uri,
+                        cli.wiki.as_deref(),
+                        section,
                         bundle,
-                        &wiki_root,
                         name.as_deref(),
                         r#type.as_deref(),
                     )?;
-                    println!("Created: {}", path.display());
+                    println!("Created: {result_uri}");
                 }
             }
             ContentAction::Commit {
@@ -232,42 +210,19 @@ fn main() -> Result<()> {
                 all,
                 message,
             } => {
-                let global = config::load_global(&config_path)?;
-                let wiki_name = cli.wiki.as_deref().unwrap_or(&global.global.default_wiki);
-                let entry = spaces::resolve_name(wiki_name, &global)?;
-                let repo_root = PathBuf::from(&entry.path);
-                let wiki_root = repo_root.join("wiki");
+                let manager = EngineManager::build(&config_path)?;
+                let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
+                let wiki_name = engine
+                    .resolve_wiki_name(cli.wiki.as_deref())
+                    .to_string();
 
-                if slugs.is_empty() && !all {
-                    anyhow::bail!("specify slugs or --all");
-                }
-
-                let hash = if all {
-                    let msg = message.unwrap_or_else(|| "commit: all".into());
-                    git::commit(&repo_root, &msg)?
-                } else {
-                    let mut paths = Vec::new();
-                    for s in &slugs {
-                        let slug = Slug::try_from(s.as_str())?;
-                        let resolved = slug.resolve(&wiki_root)?;
-                        if resolved.file_name() == Some(std::ffi::OsStr::new("index.md")) {
-                            let bundle_dir = resolved.parent().unwrap();
-                            for entry in walkdir::WalkDir::new(bundle_dir)
-                                .into_iter()
-                                .filter_map(|e| e.ok())
-                            {
-                                if entry.path().is_file() {
-                                    paths.push(entry.path().to_path_buf());
-                                }
-                            }
-                        } else {
-                            paths.push(resolved);
-                        }
-                    }
-                    let path_refs: Vec<&Path> = paths.iter().map(|p| p.as_path()).collect();
-                    let msg = message.unwrap_or_else(|| format!("commit: {}", slugs.join(", ")));
-                    git::commit_paths(&repo_root, &path_refs, &msg)?
-                };
+                let hash = ops::content_commit(
+                    &engine,
+                    &wiki_name,
+                    &slugs,
+                    all,
+                    message.as_deref(),
+                )?;
 
                 if hash.is_empty() {
                     println!("Nothing to commit");
@@ -290,33 +245,19 @@ fn main() -> Result<()> {
             let manager = EngineManager::build(&config_path)?;
             let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
             let wiki_name = engine.resolve_wiki_name(cli.wiki.as_deref());
-            let space = engine.space(wiki_name)?;
-            let resolved = space.resolved_config(&engine.config);
 
-            let opts = search::SearchOptions {
-                no_excerpt,
-                include_sections,
-                top_k: top_k.unwrap_or(resolved.defaults.search_top_k as usize),
-                r#type,
-            };
-
-            let results = if all {
-                let wikis: Vec<(String, PathBuf)> = engine
-                    .spaces
-                    .values()
-                    .map(|s| (s.name.clone(), s.index_path.clone()))
-                    .collect();
-                search::search_all(&query, &opts, &wikis, &space.schema)?
-            } else {
-                search::search(
-                    &query,
-                    &opts,
-                    &space.index_path,
-                    wiki_name,
-                    &space.schema,
-                    None,
-                )?
-            };
+            let results = ops::search(
+                &engine,
+                wiki_name,
+                &ops::SearchParams {
+                    query: &query,
+                    type_filter: r#type.as_deref(),
+                    no_excerpt,
+                    top_k,
+                    include_sections,
+                    all,
+                },
+            )?;
 
             if is_json(&format) {
                 println!("{}", serde_json::to_string_pretty(&results)?);
@@ -345,16 +286,15 @@ fn main() -> Result<()> {
             let manager = EngineManager::build(&config_path)?;
             let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
             let wiki_name = engine.resolve_wiki_name(cli.wiki.as_deref());
-            let space = engine.space(wiki_name)?;
-            let resolved = space.resolved_config(&engine.config);
 
-            let opts = search::ListOptions {
-                r#type,
-                status,
+            let result = ops::list(
+                &engine,
+                wiki_name,
+                r#type.as_deref(),
+                status.as_deref(),
                 page,
-                page_size: page_size.unwrap_or(resolved.defaults.list_page_size as usize),
-            };
-            let result = search::list(&opts, &space.index_path, wiki_name, &space.schema, None)?;
+                page_size,
+            )?;
 
             if is_json(&format) {
                 println!("{}", serde_json::to_string_pretty(&result)?);
@@ -381,56 +321,30 @@ fn main() -> Result<()> {
             format,
         } => {
             let manager = EngineManager::build(&config_path)?;
-            let wiki_name = {
+            let report = {
                 let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
-                engine.resolve_wiki_name(cli.wiki.as_deref()).to_string()
+                let wiki_name = engine
+                    .resolve_wiki_name(cli.wiki.as_deref())
+                    .to_string();
+                ops::ingest(&engine, &manager, &path, dry_run, &wiki_name)?
             };
-            {
-                let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
-                let space = engine.space(&wiki_name)?;
-                let resolved = space.resolved_config(&engine.config);
 
-                let opts = ingest::IngestOptions {
-                    dry_run,
-                    auto_commit: resolved.ingest.auto_commit,
-                };
-                let report = ingest::ingest(
-                    std::path::Path::new(&path),
-                    &opts,
-                    &space.wiki_root,
-                    &engine.type_registry,
-                    &resolved.validation,
-                )?;
-
-                if is_json(&format) {
-                    println!("{}", serde_json::to_string_pretty(&report)?);
-                } else {
-                    println!(
-                        "Ingested: {} pages, {} assets, {} warnings",
-                        report.pages_validated,
-                        report.assets_found,
-                        report.warnings.len()
-                    );
-                    for w in &report.warnings {
-                        println!("  warn: {w}");
-                    }
-                    if dry_run {
-                        println!("(dry run — nothing committed)");
-                    } else if !report.commit.is_empty() {
-                        println!("Commit: {}", report.commit);
-                    }
+            if is_json(&format) {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                println!(
+                    "Ingested: {} pages, {} assets, {} warnings",
+                    report.pages_validated,
+                    report.assets_found,
+                    report.warnings.len()
+                );
+                for w in &report.warnings {
+                    println!("  warn: {w}");
                 }
-            }
-
-            // Index update after ingest (lock released above)
-            if !dry_run {
-                match manager.on_ingest(&wiki_name) {
-                    Ok(r) => {
-                        tracing::debug!(updated = r.updated, deleted = r.deleted, "index updated");
-                    }
-                    Err(e) => {
-                        eprintln!("warning: index update failed ({e}), run `llm-wiki index rebuild`");
-                    }
+                if dry_run {
+                    println!("(dry run — nothing committed)");
+                } else if !report.commit.is_empty() {
+                    println!("Commit: {}", report.commit);
                 }
             }
         }
@@ -447,37 +361,25 @@ fn main() -> Result<()> {
             let manager = EngineManager::build(&config_path)?;
             let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
             let wiki_name = engine.resolve_wiki_name(cli.wiki.as_deref());
-            let space = engine.space(wiki_name)?;
-            let resolved = space.resolved_config(&engine.config);
 
-            let fmt = format.unwrap_or_else(|| resolved.graph.format.clone());
-            let types: Vec<String> = r#type
-                .map(|t| t.split(',').map(|s| s.trim().to_string()).collect())
-                .unwrap_or_default();
+            let result = ops::graph_build(
+                &engine,
+                wiki_name,
+                &ops::GraphParams {
+                    format: format.as_deref(),
+                    root,
+                    depth,
+                    type_filter: r#type.as_deref(),
+                    relation,
+                    output: output.as_deref(),
+                },
+            )?;
 
-            let filter = graph::GraphFilter {
-                root,
-                depth: depth.or(Some(resolved.graph.depth as usize)),
-                types,
-                relation,
-            };
-            let g = graph::build_graph(&space.index_path, &space.schema, &filter)?;
-
-            let rendered = match fmt.as_str() {
-                "dot" => graph::render_dot(&g),
-                _ => graph::render_mermaid(&g),
-            };
-
-            if let Some(ref out_path) = output {
-                let content = if out_path.ends_with(".md") {
-                    graph::wrap_graph_md(&rendered, &fmt, &filter)
-                } else {
-                    rendered
-                };
-                std::fs::write(out_path, &content)?;
-                println!("Wrote graph to {out_path}");
+            // If no output file, print rendered graph
+            if output.is_none() {
+                print!("{}", result.rendered);
             } else {
-                print!("{rendered}");
+                println!("Wrote graph to {}", result.report.output);
             }
         }
 
@@ -486,12 +388,14 @@ fn main() -> Result<()> {
             IndexAction::Rebuild { dry_run, format } => {
                 let manager = EngineManager::build(&config_path)?;
                 let wiki_name = {
-                    let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
+                    let engine =
+                        manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
                     engine.resolve_wiki_name(cli.wiki.as_deref()).to_string()
                 };
 
                 if dry_run {
-                    let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
+                    let engine =
+                        manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
                     let space = engine.space(&wiki_name)?;
                     let count = walkdir::WalkDir::new(&space.wiki_root)
                         .into_iter()
@@ -501,9 +405,12 @@ fn main() -> Result<()> {
                                 && e.path().extension().and_then(|x| x.to_str()) == Some("md")
                         })
                         .count();
-                    println!("Would index {count} pages from {}", space.wiki_root.display());
+                    println!(
+                        "Would index {count} pages from {}",
+                        space.wiki_root.display()
+                    );
                 } else {
-                    let report = manager.rebuild_index(&wiki_name)?;
+                    let report = ops::index_rebuild(&manager, &wiki_name)?;
                     if is_json(&format) {
                         println!("{}", serde_json::to_string_pretty(&report)?);
                     } else {
@@ -518,10 +425,8 @@ fn main() -> Result<()> {
                 let manager = EngineManager::build(&config_path)?;
                 let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
                 let wiki_name = engine.resolve_wiki_name(cli.wiki.as_deref());
-                let space = engine.space(wiki_name)?;
 
-                let status =
-                    search::index_status(wiki_name, &space.index_path, &space.repo_root)?;
+                let status = ops::index_status(&engine, wiki_name)?;
 
                 if is_json(&format) {
                     println!("{}", serde_json::to_string_pretty(&status)?);
@@ -533,7 +438,10 @@ fn main() -> Result<()> {
                     println!("sections:  {}", status.sections);
                     println!("stale:     {}", if status.stale { "yes" } else { "no" });
                     println!("openable:  {}", if status.openable { "yes" } else { "no" });
-                    println!("queryable: {}", if status.queryable { "yes" } else { "no" });
+                    println!(
+                        "queryable: {}",
+                        if status.queryable { "yes" } else { "no" }
+                    );
                 }
             }
         },
@@ -551,8 +459,7 @@ fn main() -> Result<()> {
                 println!("Would start: [{}]", transports.join("] ["));
                 return Ok(());
             }
-            // Serve implementation comes in Steps 14-16
-            eprintln!("serve not yet implemented — coming in Steps 14-16");
+            eprintln!("serve not yet implemented — coming in Steps 15-16");
         }
     }
 

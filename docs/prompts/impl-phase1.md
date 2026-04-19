@@ -47,6 +47,7 @@ Read them before writing code.
 | 12 | `engine.md`, `manager-pattern.md` | — (new module) |
 | 13 | `cli.md` | `code-ref/src/cli.rs`, `code-ref/src/main.rs` |
 | 14 | `mcp-server.md` | `code-ref/src/mcp/mod.rs`, `code-ref/src/mcp/tools.rs` |
+| 14-bis | `decisions/ops-module.md` | `src/mcp/handlers.rs`, `src/main.rs` |
 | 15 | `acp-server.md` | `code-ref/src/acp.rs` |
 | 16 | — | `code-ref/src/server.rs` |
 | 17 | — | `code-ref/tests/` |
@@ -115,6 +116,7 @@ Step 11: spaces.rs — space create, list, remove, set-default
 Step 12: engine.rs — Engine struct and EngineManager
 Step 13: cli.rs + main.rs — clap subcommand hierarchy
 Step 14: mcp/ — 15 MCP tools with ServerHandler
+Step 14-bis: ops.rs — shared business logic for CLI and MCP
 Step 15: acp.rs — WikiAgent with ACP transport
 Step 16: server.rs — stdio + SSE + ACP transport wiring
 Step 17: Integration tests for all modules
