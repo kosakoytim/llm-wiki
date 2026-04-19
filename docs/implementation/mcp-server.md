@@ -148,7 +148,6 @@ instructions from the engine binary.
 - Rename all tools to new names
 - Add `wiki_content_new` (merged page + section with `--section` flag)
 - Add `wiki_content_write` with `--file` support
-- Add `--format` parameter to search, list, ingest, index, spaces list
 - Add `--type` parameter to search
 - Add `--relation` parameter to graph
 - Remove `wiki_lint`, `wiki_index_check`, prompt definitions

@@ -356,7 +356,6 @@ Changes from code-ref:
   `wiki_new_page` + `wiki_new_section` → `wiki_content_new`,
   `wiki_commit` → `wiki_content_commit`
 - Remove: `wiki_lint`, `wiki_index_check`, all prompts
-- Add `--format` parameter to search, list, ingest, index, spaces list
 - Add `--type` parameter to search (already in code-ref)
 - Add `--section`, `--name`, `--type` to `wiki_content_new`
 - Tool handlers call `EngineManager` for mutations

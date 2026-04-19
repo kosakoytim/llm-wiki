@@ -11,6 +11,7 @@ pub mod index_schema;
 pub mod ingest;
 pub mod links;
 pub mod markdown;
+pub mod mcp;
 pub mod search;
 pub mod slug;
 pub mod spaces;
