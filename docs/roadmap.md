@@ -243,19 +243,45 @@ Update the indexing pipeline:
 
 ### Step 8: Schema change detection
 
-Modules: `src/engine.rs`, `src/search.rs`
-Tests: change a schema file → `has_changed()` returns true,
-rebuild triggered, `state.toml` updated with new hashes
+Modules: `src/space_builder.rs` (new), `src/indexing.rs`,
+`src/engine.rs`, `src/ops.rs`, `src/type_registry.rs`,
+`src/index_schema.rs`
+Tests: `build_space` returns consistent registry + index schema,
+new wiki has `schema_hash` in `state.toml`, modify schema file →
+stale, rebuild updates hash, old `state.toml` with `schema_version`
+→ stale, two wikis with different schemas, embedded fallback
 Commit: `engine: schema change detection via schema_hash`
 
-Update `EngineManager.build()`:
-1. Build `SpaceTypeRegistry` per wiki
-2. Compare `schema_hash` with `state.toml`
-3. Mismatch → full index rebuild with new schema
-4. Store `schema_hash` and per-type hashes in `state.toml`
+Shared builder:
+1. New `space_builder.rs` with `build_space(repo_root, tokenizer)`
+   that reads schema files once, builds both `SpaceTypeRegistry`
+   and `IndexSchema`, discards raw JSON
+2. `SpaceTypeRegistry::from_parts()` internal constructor
+3. `IndexSchema::build_from_schemas()` becomes private — callers
+   use `build_space()`
 
-Update `SpaceState` to hold `SpaceTypeRegistry` instead of bare
-`TypeRegistry`.
+Per-wiki registry:
+4. `SpaceState` gains `type_registry`, `schema` renamed to
+   `index_schema`
+5. `Engine.type_registry` removed
+6. `EngineManager::build()` calls `build_space()` per wiki
+
+Schema hash:
+7. `IndexState`: replace `schema_version: u32` with
+   `schema_hash: String`, add `types: HashMap<String, String>`
+8. Remove `CURRENT_SCHEMA_VERSION`
+9. `rebuild_index` writes `schema_hash` + `type_hashes`
+10. `index_status` compares `schema_hash` (needs current hash)
+11. Staleness = `commit != HEAD || schema_hash != current`
+
+Callers:
+12. `ops.rs`: `&engine.type_registry` → `&space.type_registry`
+13. `RecoveryContext`: registry from `space.type_registry`
+
+Cleanup:
+14. Rewrite `docs/implementation/schema-change-detection.md` as a
+    permanent implementation reference (remove migration language,
+    "changes needed" section, "current vs target" framing)
 
 ### Step 9: `llm-wiki schema` CLI + `wiki_schema` MCP tool
 

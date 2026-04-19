@@ -73,7 +73,7 @@ fn status_not_stale_after_rebuild() {
     write_page(&wiki_root, "concepts/foo.md", &concept_page("Foo", "body"));
     let index_path = build_index(dir.path(), &wiki_root);
 
-    let status = index_status("test", &index_path, dir.path()).unwrap();
+    let status = index_status("test", &index_path, dir.path(), registry().schema_hash()).unwrap();
     assert!(!status.stale);
     assert!(status.openable);
     assert!(status.queryable);
@@ -90,7 +90,7 @@ fn status_stale_after_new_commit() {
     write_page(&wiki_root, "concepts/bar.md", &concept_page("Bar", "body"));
     git::commit(dir.path(), "add bar").unwrap();
 
-    let status = index_status("test", &index_path, dir.path()).unwrap();
+    let status = index_status("test", &index_path, dir.path(), registry().schema_hash()).unwrap();
     assert!(status.stale);
 }
 
@@ -100,25 +100,21 @@ fn status_when_no_index() {
     setup_repo(dir.path());
     let index_path = dir.path().join("nonexistent");
 
-    let status = index_status("test", &index_path, dir.path()).unwrap();
+    let status = index_status("test", &index_path, dir.path(), registry().schema_hash()).unwrap();
     assert!(status.stale);
     assert!(!status.openable);
     assert!(status.built.is_none());
 }
 
 #[test]
-fn status_stale_on_schema_version_mismatch() {
+fn status_stale_on_schema_hash_mismatch() {
     let dir = tempfile::tempdir().unwrap();
     let wiki_root = setup_repo(dir.path());
     write_page(&wiki_root, "concepts/foo.md", &concept_page("Foo", "body"));
     let index_path = build_index(dir.path(), &wiki_root);
 
-    let state_path = index_path.join("state.toml");
-    let content = fs::read_to_string(&state_path).unwrap();
-    let tampered = content.replace("schema_version = 2", "schema_version = 999");
-    fs::write(&state_path, tampered).unwrap();
-
-    let status = index_status("test", &index_path, dir.path()).unwrap();
+    // Pass a different hash than what's stored
+    let status = index_status("test", &index_path, dir.path(), "different_hash").unwrap();
     assert!(status.stale);
 }
 

@@ -105,13 +105,12 @@ impl IndexSchema {
 
 // ── Field classification ──────────────────────────────────────────────────────
 
-enum FieldClass {
-    Text,    // TEXT | STORED — BM25 searchable
-    Keyword, // STRING | STORED — exact match filter
+pub(crate) enum FieldClass {
+    Text,
+    Keyword,
 }
 
-/// Classify a JSON Schema property definition into a tantivy field type.
-fn classify_field(prop: &serde_json::Value, is_slug_field: bool) -> FieldClass {
+pub(crate) fn classify_field(prop: &serde_json::Value, is_slug_field: bool) -> FieldClass {
     // Slug fields (from x-graph-edges) are always keywords
     if is_slug_field {
         return FieldClass::Keyword;
@@ -247,7 +246,7 @@ fn extract_schema_source(content: &str) -> Result<SchemaSource> {
 
 // ── Schema builder helper ─────────────────────────────────────────────────────
 
-struct SchemaBuilder {
+pub(crate) struct SchemaBuilder {
     builder: tantivy::schema::SchemaBuilder,
     fields: HashMap<String, Field>,
     keyword_fields: HashSet<String>,
@@ -255,7 +254,7 @@ struct SchemaBuilder {
 }
 
 impl SchemaBuilder {
-    fn new(tokenizer: &str) -> Self {
+    pub(crate) fn new(tokenizer: &str) -> Self {
         let text_indexing = TextFieldIndexing::default()
             .set_tokenizer(tokenizer)
             .set_index_option(IndexRecordOption::WithFreqsAndPositions);
@@ -271,21 +270,21 @@ impl SchemaBuilder {
         }
     }
 
-    fn add_fixed_fields(&mut self) {
+    pub(crate) fn add_fixed_fields(&mut self) {
         self.add_keyword("slug");
         self.add_keyword("uri");
         self.add_text("body");
         self.add_keyword("body_links");
     }
 
-    fn add_text(&mut self, name: &str) {
+    pub(crate) fn add_text(&mut self, name: &str) {
         if !self.fields.contains_key(name) {
             let field = self.builder.add_text_field(name, self.text_opts.clone());
             self.fields.insert(name.to_string(), field);
         }
     }
 
-    fn add_keyword(&mut self, name: &str) {
+    pub(crate) fn add_keyword(&mut self, name: &str) {
         if !self.fields.contains_key(name) {
             let field = self.builder.add_text_field(name, STRING | STORED);
             self.fields.insert(name.to_string(), field);
@@ -293,7 +292,7 @@ impl SchemaBuilder {
         }
     }
 
-    fn finish(self) -> IndexSchema {
+    pub(crate) fn finish(self) -> IndexSchema {
         IndexSchema {
             schema: self.builder.build(),
             fields: self.fields,

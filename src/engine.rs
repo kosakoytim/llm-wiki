@@ -7,6 +7,7 @@ use anyhow::{bail, Result};
 use crate::config::{self, GlobalConfig, ResolvedConfig};
 use crate::index_schema::IndexSchema;
 use crate::indexing;
+use crate::space_builder;
 use crate::type_registry::SpaceTypeRegistry;
 
 // ── SpaceState ────────────────────────────────────────────────────────────────
@@ -16,7 +17,8 @@ pub struct SpaceState {
     pub wiki_root: PathBuf,
     pub repo_root: PathBuf,
     pub index_path: PathBuf,
-    pub schema: IndexSchema,
+    pub type_registry: SpaceTypeRegistry,
+    pub index_schema: IndexSchema,
 }
 
 impl SpaceState {
@@ -31,9 +33,7 @@ impl SpaceState {
 pub struct Engine {
     pub config: GlobalConfig,
     pub config_path: PathBuf,
-    /// The engine state directory (parent of config_path, e.g. ~/.llm-wiki/).
     pub state_dir: PathBuf,
-    pub type_registry: SpaceTypeRegistry,
     pub spaces: HashMap<String, SpaceState>,
 }
 
@@ -52,7 +52,6 @@ impl Engine {
         explicit.unwrap_or(self.default_wiki_name())
     }
 
-    /// Index storage path for a wiki, relative to state_dir.
     pub fn index_path_for(&self, wiki_name: &str) -> PathBuf {
         self.state_dir.join("indexes").join(wiki_name)
     }
@@ -65,12 +64,8 @@ pub struct EngineManager {
 }
 
 impl EngineManager {
-    /// Build the engine from config. Opens/creates indexes for all registered wikis.
     pub fn build(config_path: &Path) -> Result<Self> {
         let config = config::load_global(config_path)?;
-        let type_registry = SpaceTypeRegistry::from_embedded();
-
-        // state_dir = parent of config_path (e.g. ~/.llm-wiki/)
         let state_dir = config_path.parent().unwrap_or(Path::new(".")).to_path_buf();
 
         let mut spaces = HashMap::new();
@@ -79,33 +74,41 @@ impl EngineManager {
             let repo_root = PathBuf::from(&entry.path);
             let wiki_root = repo_root.join("wiki");
             let index_path = state_dir.join("indexes").join(&entry.name);
-            let schema = IndexSchema::build(&config.index.tokenizer);
+
+            // Build per-wiki registry + index schema from schemas/
+            let (type_registry, index_schema) =
+                space_builder::build_space(&repo_root, &config.index.tokenizer)
+                    .unwrap_or_else(|e| {
+                        tracing::warn!(
+                            wiki = %entry.name, error = %e,
+                            "failed to build type registry, using embedded defaults"
+                        );
+                        space_builder::build_space_from_embedded(&config.index.tokenizer)
+                    });
 
             // Ensure index directory exists
             let search_dir = index_path.join("search-index");
             std::fs::create_dir_all(&search_dir)?;
 
             // Check staleness and rebuild if needed
-            let status = indexing::index_status(&entry.name, &index_path, &repo_root);
+            let current_hash = type_registry.schema_hash();
+            let status = indexing::index_status(&entry.name, &index_path, &repo_root, current_hash);
             let needs_first_build = status.as_ref().map(|s| s.built.is_none()).unwrap_or(true);
 
             if needs_first_build {
                 tracing::info!(wiki = %entry.name, "building index for the first time");
-                if let Err(e) =
-                    indexing::rebuild_index(&wiki_root, &index_path, &entry.name, &repo_root, &schema, &type_registry)
-                {
+                if let Err(e) = indexing::rebuild_index(
+                    &wiki_root, &index_path, &entry.name, &repo_root,
+                    &index_schema, &type_registry,
+                ) {
                     tracing::warn!(wiki = %entry.name, error = %e, "initial index build failed");
                 }
             } else if let Ok(ref s) = status {
                 if s.stale && config.index.auto_rebuild {
                     tracing::info!(wiki = %entry.name, "index stale, rebuilding");
                     if let Err(e) = indexing::rebuild_index(
-                        &wiki_root,
-                        &index_path,
-                        &entry.name,
-                        &repo_root,
-                        &schema,
-                        &type_registry,
+                        &wiki_root, &index_path, &entry.name, &repo_root,
+                        &index_schema, &type_registry,
                     ) {
                         tracing::warn!(wiki = %entry.name, error = %e, "index rebuild failed");
                     }
@@ -125,7 +128,8 @@ impl EngineManager {
                     wiki_root,
                     repo_root,
                     index_path,
-                    schema,
+                    type_registry,
+                    index_schema,
                 },
             );
         }
@@ -134,7 +138,6 @@ impl EngineManager {
             config,
             config_path: config_path.to_path_buf(),
             state_dir,
-            type_registry,
             spaces,
         };
 
@@ -143,7 +146,6 @@ impl EngineManager {
         })
     }
 
-    /// Incremental index update after ingest.
     pub fn on_ingest(&self, wiki_name: &str) -> Result<indexing::UpdateReport> {
         let engine = self
             .engine
@@ -156,13 +158,12 @@ impl EngineManager {
             &space.index_path,
             &space.repo_root,
             last_commit.as_deref(),
-            &space.schema,
+            &space.index_schema,
             wiki_name,
-            &engine.type_registry,
+            &space.type_registry,
         )
     }
 
-    /// Rebuild index from scratch.
     pub fn rebuild_index(&self, wiki_name: &str) -> Result<indexing::IndexReport> {
         let engine = self
             .engine
@@ -174,29 +175,24 @@ impl EngineManager {
             &space.index_path,
             wiki_name,
             &space.repo_root,
-            &space.schema,
-            &engine.type_registry,
+            &space.index_schema,
+            &space.type_registry,
         )
     }
 
-    /// Stub — restart required for wiki additions.
     pub fn on_wiki_added(&self, _name: &str, _path: &Path) -> Result<()> {
         bail!("wiki added — restart required")
     }
 
-    /// Stub — restart required for wiki removals.
     pub fn on_wiki_removed(&self, _name: &str) -> Result<()> {
         bail!("wiki removed — restart required")
     }
 
-    /// Stub — restart required for config changes.
     pub fn on_config_change(&self, _key: &str, _value: &str) -> Result<()> {
         bail!("config changed — restart required")
     }
 }
 
-/// Compute the index storage path for a wiki using $HOME.
-/// Used by CLI code that doesn't have an engine instance yet.
 pub fn default_index_path_for(wiki_name: &str) -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
     PathBuf::from(home)

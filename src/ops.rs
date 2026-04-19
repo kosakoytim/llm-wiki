@@ -238,11 +238,11 @@ pub fn search(
             .values()
             .map(|s| (s.name.clone(), s.index_path.clone()))
             .collect();
-        return search::search_all(params.query, &opts, &wikis, &space.schema);
+        return search::search_all(params.query, &opts, &wikis, &space.index_schema);
     }
 
     let recovery_ctx = if engine.config.index.auto_recovery {
-        Some(indexing::RecoveryContext { wiki_root: &space.wiki_root, repo_root: &space.repo_root, registry: &engine.type_registry })
+        Some(indexing::RecoveryContext { wiki_root: &space.wiki_root, repo_root: &space.repo_root, registry: &space.type_registry })
     } else {
         None
     };
@@ -251,7 +251,7 @@ pub fn search(
         &opts,
         &space.index_path,
         wiki_name,
-        &space.schema,
+        &space.index_schema,
         recovery_ctx.as_ref(),
     )
 }
@@ -276,7 +276,7 @@ pub fn list(
         page_size: page_size.unwrap_or(resolved.defaults.list_page_size as usize),
     };
     let recovery_ctx = if engine.config.index.auto_recovery {
-        Some(indexing::RecoveryContext { wiki_root: &space.wiki_root, repo_root: &space.repo_root, registry: &engine.type_registry })
+        Some(indexing::RecoveryContext { wiki_root: &space.wiki_root, repo_root: &space.repo_root, registry: &space.type_registry })
     } else {
         None
     };
@@ -284,7 +284,7 @@ pub fn list(
         &opts,
         &space.index_path,
         wiki_name,
-        &space.schema,
+        &space.index_schema,
         recovery_ctx.as_ref(),
     )
 }
@@ -309,7 +309,7 @@ pub fn ingest(
         Path::new(path),
         &opts,
         &space.wiki_root,
-        &engine.type_registry,
+        &space.type_registry,
         &resolved.validation,
     )?;
 
@@ -330,7 +330,7 @@ pub fn index_rebuild(manager: &EngineManager, wiki_name: &str) -> Result<indexin
 
 pub fn index_status(engine: &Engine, wiki_name: &str) -> Result<indexing::IndexStatus> {
     let space = engine.space(wiki_name)?;
-    indexing::index_status(wiki_name, &space.index_path, &space.repo_root)
+    indexing::index_status(wiki_name, &space.index_path, &space.repo_root, space.type_registry.schema_hash())
 }
 
 // ── Graph ─────────────────────────────────────────────────────────────────────
@@ -369,7 +369,7 @@ pub fn graph_build(
         types,
         relation: params.relation.clone(),
     };
-    let g = graph::build_graph(&space.index_path, &space.schema, &filter)?;
+    let g = graph::build_graph(&space.index_path, &space.index_schema, &filter)?;
 
     let rendered = match fmt {
         "dot" => graph::render_dot(&g),

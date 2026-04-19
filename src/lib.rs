@@ -19,5 +19,6 @@ pub mod ops;
 pub mod search;
 pub mod server;
 pub mod slug;
+pub mod space_builder;
 pub mod spaces;
 pub mod type_registry;

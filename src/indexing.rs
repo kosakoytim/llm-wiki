@@ -55,16 +55,16 @@ pub struct RecoveryContext<'a> {
 
 // ── state.toml ────────────────────────────────────────────────────────────────
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 2;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndexState {
     #[serde(default)]
-    pub schema_version: u32,
+    pub schema_hash: String,
     pub built: String,
     pub pages: usize,
     pub sections: usize,
     pub commit: String,
+    #[serde(default)]
+    pub types: std::collections::HashMap<String, String>,
 }
 
 pub fn last_indexed_commit(index_path: &Path) -> Option<String> {
@@ -273,11 +273,12 @@ pub fn rebuild_index(
 
     let commit = git::current_head(repo_root).unwrap_or_default();
     let state = IndexState {
-        schema_version: CURRENT_SCHEMA_VERSION,
+        schema_hash: registry.schema_hash().to_string(),
         built: Utc::now().to_rfc3339(),
         pages,
         sections,
         commit,
+        types: registry.type_hashes().clone(),
     };
     std::fs::write(
         index_path.join("state.toml"),
@@ -382,7 +383,7 @@ pub fn open_index(
 
 // ── index_status ──────────────────────────────────────────────────────────────
 
-pub fn index_status(wiki_name: &str, index_path: &Path, repo_root: &Path) -> Result<IndexStatus> {
+pub fn index_status(wiki_name: &str, index_path: &Path, repo_root: &Path, current_schema_hash: &str) -> Result<IndexStatus> {
     let state_path = index_path.join("state.toml");
     let search_dir = index_path.join("search-index");
 
@@ -394,7 +395,7 @@ pub fn index_status(wiki_name: &str, index_path: &Path, repo_root: &Path) -> Res
             Some(state) => {
                 let head = git::current_head(repo_root).unwrap_or_default();
                 let stale =
-                    state.commit != head || state.schema_version != CURRENT_SCHEMA_VERSION;
+                    state.commit != head || state.schema_hash != current_schema_hash;
                 (Some(state.built), state.pages, state.sections, stale)
             }
             None => (None, 0, 0, true),

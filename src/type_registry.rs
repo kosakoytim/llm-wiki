@@ -9,12 +9,12 @@ use crate::config;
 use crate::default_schemas;
 
 /// A compiled type entry in the registry.
-struct RegisteredType {
-    schema_path: String,
-    description: String,
-    validator: Validator,
-    aliases: HashMap<String, String>,
-    required_fields: Vec<String>,
+pub struct RegisteredType {
+    pub(crate) schema_path: String,
+    pub(crate) description: String,
+    pub(crate) validator: Validator,
+    pub(crate) aliases: HashMap<String, String>,
+    pub(crate) required_fields: Vec<String>,
 }
 
 /// Per-wiki type registry — discovers types from `schemas/*.json` via
@@ -82,6 +82,19 @@ impl SpaceTypeRegistry {
         let mut types = HashMap::new();
         discover_from_embedded(&mut types).expect("embedded schemas are valid");
         let (schema_hash, type_hashes) = compute_hashes(&types);
+        Self {
+            types,
+            schema_hash,
+            type_hashes,
+        }
+    }
+
+    /// Build from pre-constructed parts (used by space_builder).
+    pub(crate) fn from_parts(
+        types: HashMap<String, RegisteredType>,
+        schema_hash: String,
+        type_hashes: HashMap<String, String>,
+    ) -> Self {
         Self {
             types,
             schema_hash,
@@ -249,7 +262,7 @@ fn discover_from_embedded(types: &mut HashMap<String, RegisteredType>) -> Result
     Ok(())
 }
 
-fn compile_schema(schema_path: &str, description: &str, content: &str) -> Result<RegisteredType> {
+pub(crate) fn compile_schema(schema_path: &str, description: &str, content: &str) -> Result<RegisteredType> {
     let schema_value: serde_json::Value = serde_json::from_str(content)?;
     let validator = Validator::new(&schema_value)
         .map_err(|e| anyhow::anyhow!("invalid schema {schema_path}: {e}"))?;
@@ -265,7 +278,7 @@ fn compile_schema(schema_path: &str, description: &str, content: &str) -> Result
     })
 }
 
-fn extract_aliases(schema: &serde_json::Value) -> HashMap<String, String> {
+pub(crate) fn extract_aliases(schema: &serde_json::Value) -> HashMap<String, String> {
     schema
         .get("x-index-aliases")
         .and_then(|v| v.as_object())
@@ -277,7 +290,7 @@ fn extract_aliases(schema: &serde_json::Value) -> HashMap<String, String> {
         .unwrap_or_default()
 }
 
-fn extract_required(schema: &serde_json::Value) -> Vec<String> {
+pub(crate) fn extract_required(schema: &serde_json::Value) -> Vec<String> {
     schema
         .get("required")
         .and_then(|v| v.as_array())
@@ -290,7 +303,7 @@ fn extract_required(schema: &serde_json::Value) -> Vec<String> {
 }
 
 /// Validate that a custom default type requires at least `title` and `type`.
-fn validate_base_invariant(rt: &RegisteredType) -> Result<()> {
+pub(crate) fn validate_base_invariant(rt: &RegisteredType) -> Result<()> {
     if !rt.required_fields.contains(&"title".to_string()) {
         bail!(
             "base schema '{}' must require 'title' — \
@@ -310,7 +323,7 @@ fn validate_base_invariant(rt: &RegisteredType) -> Result<()> {
 
 // ── Hashing ───────────────────────────────────────────────────────────────────
 
-fn compute_hashes(types: &HashMap<String, RegisteredType>) -> (String, HashMap<String, String>) {
+pub(crate) fn compute_hashes(types: &HashMap<String, RegisteredType>) -> (String, HashMap<String, String>) {
     use std::collections::BTreeMap;
     use std::hash::{Hash, Hasher};
 
