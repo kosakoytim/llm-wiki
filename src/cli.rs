@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "llm-wiki", about = "Git-backed wiki engine with MCP server")]
+#[command(name = "llm-wiki", version, about = "Git-backed wiki engine with MCP server")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,

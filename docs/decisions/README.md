@@ -14,4 +14,5 @@ Architectural decisions and their rationale.
 | [dynamic-index-schema](dynamic-index-schema.md)     | Tantivy schema computed from type registry, not hardcoded                  |
 | [untyped-frontmatter](untyped-frontmatter.md)       | BTreeMap instead of fixed struct, type registry validates                  |
 | [engine-manager](engine-manager.md)                 | Centralized mutation handling with cascade reports                         |
+| [ops-module](ops-module.md)                         | Extract duplicated CLI/MCP business logic into src/ops.rs                  |
 | [rationalize-specs](rationalize-specs.md)           | How the specifications were rationalized                                   |
