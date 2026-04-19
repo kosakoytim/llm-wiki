@@ -157,8 +157,16 @@ fn content_new_page() {
     let manager = EngineManager::build(&config_path).unwrap();
     let engine = manager.engine.read().unwrap();
 
-    let uri = ops::content_new(&engine, "concepts/new-concept", None, false, false, None, None)
-        .unwrap();
+    let uri = ops::content_new(
+        &engine,
+        "concepts/new-concept",
+        None,
+        false,
+        false,
+        None,
+        None,
+    )
+    .unwrap();
     assert!(uri.starts_with("wiki://test/concepts/new-concept"));
 }
 

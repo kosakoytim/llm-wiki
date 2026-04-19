@@ -46,11 +46,7 @@ impl TypeRegistry {
     /// - Unknown types produce warnings in loose mode, errors in strict mode
     ///
     /// Returns a list of warnings. Bails on hard errors.
-    pub fn validate(
-        &self,
-        fm: &BTreeMap<String, Value>,
-        strictness: &str,
-    ) -> Result<Vec<String>> {
+    pub fn validate(&self, fm: &BTreeMap<String, Value>, strictness: &str) -> Result<Vec<String>> {
         let mut warnings = Vec::new();
 
         let title = fm.get("title").and_then(|v| v.as_str()).unwrap_or("");

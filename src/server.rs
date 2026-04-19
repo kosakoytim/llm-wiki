@@ -67,11 +67,7 @@ async fn serve_sse(server: McpServer, port: u16, serve_cfg: &config::ServeConfig
 
 // ── serve (orchestration) ─────────────────────────────────────────────────────
 
-pub async fn serve(
-    config_path: &std::path::Path,
-    sse_port: Option<u16>,
-    acp: bool,
-) -> Result<()> {
+pub async fn serve(config_path: &std::path::Path, sse_port: Option<u16>, acp: bool) -> Result<()> {
     // 1. Build EngineManager (loads config, mounts wikis, checks staleness)
     let manager = Arc::new(EngineManager::build(config_path)?);
 

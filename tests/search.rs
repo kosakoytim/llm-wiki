@@ -41,15 +41,11 @@ fn paper_page(title: &str, body: &str) -> String {
 }
 
 fn draft_page(title: &str) -> String {
-    format!(
-        "---\ntitle: \"{title}\"\nstatus: draft\ntype: concept\n---\n\nDraft content.\n"
-    )
+    format!("---\ntitle: \"{title}\"\nstatus: draft\ntype: concept\n---\n\nDraft content.\n")
 }
 
 fn section_page(title: &str) -> String {
-    format!(
-        "---\ntitle: \"{title}\"\nstatus: active\ntype: section\n---\n\n"
-    )
+    format!("---\ntitle: \"{title}\"\nstatus: active\ntype: section\n---\n\n")
 }
 
 fn build_index(dir: &Path, wiki_root: &Path) -> std::path::PathBuf {
@@ -124,13 +120,33 @@ fn status_when_no_index() {
 fn search_returns_ranked_results() {
     let dir = tempfile::tempdir().unwrap();
     let wiki_root = setup_repo(dir.path());
-    write_page(&wiki_root, "concepts/moe.md", &concept_page("Mixture of Experts", "MoE scaling"));
-    write_page(&wiki_root, "sources/switch.md", &paper_page("Switch Transformer", "MoE layers"));
-    write_page(&wiki_root, "concepts/attention.md", &concept_page("Attention", "Self-attention"));
+    write_page(
+        &wiki_root,
+        "concepts/moe.md",
+        &concept_page("Mixture of Experts", "MoE scaling"),
+    );
+    write_page(
+        &wiki_root,
+        "sources/switch.md",
+        &paper_page("Switch Transformer", "MoE layers"),
+    );
+    write_page(
+        &wiki_root,
+        "concepts/attention.md",
+        &concept_page("Attention", "Self-attention"),
+    );
 
     let index_path = build_index(dir.path(), &wiki_root);
     let is = schema();
-    let results = search("MoE scaling", &SearchOptions::default(), &index_path, "test", &is, None).unwrap();
+    let results = search(
+        "MoE scaling",
+        &SearchOptions::default(),
+        &index_path,
+        "test",
+        &is,
+        None,
+    )
+    .unwrap();
 
     assert!(!results.is_empty());
     for w in results.windows(2) {
@@ -142,12 +158,23 @@ fn search_returns_ranked_results() {
 fn search_type_filter() {
     let dir = tempfile::tempdir().unwrap();
     let wiki_root = setup_repo(dir.path());
-    write_page(&wiki_root, "concepts/moe.md", &concept_page("MoE", "MoE scaling"));
-    write_page(&wiki_root, "sources/switch.md", &paper_page("Switch", "MoE scaling paper"));
+    write_page(
+        &wiki_root,
+        "concepts/moe.md",
+        &concept_page("MoE", "MoE scaling"),
+    );
+    write_page(
+        &wiki_root,
+        "sources/switch.md",
+        &paper_page("Switch", "MoE scaling paper"),
+    );
 
     let index_path = build_index(dir.path(), &wiki_root);
     let is = schema();
-    let opts = SearchOptions { r#type: Some("paper".into()), ..Default::default() };
+    let opts = SearchOptions {
+        r#type: Some("paper".into()),
+        ..Default::default()
+    };
     let results = search("MoE scaling", &opts, &index_path, "test", &is, None).unwrap();
 
     assert!(!results.is_empty());
@@ -161,11 +188,23 @@ fn search_excludes_sections_by_default() {
     let dir = tempfile::tempdir().unwrap();
     let wiki_root = setup_repo(dir.path());
     write_page(&wiki_root, "concepts/index.md", &section_page("Concepts"));
-    write_page(&wiki_root, "concepts/foo.md", &concept_page("Foo Concepts", "about concepts"));
+    write_page(
+        &wiki_root,
+        "concepts/foo.md",
+        &concept_page("Foo Concepts", "about concepts"),
+    );
 
     let index_path = build_index(dir.path(), &wiki_root);
     let is = schema();
-    let results = search("Concepts", &SearchOptions::default(), &index_path, "test", &is, None).unwrap();
+    let results = search(
+        "Concepts",
+        &SearchOptions::default(),
+        &index_path,
+        "test",
+        &is,
+        None,
+    )
+    .unwrap();
 
     for r in &results {
         assert_ne!(r.slug, "concepts");
@@ -180,7 +219,10 @@ fn search_no_excerpt() {
 
     let index_path = build_index(dir.path(), &wiki_root);
     let is = schema();
-    let opts = SearchOptions { no_excerpt: true, ..Default::default() };
+    let opts = SearchOptions {
+        no_excerpt: true,
+        ..Default::default()
+    };
     let results = search("Foo", &opts, &index_path, "test", &is, None).unwrap();
 
     assert!(!results.is_empty());
@@ -214,7 +256,10 @@ fn list_type_filter() {
 
     let index_path = build_index(dir.path(), &wiki_root);
     let is = schema();
-    let opts = ListOptions { r#type: Some("concept".into()), ..Default::default() };
+    let opts = ListOptions {
+        r#type: Some("concept".into()),
+        ..Default::default()
+    };
     let result = list(&opts, &index_path, "test", &is, None).unwrap();
 
     assert_eq!(result.total, 1);
@@ -225,12 +270,19 @@ fn list_type_filter() {
 fn list_status_filter() {
     let dir = tempfile::tempdir().unwrap();
     let wiki_root = setup_repo(dir.path());
-    write_page(&wiki_root, "concepts/active.md", &concept_page("Active", "a"));
+    write_page(
+        &wiki_root,
+        "concepts/active.md",
+        &concept_page("Active", "a"),
+    );
     write_page(&wiki_root, "concepts/wip.md", &draft_page("WIP"));
 
     let index_path = build_index(dir.path(), &wiki_root);
     let is = schema();
-    let opts = ListOptions { status: Some("draft".into()), ..Default::default() };
+    let opts = ListOptions {
+        status: Some("draft".into()),
+        ..Default::default()
+    };
     let result = list(&opts, &index_path, "test", &is, None).unwrap();
 
     assert_eq!(result.total, 1);
@@ -252,11 +304,33 @@ fn list_pagination() {
     let index_path = build_index(dir.path(), &wiki_root);
     let is = schema();
 
-    let result = list(&ListOptions { page: 1, page_size: 2, ..Default::default() }, &index_path, "test", &is, None).unwrap();
+    let result = list(
+        &ListOptions {
+            page: 1,
+            page_size: 2,
+            ..Default::default()
+        },
+        &index_path,
+        "test",
+        &is,
+        None,
+    )
+    .unwrap();
     assert_eq!(result.total, 5);
     assert_eq!(result.pages.len(), 2);
 
-    let result = list(&ListOptions { page: 3, page_size: 2, ..Default::default() }, &index_path, "test", &is, None).unwrap();
+    let result = list(
+        &ListOptions {
+            page: 3,
+            page_size: 2,
+            ..Default::default()
+        },
+        &index_path,
+        "test",
+        &is,
+        None,
+    )
+    .unwrap();
     assert_eq!(result.pages.len(), 1);
 }
 
@@ -271,12 +345,24 @@ fn update_adds_new_page() {
 
     rebuild_index(&wiki_root, &index_path, "test", dir.path(), &is).unwrap();
 
-    write_page(&wiki_root, "concepts/new.md", &concept_page("NewPage", "new body"));
+    write_page(
+        &wiki_root,
+        "concepts/new.md",
+        &concept_page("NewPage", "new body"),
+    );
 
     let report = update_index(&wiki_root, &index_path, dir.path(), None, &is, "test").unwrap();
     assert_eq!(report.updated, 1);
 
-    let results = search("NewPage", &SearchOptions::default(), &index_path, "test", &is, None).unwrap();
+    let results = search(
+        "NewPage",
+        &SearchOptions::default(),
+        &index_path,
+        "test",
+        &is,
+        None,
+    )
+    .unwrap();
     assert!(results.iter().any(|r| r.title == "NewPage"));
 }
 
@@ -304,7 +390,11 @@ fn search_all_merges_wikis() {
 
     let dir_b = tempfile::tempdir().unwrap();
     let wiki_b = setup_repo(dir_b.path());
-    write_page(&wiki_b, "sources/switch.md", &paper_page("Switch", "MoE paper"));
+    write_page(
+        &wiki_b,
+        "sources/switch.md",
+        &paper_page("Switch", "MoE paper"),
+    );
     let idx_b = build_index(dir_b.path(), &wiki_b);
 
     let is = schema();
@@ -335,11 +425,21 @@ fn search_recovers_from_corrupt_index() {
         }
     }
 
-    let recovery = RecoveryContext { wiki_root: &wiki_root, repo_root: dir.path() };
-    let results = search("Foo", &SearchOptions::default(), &index_path, "test", &is, Some(&recovery)).unwrap();
+    let recovery = RecoveryContext {
+        wiki_root: &wiki_root,
+        repo_root: dir.path(),
+    };
+    let results = search(
+        "Foo",
+        &SearchOptions::default(),
+        &index_path,
+        "test",
+        &is,
+        Some(&recovery),
+    )
+    .unwrap();
     assert!(!results.is_empty());
 }
-
 
 // ── update_index edge cases ───────────────────────────────────────────────────
 
@@ -347,12 +447,24 @@ fn search_recovers_from_corrupt_index() {
 fn update_deletes_removed_page() {
     let dir = tempfile::tempdir().unwrap();
     let wiki_root = setup_repo(dir.path());
-    write_page(&wiki_root, "concepts/gone.md", &concept_page("Gone", "will be deleted"));
+    write_page(
+        &wiki_root,
+        "concepts/gone.md",
+        &concept_page("Gone", "will be deleted"),
+    );
     let index_path = build_index(dir.path(), &wiki_root);
     let is = schema();
 
     // Verify it's in the index
-    let results = search("Gone", &SearchOptions::default(), &index_path, "test", &is, None).unwrap();
+    let results = search(
+        "Gone",
+        &SearchOptions::default(),
+        &index_path,
+        "test",
+        &is,
+        None,
+    )
+    .unwrap();
     assert!(!results.is_empty());
 
     // Delete and update
@@ -361,7 +473,15 @@ fn update_deletes_removed_page() {
     assert_eq!(report.deleted, 1);
 
     // Verify it's gone
-    let results = search("Gone", &SearchOptions::default(), &index_path, "test", &is, None).unwrap();
+    let results = search(
+        "Gone",
+        &SearchOptions::default(),
+        &index_path,
+        "test",
+        &is,
+        None,
+    )
+    .unwrap();
     assert!(results.is_empty());
 }
 
@@ -369,16 +489,32 @@ fn update_deletes_removed_page() {
 fn update_modifies_existing_page() {
     let dir = tempfile::tempdir().unwrap();
     let wiki_root = setup_repo(dir.path());
-    write_page(&wiki_root, "concepts/evolve.md", &concept_page("Evolve", "original body"));
+    write_page(
+        &wiki_root,
+        "concepts/evolve.md",
+        &concept_page("Evolve", "original body"),
+    );
     let index_path = build_index(dir.path(), &wiki_root);
     let is = schema();
 
     // Modify the page
-    write_page(&wiki_root, "concepts/evolve.md", &concept_page("Evolve", "updated body with unicorn"));
+    write_page(
+        &wiki_root,
+        "concepts/evolve.md",
+        &concept_page("Evolve", "updated body with unicorn"),
+    );
     let report = update_index(&wiki_root, &index_path, dir.path(), None, &is, "test").unwrap();
     assert_eq!(report.updated, 1);
 
-    let results = search("unicorn", &SearchOptions::default(), &index_path, "test", &is, None).unwrap();
+    let results = search(
+        "unicorn",
+        &SearchOptions::default(),
+        &index_path,
+        "test",
+        &is,
+        None,
+    )
+    .unwrap();
     assert!(!results.is_empty());
 }
 
@@ -398,7 +534,10 @@ fn search_all_respects_top_k() {
     let index_path = build_index(dir.path(), &wiki_root);
     let is = schema();
 
-    let opts = SearchOptions { top_k: 2, ..Default::default() };
+    let opts = SearchOptions {
+        top_k: 2,
+        ..Default::default()
+    };
     let wikis = vec![("test".into(), index_path)];
     let results = search_all("keyword", &opts, &wikis, &is).unwrap();
     assert!(results.len() <= 2);

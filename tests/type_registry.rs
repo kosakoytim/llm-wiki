@@ -16,9 +16,21 @@ fn fm(fields: &[(&str, &str)]) -> BTreeMap<String, Value> {
 fn knows_built_in_types() {
     let reg = TypeRegistry::new();
     for t in &[
-        "page", "concept", "query-result", "section", "paper", "article",
-        "documentation", "clipping", "transcript", "note", "data",
-        "book-chapter", "thread", "skill", "doc",
+        "page",
+        "concept",
+        "query-result",
+        "section",
+        "paper",
+        "article",
+        "documentation",
+        "clipping",
+        "transcript",
+        "note",
+        "data",
+        "book-chapter",
+        "thread",
+        "skill",
+        "doc",
     ] {
         assert!(reg.is_known(t), "should know type: {t}");
     }

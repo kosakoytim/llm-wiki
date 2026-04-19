@@ -288,7 +288,8 @@ fn resolve_uri_ignores_wiki_flag() {
         "research",
     );
     // wiki:// URI specifies "research" explicitly — wiki_flag "work" is ignored
-    let (entry, slug) = WikiUri::resolve("wiki://research/concepts/moe", Some("work"), &global).unwrap();
+    let (entry, slug) =
+        WikiUri::resolve("wiki://research/concepts/moe", Some("work"), &global).unwrap();
     assert_eq!(entry.name, "research");
     assert_eq!(slug.as_str(), "concepts/moe");
 }

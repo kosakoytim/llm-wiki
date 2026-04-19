@@ -41,7 +41,6 @@ serde_yaml = "0.9"
 toml       = "0.8"
 
 # Markdown / frontmatter
-comrak     = "0.28"
 frontmatter = "0.4"
 
 # Full-text search
@@ -55,9 +54,6 @@ walkdir    = "2"
 
 # Date/time
 chrono     = { version = "0.4", default-features = false, features = ["clock", "std"] }
-
-# JSON Schema validation
-jsonschema = "0.28"
 
 # Git
 git2       = "0.19"

@@ -73,8 +73,8 @@ fn commit_paths_commits_only_specified_files() {
     fs::write(dir.path().join("a.txt"), "aaa").unwrap();
     fs::write(dir.path().join("b.txt"), "bbb").unwrap();
 
-    let hash = git::commit_paths(dir.path(), &[&dir.path().join("a.txt")], "commit a only")
-        .unwrap();
+    let hash =
+        git::commit_paths(dir.path(), &[&dir.path().join("a.txt")], "commit a only").unwrap();
     assert_eq!(hash.len(), 40);
 }
 

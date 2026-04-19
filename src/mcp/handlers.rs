@@ -84,14 +84,8 @@ pub fn handle_config(server: &McpServer, args: &Map<String, Value>) -> ToolHandl
             let value = arg_str_req(args, "value")?;
             let is_global = arg_bool(args, "global");
             let wiki_name = resolve_wiki_name(&engine, args)?;
-            let msg = ops::config_set(
-                config_path,
-                &key,
-                &value,
-                is_global,
-                Some(&wiki_name),
-            )
-            .map_err(|e| format!("{e}"))?;
+            let msg = ops::config_set(config_path, &key, &value, is_global, Some(&wiki_name))
+                .map_err(|e| format!("{e}"))?;
             ok_text(msg)
         }
         _ => Err(format!("unknown config action: {action}")),
@@ -107,14 +101,20 @@ pub fn handle_content_read(server: &McpServer, args: &Map<String, Value>) -> Too
     let no_frontmatter = arg_bool(args, "no_frontmatter");
     let list_assets = arg_bool(args, "list_assets");
 
-    match ops::content_read(&engine, &uri, wiki_flag.as_deref(), no_frontmatter, list_assets)
-        .map_err(|e| format!("{e}"))?
+    match ops::content_read(
+        &engine,
+        &uri,
+        wiki_flag.as_deref(),
+        no_frontmatter,
+        list_assets,
+    )
+    .map_err(|e| format!("{e}"))?
     {
         ops::ContentReadResult::Page(content) => ok_text(content),
         ops::ContentReadResult::Assets(assets) => ok_text(assets.join("\n")),
-        ops::ContentReadResult::Binary => Err(
-            "asset is binary — access it directly from the filesystem".into(),
-        ),
+        ops::ContentReadResult::Binary => {
+            Err("asset is binary — access it directly from the filesystem".into())
+        }
     }
 }
 
@@ -124,9 +124,8 @@ pub fn handle_content_write(server: &McpServer, args: &Map<String, Value>) -> To
     let engine = server.engine();
     let wiki_flag = arg_str(args, "wiki");
 
-    let result =
-        ops::content_write(&engine, &uri, wiki_flag.as_deref(), &content)
-            .map_err(|e| format!("{e}"))?;
+    let result = ops::content_write(&engine, &uri, wiki_flag.as_deref(), &content)
+        .map_err(|e| format!("{e}"))?;
     ok_text(format!(
         "Wrote {} bytes to {}",
         result.bytes_written,

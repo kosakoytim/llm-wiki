@@ -225,7 +225,9 @@ pub fn search(
     let opts = search::SearchOptions {
         no_excerpt: params.no_excerpt,
         include_sections: params.include_sections,
-        top_k: params.top_k.unwrap_or(resolved.defaults.search_top_k as usize),
+        top_k: params
+            .top_k
+            .unwrap_or(resolved.defaults.search_top_k as usize),
         r#type: params.type_filter.map(|s| s.to_string()),
     };
 
@@ -243,12 +245,10 @@ pub fn search(
     } else {
         None
     };
-    let recovery_ctx = recovery
-        .as_ref()
-        .map(|(wr, rr)| search::RecoveryContext {
-            wiki_root: wr,
-            repo_root: rr,
-        });
+    let recovery_ctx = recovery.as_ref().map(|(wr, rr)| search::RecoveryContext {
+        wiki_root: wr,
+        repo_root: rr,
+    });
     search::search(
         params.query,
         &opts,
@@ -283,12 +283,10 @@ pub fn list(
     } else {
         None
     };
-    let recovery_ctx = recovery
-        .as_ref()
-        .map(|(wr, rr)| search::RecoveryContext {
-            wiki_root: wr,
-            repo_root: rr,
-        });
+    let recovery_ctx = recovery.as_ref().map(|(wr, rr)| search::RecoveryContext {
+        wiki_root: wr,
+        repo_root: rr,
+    });
     search::list(
         &opts,
         &space.index_path,

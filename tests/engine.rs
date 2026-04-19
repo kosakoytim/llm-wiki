@@ -177,5 +177,7 @@ fn on_config_change_returns_restart_required() {
     let (config_path, _) = setup_wiki(dir.path(), "test");
 
     let manager = EngineManager::build(&config_path).unwrap();
-    assert!(manager.on_config_change("defaults.search_top_k", "20").is_err());
+    assert!(manager
+        .on_config_change("defaults.search_top_k", "20")
+        .is_err());
 }

@@ -71,10 +71,7 @@ impl EngineManager {
         let type_registry = TypeRegistry::new();
 
         // state_dir = parent of config_path (e.g. ~/.llm-wiki/)
-        let state_dir = config_path
-            .parent()
-            .unwrap_or(Path::new("."))
-            .to_path_buf();
+        let state_dir = config_path.parent().unwrap_or(Path::new(".")).to_path_buf();
 
         let mut spaces = HashMap::new();
 
@@ -94,16 +91,20 @@ impl EngineManager {
 
             if needs_first_build {
                 tracing::info!(wiki = %entry.name, "building index for the first time");
-                if let Err(e) = search::rebuild_index(
-                    &wiki_root, &index_path, &entry.name, &repo_root, &schema,
-                ) {
+                if let Err(e) =
+                    search::rebuild_index(&wiki_root, &index_path, &entry.name, &repo_root, &schema)
+                {
                     tracing::warn!(wiki = %entry.name, error = %e, "initial index build failed");
                 }
             } else if let Ok(ref s) = status {
                 if s.stale && config.index.auto_rebuild {
                     tracing::info!(wiki = %entry.name, "index stale, rebuilding");
                     if let Err(e) = search::rebuild_index(
-                        &wiki_root, &index_path, &entry.name, &repo_root, &schema,
+                        &wiki_root,
+                        &index_path,
+                        &entry.name,
+                        &repo_root,
+                        &schema,
                     ) {
                         tracing::warn!(wiki = %entry.name, error = %e, "index rebuild failed");
                     }
@@ -143,7 +144,10 @@ impl EngineManager {
 
     /// Incremental index update after ingest.
     pub fn on_ingest(&self, wiki_name: &str) -> Result<search::UpdateReport> {
-        let engine = self.engine.read().map_err(|_| anyhow::anyhow!("lock poisoned"))?;
+        let engine = self
+            .engine
+            .read()
+            .map_err(|_| anyhow::anyhow!("lock poisoned"))?;
         let space = engine.space(wiki_name)?;
         let last_commit = search::last_indexed_commit(&space.index_path);
         search::update_index(
@@ -158,7 +162,10 @@ impl EngineManager {
 
     /// Rebuild index from scratch.
     pub fn rebuild_index(&self, wiki_name: &str) -> Result<search::IndexReport> {
-        let engine = self.engine.read().map_err(|_| anyhow::anyhow!("lock poisoned"))?;
+        let engine = self
+            .engine
+            .read()
+            .map_err(|_| anyhow::anyhow!("lock poisoned"))?;
         let space = engine.space(wiki_name)?;
         search::rebuild_index(
             &space.wiki_root,

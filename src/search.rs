@@ -375,8 +375,7 @@ pub fn index_status(wiki_name: &str, index_path: &Path, repo_root: &Path) -> Res
         {
             Some(state) => {
                 let head = git::current_head(repo_root).unwrap_or_default();
-                let stale =
-                    state.commit != head || state.schema_version != CURRENT_SCHEMA_VERSION;
+                let stale = state.commit != head || state.schema_version != CURRENT_SCHEMA_VERSION;
                 (Some(state.built), state.pages, state.sections, stale)
             }
             None => (None, 0, 0, true),

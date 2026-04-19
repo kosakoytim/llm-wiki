@@ -5,12 +5,12 @@ pub mod tools;
 use std::future::Future;
 use std::sync::{Arc, Mutex};
 
+use rmcp::model::AnnotateAble;
 use rmcp::model::{
     CallToolRequestParam, CallToolResult, Implementation, ListResourcesResult, ListToolsResult,
     PaginatedRequestParam, RawResource, ReadResourceRequestParam, ReadResourceResult,
     ResourceContents, ResourcesCapability, ServerCapabilities, ServerInfo, ToolsCapability,
 };
-use rmcp::model::AnnotateAble;
 use rmcp::service::{Peer, RequestContext, RoleServer};
 use rmcp::Error as McpError;
 use rmcp::ServerHandler;
@@ -56,9 +56,7 @@ impl McpServer {
             for entry in walker {
                 if let Ok(slug) = Slug::from_path(entry.path(), &space.wiki_root) {
                     let uri = format!("wiki://{wiki_name}/{slug}");
-                    resources.push(
-                        RawResource::new(uri, slug.title()).no_annotation(),
-                    );
+                    resources.push(RawResource::new(uri, slug.title()).no_annotation());
                 }
             }
         }

@@ -79,5 +79,3 @@ pub fn collect_page_uris(path: &Path, wiki_root: &Path, wiki_name: &str) -> Vec<
         })
         .collect()
 }
-
-

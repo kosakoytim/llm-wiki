@@ -78,7 +78,10 @@ fn tool_list_all_have_object_schema() {
 #[test]
 fn spaces_create_requires_path_and_name() {
     let tools = tools::tool_list();
-    let tool = tools.iter().find(|t| t.name == "wiki_spaces_create").unwrap();
+    let tool = tools
+        .iter()
+        .find(|t| t.name == "wiki_spaces_create")
+        .unwrap();
     let required = tool
         .input_schema
         .get("required")
@@ -118,8 +121,6 @@ fn search_has_type_param() {
         .unwrap();
     assert!(props.contains_key("type"), "missing type param");
 }
-
-
 
 #[test]
 fn graph_has_relation_param() {

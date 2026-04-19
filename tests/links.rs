@@ -43,9 +43,7 @@ fn extract_links_deduplicates() {
 
 #[test]
 fn extract_links_empty_when_no_links() {
-    let page = frontmatter::parse(
-        "---\ntitle: \"Test\"\ntype: concept\n---\n\nNo links here.\n",
-    );
+    let page = frontmatter::parse("---\ntitle: \"Test\"\ntype: concept\n---\n\nNo links here.\n");
     let links = extract_links(&page);
     assert!(links.is_empty());
 }

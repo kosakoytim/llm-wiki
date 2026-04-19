@@ -12,9 +12,9 @@ pub fn read_page(slug: &Slug, wiki_root: &Path, no_frontmatter: bool) -> Result<
     let content = std::fs::read_to_string(&path)?;
 
     let page = frontmatter::parse(&content);
-    let notice = page.superseded_by().map(|s| {
-        format!("\n> **Superseded** by [{s}](wiki://{s})\n")
-    });
+    let notice = page
+        .superseded_by()
+        .map(|s| format!("\n> **Superseded** by [{s}](wiki://{s})\n"));
 
     if no_frontmatter {
         let body = &page.body;
@@ -113,10 +113,7 @@ pub fn create_page(
 
     let mut fm = frontmatter::scaffold(slug, false);
     if let Some(name) = name_override {
-        fm.insert(
-            "title".into(),
-            serde_yaml::Value::String(name.to_string()),
-        );
+        fm.insert("title".into(), serde_yaml::Value::String(name.to_string()));
     }
     if let Some(t) = type_override {
         fm.insert("type".into(), serde_yaml::Value::String(t.to_string()));

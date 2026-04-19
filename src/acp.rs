@@ -42,9 +42,7 @@ impl WikiAgent {
 
     pub fn resolve_wiki_name(&self, session_wiki: Option<&str>) -> String {
         let engine = self.manager.engine.read().expect("engine lock poisoned");
-        engine
-            .resolve_wiki_name(session_wiki)
-            .to_string()
+        engine.resolve_wiki_name(session_wiki).to_string()
     }
 
     fn session_cwd(&self) -> PathBuf {
@@ -93,9 +91,9 @@ impl WikiAgent {
     ) -> std::result::Result<(), acp::Error> {
         let notif = acp::SessionNotification::new(
             session_id.clone(),
-            acp::SessionUpdate::AgentMessageChunk(acp::ContentChunk::new(
-                acp::ContentBlock::Text(acp::TextContent::new(text)),
-            )),
+            acp::SessionUpdate::AgentMessageChunk(acp::ContentChunk::new(acp::ContentBlock::Text(
+                acp::TextContent::new(text),
+            ))),
         );
         self.send_notification(notif).await
     }
@@ -187,7 +185,11 @@ impl WikiAgent {
 
         // Step 3: execute search via ops
         let results = {
-            let engine = self.manager.engine.read().map_err(|_| acp::Error::internal_error())?;
+            let engine = self
+                .manager
+                .engine
+                .read()
+                .map_err(|_| acp::Error::internal_error())?;
             ops::search(
                 &engine,
                 wiki_name,
@@ -224,8 +226,11 @@ impl WikiAgent {
                 .await?;
 
                 let read_result = {
-                    let engine =
-                        self.manager.engine.read().map_err(|_| acp::Error::internal_error())?;
+                    let engine = self
+                        .manager
+                        .engine
+                        .read()
+                        .map_err(|_| acp::Error::internal_error())?;
                     ops::content_read(&engine, &top.slug, Some(wiki_name), false, false)
                 };
                 match read_result {
@@ -491,4 +496,3 @@ pub async fn serve_acp(manager: Arc<EngineManager>) -> Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!("ACP connection error: {e}"))
 }
-

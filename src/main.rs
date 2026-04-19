@@ -141,9 +141,7 @@ fn main() -> Result<()> {
                         }
                     }
                     ops::ContentReadResult::Binary => {
-                        anyhow::bail!(
-                            "asset is binary — access it directly from the filesystem"
-                        );
+                        anyhow::bail!("asset is binary — access it directly from the filesystem");
                     }
                 }
             }
@@ -176,8 +174,7 @@ fn main() -> Result<()> {
             } => {
                 if dry_run {
                     let manager = EngineManager::build(&config_path)?;
-                    let engine =
-                        manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
+                    let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
                     let global = &engine.config;
                     let (entry, slug) =
                         llm_wiki::slug::WikiUri::resolve(&uri, cli.wiki.as_deref(), global)?;
@@ -191,8 +188,7 @@ fn main() -> Result<()> {
                     println!("Would create {kind} at wiki://{}/{slug}", entry.name);
                 } else {
                     let manager = EngineManager::build(&config_path)?;
-                    let engine =
-                        manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
+                    let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
                     let result_uri = ops::content_new(
                         &engine,
                         &uri,
@@ -212,17 +208,10 @@ fn main() -> Result<()> {
             } => {
                 let manager = EngineManager::build(&config_path)?;
                 let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
-                let wiki_name = engine
-                    .resolve_wiki_name(cli.wiki.as_deref())
-                    .to_string();
+                let wiki_name = engine.resolve_wiki_name(cli.wiki.as_deref()).to_string();
 
-                let hash = ops::content_commit(
-                    &engine,
-                    &wiki_name,
-                    &slugs,
-                    all,
-                    message.as_deref(),
-                )?;
+                let hash =
+                    ops::content_commit(&engine, &wiki_name, &slugs, all, message.as_deref())?;
 
                 if hash.is_empty() {
                     println!("Nothing to commit");
@@ -323,9 +312,7 @@ fn main() -> Result<()> {
             let manager = EngineManager::build(&config_path)?;
             let report = {
                 let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
-                let wiki_name = engine
-                    .resolve_wiki_name(cli.wiki.as_deref())
-                    .to_string();
+                let wiki_name = engine.resolve_wiki_name(cli.wiki.as_deref()).to_string();
                 ops::ingest(&engine, &manager, &path, dry_run, &wiki_name)?
             };
 
@@ -388,14 +375,12 @@ fn main() -> Result<()> {
             IndexAction::Rebuild { dry_run, format } => {
                 let manager = EngineManager::build(&config_path)?;
                 let wiki_name = {
-                    let engine =
-                        manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
+                    let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
                     engine.resolve_wiki_name(cli.wiki.as_deref()).to_string()
                 };
 
                 if dry_run {
-                    let engine =
-                        manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
+                    let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
                     let space = engine.space(&wiki_name)?;
                     let count = walkdir::WalkDir::new(&space.wiki_root)
                         .into_iter()
@@ -438,10 +423,7 @@ fn main() -> Result<()> {
                     println!("sections:  {}", status.sections);
                     println!("stale:     {}", if status.stale { "yes" } else { "no" });
                     println!("openable:  {}", if status.openable { "yes" } else { "no" });
-                    println!(
-                        "queryable: {}",
-                        if status.queryable { "yes" } else { "no" }
-                    );
+                    println!("queryable: {}", if status.queryable { "yes" } else { "no" });
                 }
             }
         },
@@ -460,9 +442,8 @@ fn main() -> Result<()> {
                 return Ok(());
             }
 
-            let sse_port = sse.and_then(|opt| {
-                opt.and_then(|s| s.trim_start_matches(':').parse::<u16>().ok())
-            });
+            let sse_port =
+                sse.and_then(|opt| opt.and_then(|s| s.trim_start_matches(':').parse::<u16>().ok()));
 
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(llm_wiki::server::serve(&config_path, sse_port, acp))?;

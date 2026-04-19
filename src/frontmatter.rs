@@ -30,11 +30,7 @@ impl ParsedPage {
         self.frontmatter
             .get("tags")
             .and_then(|v| v.as_sequence())
-            .map(|seq| {
-                seq.iter()
-                    .filter_map(|v| v.as_str())
-                    .collect()
-            })
+            .map(|seq| seq.iter().filter_map(|v| v.as_str()).collect())
             .unwrap_or_default()
     }
 
@@ -66,9 +62,7 @@ pub fn parse(content: &str) -> ParsedPage {
         };
     }
     let after_open = &trimmed[3..];
-    let rest = after_open
-        .trim_start_matches('\r')
-        .trim_start_matches('\n');
+    let rest = after_open.trim_start_matches('\r').trim_start_matches('\n');
     let Some(close) = rest.find("\n---") else {
         return ParsedPage {
             frontmatter: BTreeMap::new(),
@@ -82,8 +76,7 @@ pub fn parse(content: &str) -> ParsedPage {
         .or_else(|| after_close.strip_prefix('\n'))
         .unwrap_or(after_close);
 
-    let frontmatter: BTreeMap<String, Value> =
-        serde_yaml::from_str(yaml_str).unwrap_or_default();
+    let frontmatter: BTreeMap<String, Value> = serde_yaml::from_str(yaml_str).unwrap_or_default();
 
     ParsedPage {
         frontmatter,
@@ -98,9 +91,7 @@ pub fn parse_strict(content: &str) -> Result<ParsedPage> {
         bail!("no frontmatter block found");
     }
     let after_open = &trimmed[3..];
-    let rest = after_open
-        .trim_start_matches('\r')
-        .trim_start_matches('\n');
+    let rest = after_open.trim_start_matches('\r').trim_start_matches('\n');
     let close = rest
         .find("\n---")
         .ok_or_else(|| anyhow::anyhow!("no closing --- found"))?;

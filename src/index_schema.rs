@@ -29,16 +29,52 @@ impl IndexSchema {
             map.insert(name.to_string(), field);
         };
 
-        f("slug", builder.add_text_field("slug", STRING | STORED), &mut fields);
-        f("uri", builder.add_text_field("uri", STRING | STORED), &mut fields);
-        f("title", builder.add_text_field("title", text_opts.clone()), &mut fields);
-        f("summary", builder.add_text_field("summary", text_opts.clone()), &mut fields);
-        f("body", builder.add_text_field("body", text_opts.clone()), &mut fields);
-        f("type", builder.add_text_field("type", STRING | STORED), &mut fields);
-        f("status", builder.add_text_field("status", STRING | STORED), &mut fields);
-        f("tags", builder.add_text_field("tags", text_opts), &mut fields);
+        f(
+            "slug",
+            builder.add_text_field("slug", STRING | STORED),
+            &mut fields,
+        );
+        f(
+            "uri",
+            builder.add_text_field("uri", STRING | STORED),
+            &mut fields,
+        );
+        f(
+            "title",
+            builder.add_text_field("title", text_opts.clone()),
+            &mut fields,
+        );
+        f(
+            "summary",
+            builder.add_text_field("summary", text_opts.clone()),
+            &mut fields,
+        );
+        f(
+            "body",
+            builder.add_text_field("body", text_opts.clone()),
+            &mut fields,
+        );
+        f(
+            "type",
+            builder.add_text_field("type", STRING | STORED),
+            &mut fields,
+        );
+        f(
+            "status",
+            builder.add_text_field("status", STRING | STORED),
+            &mut fields,
+        );
+        f(
+            "tags",
+            builder.add_text_field("tags", text_opts),
+            &mut fields,
+        );
         // Multi-valued keyword field for body [[wiki-links]]
-        f("body_links", builder.add_text_field("body_links", STRING | STORED), &mut fields);
+        f(
+            "body_links",
+            builder.add_text_field("body_links", STRING | STORED),
+            &mut fields,
+        );
 
         IndexSchema {
             schema: builder.build(),

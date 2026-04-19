@@ -301,12 +301,21 @@ fn default_log_format() -> String {
 
 pub fn resolve(global: &GlobalConfig, per_wiki: &WikiConfig) -> ResolvedConfig {
     ResolvedConfig {
-        defaults: per_wiki.defaults.clone().unwrap_or_else(|| global.defaults.clone()),
+        defaults: per_wiki
+            .defaults
+            .clone()
+            .unwrap_or_else(|| global.defaults.clone()),
         read: per_wiki.read.clone().unwrap_or_else(|| global.read.clone()),
         index: global.index.clone(),
-        graph: per_wiki.graph.clone().unwrap_or_else(|| global.graph.clone()),
+        graph: per_wiki
+            .graph
+            .clone()
+            .unwrap_or_else(|| global.graph.clone()),
         serve: global.serve.clone(),
-        ingest: per_wiki.ingest.clone().unwrap_or_else(|| global.ingest.clone()),
+        ingest: per_wiki
+            .ingest
+            .clone()
+            .unwrap_or_else(|| global.ingest.clone()),
         validation: per_wiki
             .validation
             .clone()
@@ -387,11 +396,7 @@ pub fn set_global_config_value(global: &mut GlobalConfig, key: &str, value: &str
     Ok(())
 }
 
-pub fn get_config_value(
-    resolved: &ResolvedConfig,
-    global: &GlobalConfig,
-    key: &str,
-) -> String {
+pub fn get_config_value(resolved: &ResolvedConfig, global: &GlobalConfig, key: &str) -> String {
     match key {
         "global.default_wiki" => global.global.default_wiki.clone(),
         "defaults.search_top_k" => resolved.defaults.search_top_k.to_string(),

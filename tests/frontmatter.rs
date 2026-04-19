@@ -120,7 +120,10 @@ fn generate_minimal_sets_defaults() {
 fn scaffold_page() {
     let slug = Slug::try_from("concepts/mixture-of-experts").unwrap();
     let fm = scaffold(&slug, false);
-    assert_eq!(fm.get("title").unwrap().as_str(), Some("Mixture Of Experts"));
+    assert_eq!(
+        fm.get("title").unwrap().as_str(),
+        Some("Mixture Of Experts")
+    );
     assert_eq!(fm.get("type").unwrap().as_str(), Some("page"));
     assert_eq!(fm.get("status").unwrap().as_str(), Some("draft"));
 }

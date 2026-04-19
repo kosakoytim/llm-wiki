@@ -24,8 +24,15 @@ fn create_builds_wiki_structure() {
     let wiki_path = dir.path().join("research");
     let cfg = config_path(dir.path());
 
-    let report = spaces::create(&wiki_path, "research", Some("test wiki"), false, false, &cfg)
-        .unwrap();
+    let report = spaces::create(
+        &wiki_path,
+        "research",
+        Some("test wiki"),
+        false,
+        false,
+        &cfg,
+    )
+    .unwrap();
 
     assert!(report.created);
     assert!(report.registered);

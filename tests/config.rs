@@ -400,8 +400,14 @@ fn get_config_value_reads_resolved_keys() {
     };
     let resolved = resolve(&global, &WikiConfig::default());
 
-    assert_eq!(get_config_value(&resolved, &global, "defaults.search_top_k"), "42");
-    assert_eq!(get_config_value(&resolved, &global, "defaults.output_format"), "json");
+    assert_eq!(
+        get_config_value(&resolved, &global, "defaults.search_top_k"),
+        "42"
+    );
+    assert_eq!(
+        get_config_value(&resolved, &global, "defaults.output_format"),
+        "json"
+    );
 }
 
 #[test]
@@ -424,10 +430,22 @@ fn get_config_value_reads_global_only_keys() {
     };
     let resolved = resolve(&global, &WikiConfig::default());
 
-    assert_eq!(get_config_value(&resolved, &global, "index.memory_budget_mb"), "100");
-    assert_eq!(get_config_value(&resolved, &global, "index.tokenizer"), "default");
-    assert_eq!(get_config_value(&resolved, &global, "serve.sse_port"), "9090");
-    assert_eq!(get_config_value(&resolved, &global, "logging.log_format"), "json");
+    assert_eq!(
+        get_config_value(&resolved, &global, "index.memory_budget_mb"),
+        "100"
+    );
+    assert_eq!(
+        get_config_value(&resolved, &global, "index.tokenizer"),
+        "default"
+    );
+    assert_eq!(
+        get_config_value(&resolved, &global, "serve.sse_port"),
+        "9090"
+    );
+    assert_eq!(
+        get_config_value(&resolved, &global, "logging.log_format"),
+        "json"
+    );
 }
 
 #[test]
@@ -448,7 +466,10 @@ fn get_config_value_returns_per_wiki_override() {
     };
     let resolved = resolve(&global, &per_wiki);
 
-    assert_eq!(get_config_value(&resolved, &global, "defaults.search_top_k"), "25");
+    assert_eq!(
+        get_config_value(&resolved, &global, "defaults.search_top_k"),
+        "25"
+    );
 }
 
 #[test]

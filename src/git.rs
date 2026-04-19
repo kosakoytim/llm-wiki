@@ -127,10 +127,7 @@ fn collect_md_changes(diff: &git2::Diff, wiki_prefix: &Path) -> Vec<ChangedFile>
     let mut changes = Vec::new();
     diff.foreach(
         &mut |delta, _| {
-            let path = delta
-                .new_file()
-                .path()
-                .or_else(|| delta.old_file().path());
+            let path = delta.new_file().path().or_else(|| delta.old_file().path());
             if let Some(p) = path {
                 if p.starts_with(wiki_prefix)
                     && p.extension().and_then(|e| e.to_str()) == Some("md")

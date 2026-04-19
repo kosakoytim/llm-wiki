@@ -18,7 +18,8 @@ fn write_file(wiki_root: &std::path::Path, rel_path: &str, content: &str) {
     fs::write(path, content).unwrap();
 }
 
-const SAMPLE: &str = "---\ntitle: \"Test\"\ntype: concept\nstatus: active\n---\n\n## Overview\n\nHello world.\n";
+const SAMPLE: &str =
+    "---\ntitle: \"Test\"\ntype: concept\nstatus: active\n---\n\n## Overview\n\nHello world.\n";
 
 fn slug(s: &str) -> Slug {
     Slug::try_from(s).unwrap()
@@ -187,7 +188,14 @@ fn create_page_with_name_override() {
     let dir = tempfile::tempdir().unwrap();
     let wiki = setup_wiki(dir.path());
 
-    let path = create_page(&slug("concepts/bar"), false, &wiki, Some("Custom Title"), None).unwrap();
+    let path = create_page(
+        &slug("concepts/bar"),
+        false,
+        &wiki,
+        Some("Custom Title"),
+        None,
+    )
+    .unwrap();
     let page = frontmatter::parse(&fs::read_to_string(&path).unwrap());
     assert_eq!(page.title(), Some("Custom Title"));
 }
