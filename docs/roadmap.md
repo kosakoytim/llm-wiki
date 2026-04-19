@@ -459,14 +459,22 @@ Tests: unit tests for dispatch_workflow, session management
 Commit: `feat: add acp.rs — WikiAgent with ACP transport`
 
 Changes from code-ref:
-- `WikiAgent` holds `Arc<RwLock<Engine>>` instead of separate
+- `WikiAgent` holds `Arc<EngineManager>` instead of separate
   `GlobalConfig` + `Vec<WikiEntry>`
-- Remove `INSTRUCTIONS` injection at initialize
+- `resolve_wiki` uses `engine.resolve_wiki_name` + `engine.space`
+  instead of iterating `Vec<WikiEntry>`
+- `run_research` calls `ops::search` and `ops::content_read`
+  instead of direct `crate::search::search` /
+  `crate::markdown::read_page`
+- Remove `WikiServer::index_path_for` — index path comes from
+  `SpaceState` via Engine
 - Remove `run_lint` (lint is a skill)
-- `run_research` calls engine methods instead of direct
-  `crate::search::search` / `crate::markdown::read_page`
-- Replace keyword dispatch with `llm-wiki:` prefix convention
+- Remove `INSTRUCTIONS` injection at initialize
+- Remove `crate::server::INSTRUCTIONS` reference
 - Remove ingest/crystallize placeholder strings
+- Replace keyword dispatch with `llm-wiki:` prefix convention
+- `serve_acp` accepts `Arc<EngineManager>` instead of
+  `Arc<GlobalConfig>`
 - Keep: AcpSession, streaming helpers (send_message, send_tool_call,
   send_tool_result), make_tool_id, serve_acp connection setup
 
@@ -480,7 +488,9 @@ Commit: `feat: add server.rs — stdio + SSE + ACP transport wiring`
 
 Changes from code-ref:
 - Build `EngineManager` at startup instead of `WikiServer`
-- Share `Arc<RwLock<Engine>>` across all transports
+- Share `Arc<EngineManager>` across all transports (MCP + ACP)
+- `McpServer::new(manager.clone())` for MCP transports
+- `serve_acp(manager.clone())` for ACP transport
 - Remove `INSTRUCTIONS` constant and schema.md injection
 - Remove `WikiServer` struct (replaced by `McpServer` in mcp/mod.rs)
 - Keep: serve_stdio, serve_sse with retry, serve() orchestration,

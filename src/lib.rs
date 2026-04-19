@@ -1,6 +1,7 @@
 // llm-wiki engine library
 // Modules added incrementally — see docs/roadmap.md Phase 1
 
+pub mod acp;
 pub mod cli;
 pub mod config;
 pub mod engine;
