@@ -339,3 +339,126 @@ fn search_recovers_from_corrupt_index() {
     let results = search("Foo", &SearchOptions::default(), &index_path, "test", &is, Some(&recovery)).unwrap();
     assert!(!results.is_empty());
 }
+
+
+// ── update_index edge cases ───────────────────────────────────────────────────
+
+#[test]
+fn update_deletes_removed_page() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    write_page(&wiki_root, "concepts/gone.md", &concept_page("Gone", "will be deleted"));
+    let index_path = build_index(dir.path(), &wiki_root);
+    let is = schema();
+
+    // Verify it's in the index
+    let results = search("Gone", &SearchOptions::default(), &index_path, "test", &is, None).unwrap();
+    assert!(!results.is_empty());
+
+    // Delete and update
+    fs::remove_file(wiki_root.join("concepts/gone.md")).unwrap();
+    let report = update_index(&wiki_root, &index_path, dir.path(), None, &is, "test").unwrap();
+    assert_eq!(report.deleted, 1);
+
+    // Verify it's gone
+    let results = search("Gone", &SearchOptions::default(), &index_path, "test", &is, None).unwrap();
+    assert!(results.is_empty());
+}
+
+#[test]
+fn update_modifies_existing_page() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    write_page(&wiki_root, "concepts/evolve.md", &concept_page("Evolve", "original body"));
+    let index_path = build_index(dir.path(), &wiki_root);
+    let is = schema();
+
+    // Modify the page
+    write_page(&wiki_root, "concepts/evolve.md", &concept_page("Evolve", "updated body with unicorn"));
+    let report = update_index(&wiki_root, &index_path, dir.path(), None, &is, "test").unwrap();
+    assert_eq!(report.updated, 1);
+
+    let results = search("unicorn", &SearchOptions::default(), &index_path, "test", &is, None).unwrap();
+    assert!(!results.is_empty());
+}
+
+// ── search_all edge cases ─────────────────────────────────────────────────────
+
+#[test]
+fn search_all_respects_top_k() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    for i in 0..5 {
+        write_page(
+            &wiki_root,
+            &format!("concepts/topic-{i}.md"),
+            &concept_page(&format!("Topic {i}"), "shared keyword body"),
+        );
+    }
+    let index_path = build_index(dir.path(), &wiki_root);
+    let is = schema();
+
+    let opts = SearchOptions { top_k: 2, ..Default::default() };
+    let wikis = vec![("test".into(), index_path)];
+    let results = search_all("keyword", &opts, &wikis, &is).unwrap();
+    assert!(results.len() <= 2);
+}
+
+#[test]
+fn search_all_skips_missing_index() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    write_page(&wiki_root, "concepts/foo.md", &concept_page("Foo", "body"));
+    let index_path = build_index(dir.path(), &wiki_root);
+    let is = schema();
+
+    let wikis = vec![
+        ("good".into(), index_path),
+        ("bad".into(), dir.path().join("nonexistent")),
+    ];
+    let results = search_all("Foo", &SearchOptions::default(), &wikis, &is).unwrap();
+    assert!(!results.is_empty());
+}
+
+// ── index_status edge cases ───────────────────────────────────────────────────
+
+#[test]
+fn status_stale_on_schema_version_mismatch() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    write_page(&wiki_root, "concepts/foo.md", &concept_page("Foo", "body"));
+    let index_path = build_index(dir.path(), &wiki_root);
+
+    // Tamper with schema_version in state.toml
+    let state_path = index_path.join("state.toml");
+    let content = fs::read_to_string(&state_path).unwrap();
+    let tampered = content.replace("schema_version = 2", "schema_version = 999");
+    fs::write(&state_path, tampered).unwrap();
+
+    let status = index_status("test", &index_path, dir.path()).unwrap();
+    assert!(status.stale);
+}
+
+// ── collect_changed_files ─────────────────────────────────────────────────────
+
+#[test]
+fn collect_changed_files_detects_new_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    write_page(&wiki_root, "concepts/new.md", &concept_page("New", "body"));
+
+    let changes = collect_changed_files(dir.path(), &wiki_root, None).unwrap();
+    assert!(!changes.is_empty());
+}
+
+#[test]
+fn collect_changed_files_empty_when_clean() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    write_page(&wiki_root, "concepts/foo.md", &concept_page("Foo", "body"));
+    git::commit(dir.path(), "add foo").unwrap();
+    let head = git::current_head(dir.path()).unwrap();
+
+    let changes = collect_changed_files(dir.path(), &wiki_root, Some(&head)).unwrap();
+    assert!(changes.is_empty());
+}
