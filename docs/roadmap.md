@@ -143,21 +143,24 @@ Existing wikis are not modified — only new wikis get the schemas.
 ### Step 5: Dynamic `SpaceTypeRegistry`
 
 Modules: `src/type_registry.rs` (rewrite)
-Deps: add `jsonschema = "0.28"` to `Cargo.toml`
-Tests: build registry from test schemas, validate frontmatter,
-alias resolution, unknown type fallback
-Commit: `type_registry: dynamic registry from wiki.toml + schemas/`
+Deps: `jsonschema` already in `Cargo.toml`
+Tests: build registry from test schemas on disk, build from embedded
+defaults when no schemas/ dir, validate frontmatter, alias extraction,
+unknown type fallback, wiki.toml override takes precedence
+Commit: `type_registry: dynamic registry from schemas/ + wiki.toml overrides`
 
 Replace the hardcoded `TypeRegistry` with `SpaceTypeRegistry`:
-- Load `[types.*]` from `wiki.toml`
-- For each type, load JSON Schema from `schemas/`, compile validator
-- Extract `x-index-aliases` from schema
-- Fallback: if no `schemas/` dir or no `[types.*]`, use embedded
-  base schema (backward compat with Phase 1 wikis)
+- Scan `schemas/*.json` in the wiki repo, read `x-wiki-types` from
+  each to discover types
+- For each type, compile `jsonschema::Validator`, extract
+  `x-index-aliases`
+- Read `[types.*]` from `wiki.toml` — overrides take precedence
+- Fallback: if no `schemas/` dir, use embedded default schemas
 - `validate(frontmatter, type) -> Result<Vec<Warning>>`
 - `aliases(type) -> HashMap<String, String>`
-- `schema_hash() -> String` (SHA-256 of all type inputs)
+- `schema_hash() -> String` (SHA-256 of all inputs)
 - `type_hashes() -> HashMap<String, String>` (per-type)
+- Multiple types sharing a schema share the compiled validator
 
 ### Step 6: Dynamic `IndexSchema`
 

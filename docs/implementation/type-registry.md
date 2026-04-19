@@ -1,8 +1,8 @@
 ---
 title: "Type Registry Implementation"
-summary: "How types are loaded, compiled, cached, and invalidated at runtime."
+summary: "How types are discovered from schemas, compiled, cached, and invalidated at runtime."
 status: draft
-last_updated: "2025-07-17"
+last_updated: "2025-07-18"
 ---
 
 # Type Registry Implementation
@@ -15,13 +15,18 @@ design.
 
 The type registry is an in-memory cache of compiled validators and
 metadata for all registered types. Built once at startup, used on every
-ingest, invalidated when the type configuration changes.
+ingest, invalidated when schema files change.
+
+Types are discovered from `schemas/*.json` via `x-wiki-types`, with
+optional `[types.*]` entries in `wiki.toml` as overrides. See
+[schema-driven-types](../decisions/schema-driven-types.md) for the
+rationale.
 
 ## Core Structs
 
 ```rust
 /// Per-wiki type registry
-struct SpaceTypeRegistry {
+pub struct SpaceTypeRegistry {
     /// type name → compiled type
     types: HashMap<String, RegisteredType>,
     /// SHA-256 hash of all type inputs (for change detection)
@@ -30,7 +35,11 @@ struct SpaceTypeRegistry {
     type_hashes: HashMap<String, String>,
 }
 
-struct RegisteredType {
+pub struct RegisteredType {
+    /// Path to the schema file (relative to repo root)
+    schema_path: String,
+    /// Human-readable description
+    description: String,
     /// compiled JSON Schema validator — no re-parsing on each ingest
     validator: jsonschema::Validator,
     /// x-index-aliases: source field → canonical field
@@ -39,99 +48,46 @@ struct RegisteredType {
     edges: Vec<EdgeDecl>,
 }
 
-struct EdgeDecl {
-    field: String,
-    relation: String,
-    direction: String,
-    target_types: Option<Vec<String>>,
-}
-
-/// All wikis combined - used by cross-wiki operations
-struct GlobalTypeRegistry {
-    /// wiki name -> per-wiki registry
-    spaces: HashMap<String, SpaceTypeRegistry>,
+pub struct EdgeDecl {
+    pub field: String,
+    pub relation: String,
+    pub direction: String,
+    pub target_types: Option<Vec<String>>,
 }
 ```
-
-`GlobalTypeRegistry` is built at startup by loading each wiki's
-`SpaceTypeRegistry`. Cross-wiki search and graph operations iterate
-over all spaces.
-
-## SpaceTypeRegistryManager
-
-Manages the lifecycle of a `SpaceTypeRegistry` — builds, detects
-changes, and rebuilds only what's needed.
-
-```rust
-struct SpaceTypeRegistryManager {
-    wiki_root: PathBuf,
-    registry: SpaceTypeRegistry,
-}
-
-impl SpaceTypeRegistryManager {
-    /// Build from wiki.toml + schemas/
-    fn build(wiki_root: &Path) -> Result<Self>;
-
-    /// Check if type registry has changed on disk
-    fn has_changed(&self) -> Result<bool>;
-
-    /// Rebuild entirely
-    fn rebuild(&mut self) -> Result<RebuildReport>;
-
-    /// Detect which types changed and rebuild only those
-    fn refresh(&mut self) -> Result<RefreshReport>;
-
-    /// Get the current registry (read-only)
-    fn registry(&self) -> &SpaceTypeRegistry;
-}
-
-struct RefreshReport {
-    added: Vec<String>,
-    removed: Vec<String>,
-    changed: Vec<String>,
-    needs_full_index_rebuild: bool,
-    needs_partial_index_rebuild: Vec<String>,
-}
-```
-
-### Change detection
-
-`has_changed()` recomputes `schema_hash` from current `wiki.toml` +
-`schemas/` and compares with the stored hash.
-
-### Refresh logic
-
-`refresh()` compares per-type hashes to determine what changed:
-
-1. Types in old but not new -> removed
-2. Types in new but not old -> added
-3. Types in both but hash differs -> changed
-4. If added or removed -> `needs_full_index_rebuild = true`
-5. If all types changed -> `needs_full_index_rebuild = true`
-6. If some types changed -> `needs_partial_index_rebuild` = changed list
-
-Only the affected `RegisteredType` entries are rebuilt (re-read schema,
-re-compile validator, re-extract aliases/edges). Unchanged types keep
-their compiled validators.
-
-### Called by EngineManager
-
-`EngineManager.on_type_change()` calls `SpaceTypeRegistryManager.refresh()`,
-reads the `RefreshReport`, and decides whether to do a full or partial
-index rebuild. See [engine.md](engine.md).
 
 ## Build Sequence
 
-1. Read `wiki.toml` → collect all `[types.*]` entries (name, schema path,
-   description)
-2. For each type:
-   a. Load the JSON Schema file from `schemas/`
-   b. Compile the validator via `jsonschema::validator_for()`
-   c. Extract `x-index-aliases` from the schema
-   d. Extract `x-graph-edges` from the schema
-   e. Compute per-type hash from aliases + edges
-3. Compute global `schema_hash` from all per-type hashes
-4. Store in `SpaceTypeRegistry`
+1. Scan `schemas/*.json` in the wiki repository
+2. For each schema file:
+   a. Parse the JSON Schema
+   b. Read `x-wiki-types` → collect `(type_name, description)` pairs
+   c. Extract `x-index-aliases`
+   d. Extract `x-graph-edges` (Phase 3)
+   e. Compile the validator via `jsonschema::Validator::new()`
+   f. For each type declared in `x-wiki-types`, create a
+      `RegisteredType` sharing the same compiled validator
+3. Read `[types.*]` from `wiki.toml` (if any)
+4. For each `wiki.toml` override:
+   a. Load the referenced schema file
+   b. Compile validator, extract aliases/edges
+   c. Replace or add the entry in the registry
+5. Compute per-type hashes and global `schema_hash`
+6. Store in `SpaceTypeRegistry`
+
+### Fallback behavior
+
+- If `schemas/` directory is missing → use embedded default schemas
+  (backward compat with Phase 1 wikis)
+- The type named `default` is the fallback for pages with an
+  unrecognized or missing `type` field
+- If no `default` type is discovered → use embedded `base.json`
+
+### Validator sharing
+
+Multiple types can share a single compiled validator (e.g., `paper`,
+`article`, `documentation` all use `paper.json`). The validator is
+compiled once per schema file, then referenced by each type.
 
 ## Usage
 
@@ -143,7 +99,7 @@ index rebuild. See [engine.md](engine.md).
 3. Fall back to "default" if type not found
 4. validator.validate(frontmatter) → accept or reject
 5. aliases → resolve field names for indexing
-6. edges → resolve graph edges for indexing
+6. edges → resolve graph edges for indexing (Phase 3)
 ```
 
 No file I/O, no schema parsing — everything is pre-compiled.
@@ -158,71 +114,60 @@ building petgraph from the index.
 
 ### llm-wiki serve
 
-Built once at startup. Lives for the process lifetime. If `wiki.toml`
-or `schemas/` change on disk, the server doesn't detect it
-automatically — run `llm-wiki index rebuild` or restart.
+Built once at startup. Lives for the process lifetime. If `schemas/`
+files change on disk, the server doesn't detect it automatically —
+run `llm-wiki index rebuild` or restart.
 
 ### CLI commands
 
 Each invocation:
 
 1. Read `state.toml` → get stored `schema_hash`
-2. Recompute hash from current `wiki.toml` + `schemas/`
-3. Match → load cached `schema.json` → build registry from cache
+2. Recompute hash from current `schemas/` + `wiki.toml` overrides
+3. Match → use cached registry
 4. Mismatch → rebuild registry from schema files → update cache
+
+## Schema Hash
+
+The `schema_hash` is a SHA-256 of all inputs that affect the type
+registry:
+
+- Contents of each `schemas/*.json` file (sorted by filename)
+- Contents of `[types.*]` entries from `wiki.toml` (sorted by type name)
+
+Per-type hashes cover the subset relevant to each type:
+- The schema file content
+- The `x-index-aliases` mapping
+- The `x-graph-edges` declarations (Phase 3)
+
+### What triggers invalidation
+
+- Schema file added, removed, or modified in `schemas/`
+- `[types.*]` entry added, removed, or changed in `wiki.toml`
+- `x-index-aliases` changed in a schema
+- `x-graph-edges` changed in a schema
+
+### What does not trigger invalidation
+
+- Page content changes (handled by incremental update via git diff)
+- Config changes outside `[types.*]` in `wiki.toml`
+- Schema changes that don't affect validation, aliases, or edges
 
 ## Relationship to Index Schema
 
-The tantivy `IndexSchema` is built from the `SpaceTypeRegistry`. The registry
-knows all fields across all types (after alias resolution), their JSON
-Schema types, and their edge declarations. The index schema is the
-tantivy translation of that.
+The tantivy `IndexSchema` is built from the `SpaceTypeRegistry`:
 
 ```
-wiki.toml + schemas/
+schemas/*.json + wiki.toml overrides
     → SpaceTypeRegistry (validators, aliases, edges)
         → IndexSchema (tantivy Schema, field handles)
             → tantivy Index
 ```
 
 Both are rebuilt together when `schema_hash` changes. See
-[tantivy.md](tantivy.md) for the `IndexSchema` struct and how fields
-are classified.
-
-## Cache File
-
-The compiled registry metadata (not the validators — those can't be
-serialized) is cached as `schema.json` at
-`~/.llm-wiki/indexes/<name>/schema.json`.
-
-Contains:
-- Field set (name, tantivy type, options)
-- Per-type aliases
-- Per-type edge declarations
-
-The `jsonschema::Validator` is rebuilt from the schema files when the
-registry is loaded — compilation is fast (microseconds per schema).
-
-## Invalidation
-
-The registry is invalidated when `schema_hash` changes. See
-[index-management.md](../specifications/engine/index-management.md)
-for the change detection logic.
-
-What triggers invalidation:
-- Type added or removed in `wiki.toml`
-- Type pointing to a different schema file
-- `x-index-aliases` changed
-- `x-graph-edges` changed
-
-What does not:
-- Page content changes
-- Config changes outside `[types.*]`
-- Schema changes that don't affect aliases or edges
+[tantivy.md](tantivy.md) for the `IndexSchema` struct.
 
 ## Crate
-
-Use the `jsonschema` crate for validation:
 
 ```toml
 jsonschema = "0.28"

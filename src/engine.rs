@@ -7,7 +7,7 @@ use anyhow::{bail, Result};
 use crate::config::{self, GlobalConfig, ResolvedConfig};
 use crate::index_schema::IndexSchema;
 use crate::search;
-use crate::type_registry::TypeRegistry;
+use crate::type_registry::SpaceTypeRegistry;
 
 // ── SpaceState ────────────────────────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ pub struct Engine {
     pub config_path: PathBuf,
     /// The engine state directory (parent of config_path, e.g. ~/.llm-wiki/).
     pub state_dir: PathBuf,
-    pub type_registry: TypeRegistry,
+    pub type_registry: SpaceTypeRegistry,
     pub spaces: HashMap<String, SpaceState>,
 }
 
@@ -68,7 +68,7 @@ impl EngineManager {
     /// Build the engine from config. Opens/creates indexes for all registered wikis.
     pub fn build(config_path: &Path) -> Result<Self> {
         let config = config::load_global(config_path)?;
-        let type_registry = TypeRegistry::new();
+        let type_registry = SpaceTypeRegistry::from_embedded();
 
         // state_dir = parent of config_path (e.g. ~/.llm-wiki/)
         let state_dir = config_path.parent().unwrap_or(Path::new(".")).to_path_buf();

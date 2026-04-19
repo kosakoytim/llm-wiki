@@ -149,8 +149,9 @@ See [engine-state.md](engine-state.md) for the full engine state layout.
 The engine detects type registry changes by hashing the inputs that
 affect the index schema:
 
-1. All `[types.*]` entries from `wiki.toml` (type name to schema path)
-2. For each type, the `x-index-aliases` and `x-graph-edges` from its
+1. All `schemas/*.json` files (sorted by filename)
+2. All `[types.*]` override entries from `wiki.toml` (sorted by type name)
+3. For each type, the `x-index-aliases` and `x-graph-edges` from its
    JSON Schema file
 
 These inputs are sorted and normalized, then hashed (SHA-256) per type
@@ -158,7 +159,8 @@ and combined into a global `schema_hash`. Both are stored in
 `state.toml`.
 
 On every ingest or search/list, the engine recomputes the hashes from
-the current `wiki.toml` + `schemas/` and compares with stored values.
+the current `schemas/` + `wiki.toml` overrides and compares with stored
+values.
 
 ### When the global hash mismatches
 
@@ -170,8 +172,8 @@ the current `wiki.toml` + `schemas/` and compares with stored values.
 
 ### What triggers a mismatch
 
-- Type added or removed in `wiki.toml`
-- Type pointing to a different schema file
+- Schema file added, removed, or modified in `schemas/`
+- `[types.*]` override added, removed, or changed in `wiki.toml`
 - `x-index-aliases` changed in a schema
 - `x-graph-edges` changed in a schema
 

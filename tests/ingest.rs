@@ -4,10 +4,10 @@ use std::path::Path;
 use llm_wiki::config::ValidationConfig;
 use llm_wiki::git;
 use llm_wiki::ingest::*;
-use llm_wiki::type_registry::TypeRegistry;
+use llm_wiki::type_registry::SpaceTypeRegistry;
 
-fn registry() -> TypeRegistry {
-    TypeRegistry::new()
+fn registry() -> SpaceTypeRegistry {
+    SpaceTypeRegistry::from_embedded()
 }
 
 fn validation() -> ValidationConfig {

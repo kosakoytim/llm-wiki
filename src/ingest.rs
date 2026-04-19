@@ -7,7 +7,7 @@ use walkdir::WalkDir;
 use crate::config::ValidationConfig;
 use crate::frontmatter;
 use crate::git;
-use crate::type_registry::TypeRegistry;
+use crate::type_registry::SpaceTypeRegistry;
 
 /// Normalize line endings: CRLF → LF, lone CR → LF.
 pub fn normalize_line_endings(input: &str) -> String {
@@ -32,7 +32,7 @@ pub fn ingest(
     path: &Path,
     options: &IngestOptions,
     wiki_root: &Path,
-    registry: &TypeRegistry,
+    registry: &SpaceTypeRegistry,
     validation: &ValidationConfig,
 ) -> Result<IngestReport> {
     let repo_root = wiki_root
@@ -89,7 +89,7 @@ pub fn ingest(
 
 fn validate_file(
     path: &Path,
-    registry: &TypeRegistry,
+    registry: &SpaceTypeRegistry,
     validation: &ValidationConfig,
     report: &mut IngestReport,
 ) -> Result<()> {
