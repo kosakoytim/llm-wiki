@@ -15,6 +15,7 @@ pub mod markdown;
 pub mod mcp;
 pub mod ops;
 pub mod search;
+pub mod server;
 pub mod slug;
 pub mod spaces;
 pub mod type_registry;

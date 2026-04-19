@@ -363,7 +363,7 @@ Changes from code-ref:
 - Keep ToolResult struct and panic isolation
 - Remove prompt_list, get_prompt_content, INSTRUCTIONS injection
 
-### Step 14-bis: ops.rs — Shared business logic
+### Step 14-bis: ops.rs — Shared business logic ✓
 
 Modules: `src/ops.rs`, `src/mcp/handlers.rs`, `src/main.rs`, `src/lib.rs`
 Pulls from: `src/mcp/handlers.rs` (complete handler logic),
@@ -450,7 +450,7 @@ pub fn graph_build(engine, wiki_name, format, root, depth, type_, relation) -> R
 - CLI search and list gain auto-recovery (was missing, MCP had it)
 - Single source of truth for all business logic
 
-### Step 15: acp.rs — ACP agent
+### Step 15: acp.rs — ACP agent ✓
 
 Modules: `src/acp.rs`, `src/lib.rs`
 Pulls from: `code-ref/src/acp.rs` (WikiAgent struct, AcpSession,
@@ -478,7 +478,7 @@ Changes from code-ref:
 - Keep: AcpSession, streaming helpers (send_message, send_tool_call,
   send_tool_result), make_tool_id, serve_acp connection setup
 
-### Step 16: server.rs — Transport wiring
+### Step 16: server.rs — Transport wiring ✓
 
 Modules: `src/server.rs`, `src/lib.rs`
 Pulls from: `code-ref/src/server.rs` (serve_stdio, serve_sse,

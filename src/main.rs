@@ -459,7 +459,13 @@ fn main() -> Result<()> {
                 println!("Would start: [{}]", transports.join("] ["));
                 return Ok(());
             }
-            eprintln!("serve not yet implemented — coming in Steps 15-16");
+
+            let sse_port = sse.and_then(|opt| {
+                opt.and_then(|s| s.trim_start_matches(':').parse::<u16>().ok())
+            });
+
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(llm_wiki::server::serve(&config_path, sse_port, acp))?;
         }
     }
 
