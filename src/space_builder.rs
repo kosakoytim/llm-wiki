@@ -89,7 +89,9 @@ fn parse_from_dir(schemas_dir: &Path, repo_root: &Path) -> Result<Vec<ParsedSche
 
 fn parse_from_embedded() -> Result<Vec<ParsedSchemaFile>> {
     let mut parsed = Vec::new();
-    for (filename, content) in default_schemas::default_schemas() {
+    let mut schemas: Vec<_> = default_schemas::default_schemas().into_iter().collect();
+    schemas.sort_by_key(|(filename, _)| *filename);
+    for (filename, content) in schemas {
         let schema_rel = format!("schemas/{filename}");
         parsed.push(parse_schema_file(&schema_rel, content)?);
     }

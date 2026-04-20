@@ -5,14 +5,20 @@ use llm_wiki::git;
 use llm_wiki::index_schema::IndexSchema;
 use llm_wiki::indexing::*;
 use llm_wiki::search;
+use llm_wiki::space_builder;
 use llm_wiki::type_registry::SpaceTypeRegistry;
 
+fn schema_and_registry() -> (IndexSchema, SpaceTypeRegistry) {
+    let (registry, schema) = space_builder::build_space_from_embedded("en_stem");
+    (schema, registry)
+}
+
 fn schema() -> IndexSchema {
-    IndexSchema::build("en_stem")
+    schema_and_registry().0
 }
 
 fn registry() -> SpaceTypeRegistry {
-    SpaceTypeRegistry::from_embedded()
+    schema_and_registry().1
 }
 
 fn setup_repo(dir: &Path) -> std::path::PathBuf {

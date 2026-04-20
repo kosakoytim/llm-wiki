@@ -21,21 +21,6 @@ pub struct IndexSchema {
 }
 
 impl IndexSchema {
-    /// Hardcoded schema for backward compatibility (no registry needed).
-    pub fn build(tokenizer: &str) -> Self {
-        let mut builder = SchemaBuilder::new(tokenizer);
-
-        builder.add_fixed_fields();
-        // Hardcoded Phase 1 fields
-        builder.add_text("title");
-        builder.add_text("summary");
-        builder.add_keyword("type");
-        builder.add_keyword("status");
-        builder.add_text("tags");
-
-        builder.finish()
-    }
-
     /// Build from schema files on disk + wiki.toml overrides.
     ///
     /// Reads each schema file once, extracts properties, classifies
