@@ -4,8 +4,8 @@ use std::sync::{Arc, RwLock};
 
 use anyhow::{bail, Result};
 
-use crate::config::{self, GlobalConfig, ResolvedConfig};
-use crate::index_manager::{IndexReport, SpaceIndexManager, UpdateReport};
+use crate::config::{self, GlobalConfig, ResolvedConfig, WikiEntry};
+use crate::index_manager::{IndexReport, SpaceIndexManager, StalenessKind, UpdateReport};
 use crate::index_schema::IndexSchema;
 use crate::space_builder;
 use crate::type_registry::SpaceTypeRegistry;
@@ -71,107 +71,15 @@ impl EngineManager {
         let mut spaces = HashMap::new();
 
         for entry in &config.wikis {
-            let repo_root = PathBuf::from(&entry.path);
-            let wiki_root = repo_root.join("wiki");
-            let index_path = state_dir.join("indexes").join(&entry.name);
-
-            // Build per-wiki registry + index schema from schemas/
-            let (type_registry, index_schema) =
-                space_builder::build_space(&repo_root, &config.index.tokenizer)
-                    .unwrap_or_else(|e| {
-                        tracing::warn!(
-                            wiki = %entry.name, error = %e,
-                            "failed to build type registry, using embedded defaults"
-                        );
-                        space_builder::build_space_from_embedded(&config.index.tokenizer)
-                    });
-
-            let mut index_manager = SpaceIndexManager::new(&entry.name, &index_path);
-
-            // Ensure index directory exists
-            let search_dir = index_path.join("search-index");
-            std::fs::create_dir_all(&search_dir)?;
-
-            // Check staleness and rebuild if needed
-            let status = index_manager.status(&repo_root);
-            let needs_first_build = status.as_ref().map(|s| s.built.is_none()).unwrap_or(true);
-
-            if needs_first_build {
-                tracing::info!(wiki = %entry.name, "building index for the first time");
-                if let Err(e) = index_manager.rebuild(
-                    &wiki_root, &repo_root, &index_schema, &type_registry,
-                ) {
-                    tracing::warn!(wiki = %entry.name, error = %e, "initial index build failed");
-                }
-            } else if config.index.auto_rebuild {
-                use crate::index_manager::StalenessKind;
-                match index_manager.staleness_kind(&repo_root) {
-                    Ok(StalenessKind::Current) => {}
-                    Ok(StalenessKind::CommitChanged) => {
-                        tracing::info!(wiki = %entry.name, "index behind HEAD, updating");
-                        let last = index_manager.last_commit();
-                        if let Err(e) = index_manager.update(
-                            &wiki_root, &repo_root, last.as_deref(),
-                            &index_schema, &type_registry,
-                        ) {
-                            tracing::warn!(wiki = %entry.name, error = %e, "incremental update failed");
-                        }
-                    }
-                    Ok(StalenessKind::TypesChanged(types)) => {
-                        tracing::info!(wiki = %entry.name, types = ?types, "types changed, partial rebuild");
-                        if let Err(e) = index_manager.rebuild_types(
-                            &types, &wiki_root, &repo_root, &index_schema, &type_registry,
-                        ) {
-                            tracing::warn!(wiki = %entry.name, error = %e, "partial rebuild failed, doing full");
-                            let _ = index_manager.rebuild(
-                                &wiki_root, &repo_root, &index_schema, &type_registry,
-                            );
-                        }
-                    }
-                    Ok(StalenessKind::FullRebuildNeeded) => {
-                        tracing::info!(wiki = %entry.name, "index stale, rebuilding");
-                        if let Err(e) = index_manager.rebuild(
-                            &wiki_root, &repo_root, &index_schema, &type_registry,
-                        ) {
-                            tracing::warn!(wiki = %entry.name, error = %e, "index rebuild failed");
-                        }
-                    }
-                    Err(e) => {
-                        tracing::warn!(wiki = %entry.name, error = %e, "staleness check failed, rebuilding");
-                        let _ = index_manager.rebuild(
-                            &wiki_root, &repo_root, &index_schema, &type_registry,
-                        );
-                    }
-                }
-            } else if let Ok(ref s) = status {
-                if s.stale {
+            match mount_wiki(entry, &state_dir, &config) {
+                Ok(ctx) => { spaces.insert(entry.name.clone(), ctx); }
+                Err(e) => {
                     tracing::warn!(
-                        wiki = %entry.name,
-                        "index stale — run `llm-wiki index rebuild --wiki {}`",
-                        entry.name,
+                        wiki = %entry.name, error = %e,
+                        "failed to mount wiki, skipping",
                     );
                 }
             }
-
-            // Open the index for serving (hold reader in memory)
-            if let Err(e) = index_manager.open(
-                &index_schema,
-                Some((&wiki_root, &repo_root, &type_registry)),
-            ) {
-                tracing::warn!(wiki = %entry.name, error = %e, "failed to open index");
-            }
-
-            spaces.insert(
-                entry.name.clone(),
-                SpaceContext {
-                    name: entry.name.clone(),
-                    wiki_root,
-                    repo_root,
-                    type_registry,
-                    index_schema,
-                    index_manager,
-                },
-            );
         }
 
         let engine = Engine {
@@ -243,4 +151,111 @@ impl EngineManager {
     pub fn on_config_change(&self, _key: &str, _value: &str) -> Result<()> {
         bail!("config changed — restart required")
     }
+}
+
+// ── mount_wiki ────────────────────────────────────────────────────────────────
+
+fn mount_wiki(
+    entry: &WikiEntry,
+    state_dir: &Path,
+    config: &GlobalConfig,
+) -> Result<SpaceContext> {
+    let repo_root = PathBuf::from(&entry.path);
+    let wiki_root = repo_root.join("wiki");
+    let index_path = state_dir.join("indexes").join(&entry.name);
+
+    let (type_registry, index_schema) =
+        space_builder::build_space(&repo_root, &config.index.tokenizer).unwrap_or_else(|e| {
+            tracing::warn!(
+                wiki = %entry.name, error = %e,
+                "failed to build type registry, using embedded defaults"
+            );
+            space_builder::build_space_from_embedded(&config.index.tokenizer)
+        });
+
+    let mut index_manager = SpaceIndexManager::new(&entry.name, &index_path);
+
+    let search_dir = index_path.join("search-index");
+    std::fs::create_dir_all(&search_dir)?;
+
+    // Staleness check and rebuild
+    let status = index_manager.status(&repo_root);
+    let needs_first_build = status.as_ref().map(|s| s.built.is_none()).unwrap_or(true);
+
+    if needs_first_build {
+        tracing::info!(wiki = %entry.name, "building index for the first time");
+        if let Err(e) = index_manager.rebuild(&wiki_root, &repo_root, &index_schema, &type_registry)
+        {
+            tracing::warn!(wiki = %entry.name, error = %e, "initial index build failed");
+        }
+    } else if config.index.auto_rebuild {
+        match index_manager.staleness_kind(&repo_root) {
+            Ok(StalenessKind::Current) => {}
+            Ok(StalenessKind::CommitChanged) => {
+                tracing::info!(wiki = %entry.name, "index behind HEAD, updating");
+                let last = index_manager.last_commit();
+                if let Err(e) = index_manager.update(
+                    &wiki_root,
+                    &repo_root,
+                    last.as_deref(),
+                    &index_schema,
+                    &type_registry,
+                ) {
+                    tracing::warn!(wiki = %entry.name, error = %e, "incremental update failed");
+                }
+            }
+            Ok(StalenessKind::TypesChanged(types)) => {
+                tracing::info!(wiki = %entry.name, types = ?types, "types changed, partial rebuild");
+                if let Err(e) = index_manager.rebuild_types(
+                    &types,
+                    &wiki_root,
+                    &repo_root,
+                    &index_schema,
+                    &type_registry,
+                ) {
+                    tracing::warn!(wiki = %entry.name, error = %e, "partial rebuild failed, doing full");
+                    let _ =
+                        index_manager.rebuild(&wiki_root, &repo_root, &index_schema, &type_registry);
+                }
+            }
+            Ok(StalenessKind::FullRebuildNeeded) => {
+                tracing::info!(wiki = %entry.name, "index stale, rebuilding");
+                if let Err(e) =
+                    index_manager.rebuild(&wiki_root, &repo_root, &index_schema, &type_registry)
+                {
+                    tracing::warn!(wiki = %entry.name, error = %e, "index rebuild failed");
+                }
+            }
+            Err(e) => {
+                tracing::warn!(wiki = %entry.name, error = %e, "staleness check failed, rebuilding");
+                let _ =
+                    index_manager.rebuild(&wiki_root, &repo_root, &index_schema, &type_registry);
+            }
+        }
+    } else if let Ok(ref s) = status {
+        if s.stale {
+            tracing::warn!(
+                wiki = %entry.name,
+                "index stale — run `llm-wiki index rebuild --wiki {}`",
+                entry.name,
+            );
+        }
+    }
+
+    // Open the index for serving
+    if let Err(e) = index_manager.open(
+        &index_schema,
+        Some((&wiki_root, &repo_root, &type_registry)),
+    ) {
+        tracing::warn!(wiki = %entry.name, error = %e, "failed to open index");
+    }
+
+    Ok(SpaceContext {
+        name: entry.name.clone(),
+        wiki_root,
+        repo_root,
+        type_registry,
+        index_schema,
+        index_manager,
+    })
 }
