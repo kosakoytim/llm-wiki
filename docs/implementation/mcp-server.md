@@ -151,7 +151,7 @@ instructions from the engine binary.
 - Add `--type` parameter to search
 - Add `--relation` parameter to graph
 - Remove `wiki_lint`, `wiki_index_check`, prompt definitions
-- Tool handlers call `EngineManager` for mutations (ingest, commit)
+- Tool handlers call `WikiEngine` for mutations (ingest, commit)
 
 ## Crate
 

@@ -163,7 +163,7 @@ fn mount_wiki(
             space_builder::build_space_from_embedded(&config.index.tokenizer)
         });
 
-    let mut index_manager = SpaceIndexManager::new(&entry.name, &index_path);
+    let index_manager = SpaceIndexManager::new(&entry.name, &index_path);
 
     let search_dir = index_path.join("search-index");
     std::fs::create_dir_all(&search_dir)?;

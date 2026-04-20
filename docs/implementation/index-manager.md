@@ -77,7 +77,7 @@ enum RebuildReason {
 
 ### Incremental update
 
-Called by `EngineManager.on_ingest()`. Uses two git diffs to find
+Called by `WikiEngine.refresh_index()`. Uses two git diffs to find
 changed pages:
 
 ```
@@ -163,18 +163,14 @@ skill    = "3a4b5c6d..."
 
 Updated after every successful rebuild or update.
 
-## Called by EngineManager
+## Called by WikiEngine
 
 ```
-EngineManager.on_ingest(wiki, paths)
+WikiEngine.refresh_index(wiki)
     -> SpaceIndexManager.update(registry)
 
-EngineManager.on_type_change(wiki)
-    -> SpaceTypeRegistryManager.refresh()
-        -> if needs_full_rebuild:
-            SpaceIndexManager.rebuild(registry)
-        -> if needs_partial_rebuild:
-            SpaceIndexManager.rebuild_types(changed, registry)
+WikiEngine.rebuild_index(wiki)
+    -> SpaceIndexManager.rebuild(registry)
 ```
 
 ## Initial Scope

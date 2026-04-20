@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::sync::RwLock;
 
 use anyhow::{Context, Result};
 use chrono::Utc;
@@ -70,11 +71,15 @@ pub struct IndexState {
 
 // ── SpaceIndexManager ─────────────────────────────────────────────────────────
 
+struct IndexInner {
+    tantivy_index: Option<Index>,
+    index_reader: Option<IndexReader>,
+}
+
 pub struct SpaceIndexManager {
     wiki_name: String,
     index_path: PathBuf,
-    tantivy_index: Option<Index>,
-    index_reader: Option<IndexReader>,
+    inner: RwLock<IndexInner>,
 }
 
 impl SpaceIndexManager {
@@ -82,8 +87,10 @@ impl SpaceIndexManager {
         Self {
             wiki_name: wiki_name.into(),
             index_path: index_path.into(),
-            tantivy_index: None,
-            index_reader: None,
+            inner: RwLock::new(IndexInner {
+                tantivy_index: None,
+                index_reader: None,
+            }),
         }
     }
 
@@ -99,7 +106,7 @@ impl SpaceIndexManager {
     /// Call after rebuild/staleness check. Recovery: if open fails and
     /// wiki_root/repo_root/registry are provided, rebuild and retry.
     pub fn open(
-        &mut self,
+        &self,
         is: &IndexSchema,
         recovery: Option<(&Path, &Path, &SpaceTypeRegistry)>,
     ) -> Result<()> {
@@ -131,14 +138,16 @@ impl SpaceIndexManager {
         };
 
         let reader = index.reader()?;
-        self.tantivy_index = Some(index);
-        self.index_reader = Some(reader);
+        let mut inner = self.inner.write().map_err(|_| anyhow::anyhow!("index lock poisoned"))?;
+        inner.tantivy_index = Some(index);
+        inner.index_reader = Some(reader);
         Ok(())
     }
 
     /// Get a searcher. Cheap — arc clone of current segment set.
     pub fn searcher(&self) -> Result<Searcher> {
-        self.index_reader
+        let inner = self.inner.read().map_err(|_| anyhow::anyhow!("index lock poisoned"))?;
+        inner.index_reader
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("index not open"))
             .map(|r| r.searcher())
@@ -146,9 +155,11 @@ impl SpaceIndexManager {
 
     /// Get a writer from the held index, or open from disk if not held.
     fn writer(&self) -> Result<IndexWriter> {
-        if let Some(ref idx) = self.tantivy_index {
+        let inner = self.inner.read().map_err(|_| anyhow::anyhow!("index lock poisoned"))?;
+        if let Some(ref idx) = inner.tantivy_index {
             Ok(idx.writer(50_000_000)?)
         } else {
+            drop(inner);
             let search_dir = self.index_path.join("search-index");
             let dir = MmapDirectory::open(&search_dir)
                 .with_context(|| format!("failed to open index dir: {}", search_dir.display()))?;
