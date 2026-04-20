@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::engine::Engine;
+use crate::engine::EngineState;
 use crate::search;
 
 pub struct SearchParams<'a> {
@@ -13,7 +13,7 @@ pub struct SearchParams<'a> {
 }
 
 pub fn search(
-    engine: &Engine,
+    engine: &EngineState,
     wiki_name: &str,
     params: &SearchParams<'_>,
 ) -> Result<Vec<search::PageRef>> {
@@ -50,7 +50,7 @@ pub fn search(
 
 
 pub fn list(
-    engine: &Engine,
+    engine: &EngineState,
     wiki_name: &str,
     type_filter: Option<&str>,
     status: Option<&str>,

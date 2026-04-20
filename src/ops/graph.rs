@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::engine::Engine;
+use crate::engine::EngineState;
 use crate::graph;
 
 pub struct GraphResult {
@@ -18,7 +18,7 @@ pub struct GraphParams<'a> {
 }
 
 pub fn graph_build(
-    engine: &Engine,
+    engine: &EngineState,
     wiki_name: &str,
     params: &GraphParams<'_>,
 ) -> Result<GraphResult> {

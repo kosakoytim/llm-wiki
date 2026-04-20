@@ -28,16 +28,16 @@ impl SpaceContext {
     }
 }
 
-// ── Engine ────────────────────────────────────────────────────────────────────
+// ── EngineState ──────────────────────────────────────────────────────────────
 
-pub struct Engine {
+pub struct EngineState {
     pub config: GlobalConfig,
     pub config_path: PathBuf,
     pub state_dir: PathBuf,
     pub spaces: HashMap<String, SpaceContext>,
 }
 
-impl Engine {
+impl EngineState {
     pub fn default_wiki_name(&self) -> &str {
         &self.config.global.default_wiki
     }
@@ -57,13 +57,13 @@ impl Engine {
     }
 }
 
-// ── EngineManager ─────────────────────────────────────────────────────────────
+// ── WikiEngine ─────────────────────────────────────────────────────────────
 
-pub struct EngineManager {
-    pub engine: Arc<RwLock<Engine>>,
+pub struct WikiEngine {
+    pub state: Arc<RwLock<EngineState>>,
 }
 
-impl EngineManager {
+impl WikiEngine {
     pub fn build(config_path: &Path) -> Result<Self> {
         let config = config::load_global(config_path)?;
         let state_dir = config_path.parent().unwrap_or(Path::new(".")).to_path_buf();
@@ -82,21 +82,21 @@ impl EngineManager {
             }
         }
 
-        let engine = Engine {
+        let engine = EngineState {
             config,
             config_path: config_path.to_path_buf(),
             state_dir,
             spaces,
         };
 
-        Ok(EngineManager {
-            engine: Arc::new(RwLock::new(engine)),
+        Ok(WikiEngine {
+            state: Arc::new(RwLock::new(engine)),
         })
     }
 
     pub fn refresh_index(&self, wiki_name: &str) -> Result<UpdateReport> {
         let engine = self
-            .engine
+            .state
             .read()
             .map_err(|_| anyhow::anyhow!("lock poisoned"))?;
         let space = engine.space(wiki_name)?;
@@ -121,7 +121,7 @@ impl EngineManager {
 
     pub fn rebuild_index(&self, wiki_name: &str) -> Result<IndexReport> {
         let engine = self
-            .engine
+            .state
             .read()
             .map_err(|_| anyhow::anyhow!("lock poisoned"))?;
         let space = engine.space(wiki_name)?;

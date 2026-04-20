@@ -223,7 +223,7 @@ pub fn handle_ingest(server: &McpServer, args: &Map<String, Value>) -> ToolHandl
     let path = arg_str_req(args, "path")?;
     let dry_run = arg_bool(args, "dry_run");
 
-    // Read path: ingest (ops handles EngineManager mutation internally)
+    // Read path: ingest (ops handles WikiEngine mutation internally)
     let (report, wiki_name, notify_uris) = {
         let engine = server.engine();
         let wiki_name = resolve_wiki_name(&engine, args)?;

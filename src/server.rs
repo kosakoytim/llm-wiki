@@ -6,7 +6,7 @@ use rmcp::transport::SseServer;
 use rmcp::ServiceExt;
 
 use crate::config;
-use crate::engine::EngineManager;
+use crate::engine::WikiEngine;
 use crate::mcp::McpServer;
 
 // ── serve_stdio ───────────────────────────────────────────────────────────────
@@ -68,11 +68,11 @@ async fn serve_sse(server: McpServer, port: u16, serve_cfg: &config::ServeConfig
 // ── serve (orchestration) ─────────────────────────────────────────────────────
 
 pub async fn serve(config_path: &std::path::Path, sse_port: Option<u16>, acp: bool) -> Result<()> {
-    // 1. Build EngineManager (loads config, mounts wikis, checks staleness)
-    let manager = Arc::new(EngineManager::build(config_path)?);
+    // 1. Build WikiEngine (loads config, mounts wikis, checks staleness)
+    let manager = Arc::new(WikiEngine::build(config_path)?);
 
     let (wiki_count, serve_cfg, sse_enabled, resolved_port) = {
-        let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
+        let engine = manager.state.read().map_err(|_| anyhow::anyhow!("lock"))?;
         let count = engine.spaces.len();
         let cfg = engine.config.serve.clone();
         let sse = sse_port.is_some() || cfg.sse;

@@ -7,7 +7,7 @@ use anyhow::Result;
 use tokio::sync::{mpsc, oneshot};
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
-use crate::engine::EngineManager;
+use crate::engine::WikiEngine;
 use crate::ops;
 
 // ── Session ───────────────────────────────────────────────────────────────────
@@ -23,14 +23,14 @@ pub struct AcpSession {
 // ── WikiAgent ─────────────────────────────────────────────────────────────────
 
 pub struct WikiAgent {
-    pub manager: Arc<EngineManager>,
+    pub manager: Arc<WikiEngine>,
     sessions: Mutex<HashMap<String, AcpSession>>,
     update_tx: mpsc::UnboundedSender<(acp::SessionNotification, oneshot::Sender<()>)>,
 }
 
 impl WikiAgent {
     pub fn new(
-        manager: Arc<EngineManager>,
+        manager: Arc<WikiEngine>,
         update_tx: mpsc::UnboundedSender<(acp::SessionNotification, oneshot::Sender<()>)>,
     ) -> Self {
         Self {
@@ -41,12 +41,12 @@ impl WikiAgent {
     }
 
     pub fn resolve_wiki_name(&self, session_wiki: Option<&str>) -> String {
-        let engine = self.manager.engine.read().expect("engine lock poisoned");
+        let engine = self.manager.state.read().expect("engine lock poisoned");
         engine.resolve_wiki_name(session_wiki).to_string()
     }
 
     fn session_cwd(&self) -> PathBuf {
-        let engine = self.manager.engine.read().expect("engine lock poisoned");
+        let engine = self.manager.state.read().expect("engine lock poisoned");
         let name = engine.default_wiki_name();
         engine
             .space(name)
@@ -187,7 +187,7 @@ impl WikiAgent {
         let results = {
             let engine = self
                 .manager
-                .engine
+                .state
                 .read()
                 .map_err(|_| acp::Error::internal_error())?;
             ops::search(
@@ -228,7 +228,7 @@ impl WikiAgent {
                 let read_result = {
                     let engine = self
                         .manager
-                        .engine
+                        .state
                         .read()
                         .map_err(|_| acp::Error::internal_error())?;
                     ops::content_read(&engine, &top.slug, Some(wiki_name), false, false)
@@ -466,7 +466,7 @@ impl acp::Agent for WikiAgent {
 
 // ── serve_acp ─────────────────────────────────────────────────────────────────
 
-pub async fn serve_acp(manager: Arc<EngineManager>) -> Result<()> {
+pub async fn serve_acp(manager: Arc<WikiEngine>) -> Result<()> {
     let outgoing = tokio::io::stdout().compat_write();
     let incoming = tokio::io::stdin().compat();
 

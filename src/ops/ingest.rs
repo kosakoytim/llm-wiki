@@ -2,12 +2,12 @@ use std::path::Path;
 
 use anyhow::Result;
 
-use crate::engine::{Engine, EngineManager};
+use crate::engine::{EngineState, WikiEngine};
 use crate::ingest;
 
 pub fn ingest(
-    engine: &Engine,
-    manager: &EngineManager,
+    engine: &EngineState,
+    manager: &WikiEngine,
     path: &str,
     dry_run: bool,
     wiki_name: &str,
