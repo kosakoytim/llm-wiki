@@ -229,7 +229,7 @@ impl SpaceIndexManager {
             let uri = format!("wiki://{}/{slug}", self.wiki_name);
             let page = frontmatter::parse(&content);
 
-            writer.add_document(build_document(is, registry, slug.as_str(), &uri, &page))?;
+            writer.add_document(index_page(is, registry, slug.as_str(), &uri, &page))?;
 
             if page.page_type() == Some("section") {
                 sections += 1;
@@ -301,7 +301,7 @@ impl SpaceIndexManager {
                 if let Ok(content) = std::fs::read_to_string(&full_path) {
                     let page = frontmatter::parse(&content);
                     let uri = format!("wiki://{}/{slug}", self.wiki_name);
-                    writer.add_document(build_document(is, registry, slug.as_str(), &uri, &page))?;
+                    writer.add_document(index_page(is, registry, slug.as_str(), &uri, &page))?;
                     updated += 1;
                 }
             }
@@ -474,7 +474,7 @@ impl SpaceIndexManager {
                 }
             };
             let uri = format!("wiki://{}/{slug}", self.wiki_name);
-            writer.add_document(build_document(is, registry, slug.as_str(), &uri, &page))?;
+            writer.add_document(index_page(is, registry, slug.as_str(), &uri, &page))?;
             pages += 1;
         }
 
@@ -506,7 +506,7 @@ impl SpaceIndexManager {
 
 // ── Document building (private) ───────────────────────────────────────────────
 
-fn build_document(
+fn index_page(
     is: &IndexSchema,
     registry: &SpaceTypeRegistry,
     slug: &str,
@@ -515,53 +515,68 @@ fn build_document(
 ) -> tantivy::TantivyDocument {
     let mut doc = tantivy::TantivyDocument::default();
 
-    // Fixed fields
     doc.add_text(is.field("slug"), slug);
     doc.add_text(is.field("uri"), uri);
 
-    // Get aliases for this page's type
-    let page_type = page.page_type().unwrap_or("page");
-    let empty_aliases = std::collections::HashMap::new();
-    let aliases = registry.aliases(page_type).unwrap_or(&empty_aliases);
-
-    // Dynamic frontmatter indexing with alias resolution.
-    let mut indexed: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let resolved = resolve_fields(page, registry);
     let mut extra_text = String::new();
 
-    for (field_name, value) in &page.frontmatter {
-        if aliases.contains_key(field_name.as_str()) {
-            continue;
-        }
-
-        let canonical = field_name.as_str();
-        indexed.insert(canonical.to_string());
+    for (canonical, value) in &resolved {
         index_value(&mut doc, &mut extra_text, is, canonical, value);
     }
 
-    // Handle aliased source fields whose canonical target was NOT present
-    for (source_field, canonical) in aliases {
-        if indexed.contains(canonical.as_str()) {
-            continue;
-        }
-        if let Some(value) = page.frontmatter.get(source_field.as_str()) {
-            indexed.insert(canonical.clone());
-            index_value(&mut doc, &mut extra_text, is, canonical, value);
-        }
-    }
-
-    // Body + unrecognized fields
     if extra_text.is_empty() {
         doc.add_text(is.field("body"), &page.body);
     } else {
         doc.add_text(is.field("body"), format!("{}\n{}", page.body, extra_text.trim()));
     }
 
-    // Body wiki-links
     for link in links::extract_body_wikilinks(&page.body) {
         doc.add_text(is.field("body_links"), &link);
     }
 
     doc
+}
+
+/// Resolve frontmatter fields through the type's alias map.
+///
+/// Two passes:
+/// 1. Index non-aliased fields under their own name
+/// 2. For aliased source fields, index under the canonical name
+///    only if the canonical wasn't already present
+fn resolve_fields<'a>(
+    page: &'a frontmatter::ParsedPage,
+    registry: &'a SpaceTypeRegistry,
+) -> Vec<(String, &'a serde_yaml::Value)> {
+    let page_type = page.page_type().unwrap_or("page");
+    let empty = std::collections::HashMap::new();
+    let aliases = registry.aliases(page_type).unwrap_or(&empty);
+
+    let mut result = Vec::new();
+    let mut indexed: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    // Pass 1: non-aliased fields
+    for (field_name, value) in &page.frontmatter {
+        if aliases.contains_key(field_name.as_str()) {
+            continue;
+        }
+        let canonical = field_name.to_string();
+        indexed.insert(canonical.clone());
+        result.push((canonical, value));
+    }
+
+    // Pass 2: aliased source fields whose canonical target was not present
+    for (source_field, canonical) in aliases {
+        if indexed.contains(canonical.as_str()) {
+            continue;
+        }
+        if let Some(value) = page.frontmatter.get(source_field.as_str()) {
+            indexed.insert(canonical.clone());
+            result.push((canonical.clone(), value));
+        }
+    }
+
+    result
 }
 
 fn index_value(
