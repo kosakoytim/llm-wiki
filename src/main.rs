@@ -228,7 +228,7 @@ fn main() -> Result<()> {
             no_excerpt,
             top_k,
             include_sections,
-            all,
+            cross_wiki,
             format,
         } => {
             let manager = WikiEngine::build(&config_path)?;
@@ -244,7 +244,7 @@ fn main() -> Result<()> {
                     no_excerpt,
                     top_k,
                     include_sections,
-                    all,
+                    cross_wiki,
                 },
             )?;
 

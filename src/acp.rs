@@ -199,7 +199,7 @@ impl WikiAgent {
                     no_excerpt: false,
                     top_k: Some(5),
                     include_sections: false,
-                    all: false,
+                    cross_wiki: false,
                 },
             )
         };

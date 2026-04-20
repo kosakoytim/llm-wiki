@@ -219,7 +219,7 @@ fn search_returns_results() {
             no_excerpt: false,
             top_k: None,
             include_sections: false,
-            all: false,
+            cross_wiki: false,
         },
     )
     .unwrap();
@@ -243,7 +243,7 @@ fn search_type_filter() {
             no_excerpt: true,
             top_k: None,
             include_sections: false,
-            all: false,
+            cross_wiki: false,
         },
     )
     .unwrap();

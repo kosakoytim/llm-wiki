@@ -9,7 +9,7 @@ pub struct SearchParams<'a> {
     pub no_excerpt: bool,
     pub top_k: Option<usize>,
     pub include_sections: bool,
-    pub all: bool,
+    pub cross_wiki: bool,
 }
 
 pub fn search(
@@ -29,7 +29,7 @@ pub fn search(
         r#type: params.type_filter.map(|s| s.to_string()),
     };
 
-    if params.all {
+    if params.cross_wiki {
         let mut wikis = Vec::new();
         for s in engine.spaces.values() {
             let searcher = s.index_manager.searcher()?;

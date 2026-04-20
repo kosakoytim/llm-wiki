@@ -46,7 +46,7 @@ pub enum Commands {
         include_sections: bool,
         /// Search across all registered wikis
         #[arg(long)]
-        all: bool,
+        cross_wiki: bool,
         /// Output format: text | json
         #[arg(long)]
         format: Option<String>,
