@@ -588,7 +588,7 @@ fn rebuild_types_reindexes_only_changed_type() {
 }
 
 #[test]
-fn changed_types_detects_modification() {
+fn staleness_kind_detects_type_modification() {
     let dir = tempfile::tempdir().unwrap();
     let wiki_root = setup_repo(dir.path());
 
@@ -603,8 +603,8 @@ fn changed_types_detects_modification() {
     let mgr = build_index(dir.path(), &wiki_root);
 
     // No changes yet
-    let changed = mgr.changed_types(dir.path()).unwrap();
-    assert!(changed.is_empty());
+    let kind = mgr.staleness_kind(dir.path()).unwrap();
+    assert_eq!(kind, StalenessKind::Current);
 
     // Modify concept schema
     let concept_schema = schemas_dir.join("concept.json");
@@ -615,6 +615,11 @@ fn changed_types_detects_modification() {
     );
     std::fs::write(&concept_schema, content).unwrap();
 
-    let changed = mgr.changed_types(dir.path()).unwrap();
-    assert!(changed.contains(&"concept".to_string()));
+    let kind = mgr.staleness_kind(dir.path()).unwrap();
+    match kind {
+        StalenessKind::TypesChanged(types) => {
+            assert!(types.contains(&"concept".to_string()));
+        }
+        other => panic!("expected TypesChanged, got {other:?}"),
+    }
 }

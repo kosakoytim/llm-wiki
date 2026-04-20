@@ -377,39 +377,6 @@ impl SpaceIndexManager {
         Ok(())
     }
 
-    /// Compare stored per-type hashes against current disk hashes.
-    /// Returns type names that changed (added, modified, or removed).
-    pub fn changed_types(&self, repo_root: &Path) -> Result<Vec<String>> {
-        let state_path = self.index_path.join("state.toml");
-        let stored = match std::fs::read_to_string(&state_path)
-            .ok()
-            .and_then(|c| toml::from_str::<IndexState>(&c).ok())
-        {
-            Some(s) => s.types,
-            None => return Ok(Vec::new()),
-        };
-
-        let (_, current) = crate::type_registry::compute_disk_hashes(repo_root)?;
-
-        let mut changed = Vec::new();
-        // Modified or removed
-        for (name, hash) in &stored {
-            match current.get(name) {
-                Some(h) if h != hash => changed.push(name.clone()),
-                None => changed.push(name.clone()),
-                _ => {}
-            }
-        }
-        // Added
-        for name in current.keys() {
-            if !stored.contains_key(name) {
-                changed.push(name.clone());
-            }
-        }
-        changed.sort();
-        Ok(changed)
-    }
-
     /// Determine what kind of staleness exists.
     pub fn staleness_kind(&self, repo_root: &Path) -> Result<StalenessKind> {
         let state_path = self.index_path.join("state.toml");
