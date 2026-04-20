@@ -1,10 +1,11 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use tantivy::{
-    collector::TopDocs,
+    collector::{Count, TopDocs},
     query::{AllQuery, BooleanQuery, Occur, QueryParser, TermQuery},
     schema::{IndexRecordOption, Value},
-    Searcher, Snippet, SnippetGenerator, Term,
+    snippet::{Snippet, SnippetGenerator},
+    Order, Searcher, Term,
 };
 
 use crate::index_schema::IndexSchema;
@@ -209,11 +210,38 @@ pub fn list(
         }
     };
 
-    let top_docs = searcher.search(&query, &TopDocs::with_limit(100_000))?;
+    // Count total matches
+    let total = searcher.search(&query, &Count)?;
+    if total == 0 {
+        return Ok(PageList {
+            pages: Vec::new(),
+            total: 0,
+            page: options.page,
+            page_size: options.page_size,
+        });
+    }
 
-    let mut summaries: Vec<PageSummary> = Vec::new();
-    for (_score, doc_addr) in top_docs {
-        let doc: tantivy::TantivyDocument = searcher.doc(doc_addr)?;
+    // Fetch sorted by _slug_ord, limited to offset + page_size
+    let page = options.page;
+    let page_size = options.page_size;
+    let offset = (page - 1) * page_size;
+    let limit = offset + page_size;
+
+    let sorted_docs = searcher.search(
+        &query,
+        &TopDocs::with_limit(limit).order_by_fast_field::<u64>("_slug_ord", Order::Asc),
+    )?;
+
+    // Extract full fields only for the page window
+    let window = if offset < sorted_docs.len() {
+        &sorted_docs[offset..]
+    } else {
+        &[]
+    };
+
+    let mut summaries = Vec::with_capacity(window.len());
+    for (_ord, doc_addr) in window {
+        let doc: tantivy::TantivyDocument = searcher.doc(*doc_addr)?;
 
         let slug = doc
             .get_first(f_slug)
@@ -258,20 +286,11 @@ pub fn list(
         });
     }
 
+    // Stable sort within the window for ties (same 8-byte prefix)
     summaries.sort_by(|a, b| a.slug.cmp(&b.slug));
 
-    let total = summaries.len();
-    let page = options.page;
-    let page_size = options.page_size;
-    let start = (page - 1) * page_size;
-    let pages = if start < total {
-        summaries[start..(start + page_size).min(total)].to_vec()
-    } else {
-        Vec::new()
-    };
-
     Ok(PageList {
-        pages,
+        pages: summaries,
         total,
         page,
         page_size,

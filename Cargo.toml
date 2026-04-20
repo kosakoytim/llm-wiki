@@ -50,7 +50,7 @@ sha2       = "0.10"
 frontmatter = "0.4"
 
 # Full-text search
-tantivy    = "0.22"
+tantivy    = "0.25"
 
 # Graph
 petgraph   = "0.6"

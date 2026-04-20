@@ -3,7 +3,7 @@ use std::path::Path;
 
 use anyhow::Result;
 use tantivy::schema::{
-    Field, IndexRecordOption, Schema, TextFieldIndexing, TextOptions, STORED, STRING,
+    Field, IndexRecordOption, Schema, TextFieldIndexing, TextOptions, FAST, STORED, STRING,
 };
 
 use crate::config;
@@ -260,6 +260,8 @@ impl SchemaBuilder {
         self.add_keyword("uri");
         self.add_text("body");
         self.add_keyword("body_links");
+        let f = self.builder.add_u64_field("_slug_ord", FAST | STORED);
+        self.fields.insert("_slug_ord".to_string(), f);
     }
 
     pub(crate) fn add_text(&mut self, name: &str) {

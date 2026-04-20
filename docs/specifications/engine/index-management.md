@@ -64,6 +64,9 @@ How frontmatter fields map to roles:
   text.
 - **Body text** is indexed as BM25 text.
 - **Slug** and **URI** are stored but not searched.
+- **`_slug_ord`** is a u64 FAST field encoding the first 8 bytes of
+  the slug as big-endian. Used by `wiki_list` for sorted pagination
+  via `order_by_fast_field`.
 
 The `slug` field is the unique key for delete+insert operations.
 
