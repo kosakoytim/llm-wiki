@@ -411,3 +411,219 @@ fn alias_name_indexed_as_title() {
         "skill name should be searchable as title"
     );
 }
+
+
+// ── schema hash staleness ─────────────────────────────────────────────────────
+
+#[test]
+fn status_stale_on_schema_hash_mismatch() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+
+    let schemas_dir = dir.path().join("schemas");
+    std::fs::create_dir_all(&schemas_dir).unwrap();
+    for (filename, content) in llm_wiki::default_schemas::default_schemas() {
+        std::fs::write(schemas_dir.join(filename), content).unwrap();
+    }
+    std::fs::write(dir.path().join("wiki.toml"), "[types]\n").unwrap();
+
+    write_page(&wiki_root, "concepts/foo.md", &concept_page("Foo", "body"));
+    let mgr = build_index(dir.path(), &wiki_root);
+
+    let status = mgr.status(dir.path()).unwrap();
+    assert!(!status.stale);
+
+    // Modify a schema file on disk
+    let concept_schema = schemas_dir.join("concept.json");
+    let mut content = std::fs::read_to_string(&concept_schema).unwrap();
+    content = content.replace(
+        "\"x-wiki-types\"",
+        "\"x-graph-edges\": {\"related\": {}}, \"x-wiki-types\"",
+    );
+    std::fs::write(&concept_schema, content).unwrap();
+
+    let status = mgr.status(dir.path()).unwrap();
+    assert!(status.stale);
+}
+
+#[test]
+fn round_trip_rebuild_then_not_stale() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+
+    let schemas_dir = dir.path().join("schemas");
+    std::fs::create_dir_all(&schemas_dir).unwrap();
+    for (filename, content) in llm_wiki::default_schemas::default_schemas() {
+        std::fs::write(schemas_dir.join(filename), content).unwrap();
+    }
+    std::fs::write(dir.path().join("wiki.toml"), "[types]\n").unwrap();
+
+    write_page(&wiki_root, "concepts/foo.md", &concept_page("Foo", "body"));
+    let mgr = build_index(dir.path(), &wiki_root);
+
+    let status = mgr.status(dir.path()).unwrap();
+    assert!(!status.stale, "should not be stale right after rebuild");
+}
+
+// ── alias resolution ──────────────────────────────────────────────────────────
+
+fn skill_page_with_title(name: &str, title: &str, description: &str, body: &str) -> String {
+    format!(
+        "---\nname: \"{name}\"\ntitle: \"{title}\"\ndescription: \"{description}\"\nstatus: active\ntype: skill\ntags:\n  - workflow\n---\n\n{body}\n"
+    )
+}
+
+#[test]
+fn alias_description_indexed_as_summary() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    write_page(
+        &wiki_root,
+        "skills/ingest.md",
+        &skill_page("ingest", "Process source files into wiki", "body"),
+    );
+
+    let mgr = build_index(dir.path(), &wiki_root);
+    let is = schema();
+
+    let results = search::search(
+        "Process source files",
+        &search::SearchOptions::default(),
+        mgr.index_path(),
+        "test",
+        &is,
+        None,
+    )
+    .unwrap();
+    assert!(
+        !results.is_empty(),
+        "skill description should be searchable as summary"
+    );
+}
+
+#[test]
+fn alias_canonical_wins_when_both_exist() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    write_page(
+        &wiki_root,
+        "skills/dual.md",
+        &skill_page_with_title("aliased-name", "canonical-title", "desc", "body"),
+    );
+
+    let mgr = build_index(dir.path(), &wiki_root);
+    let is = schema();
+
+    let results = search::search(
+        "canonical-title",
+        &search::SearchOptions::default(),
+        mgr.index_path(),
+        "test",
+        &is,
+        None,
+    )
+    .unwrap();
+    assert!(
+        results.iter().any(|r| r.title == "canonical-title"),
+        "canonical title should win"
+    );
+
+    let results = search::search(
+        "aliased-name",
+        &search::SearchOptions {
+            top_k: 10,
+            ..Default::default()
+        },
+        mgr.index_path(),
+        "test",
+        &is,
+        None,
+    )
+    .unwrap();
+    for r in &results {
+        if r.slug == "skills/dual" {
+            assert_eq!(r.title, "canonical-title", "canonical should win over alias");
+        }
+    }
+}
+
+#[test]
+fn alias_source_field_not_double_indexed() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    write_page(
+        &wiki_root,
+        "skills/single.md",
+        &skill_page("my-skill", "A skill", "body"),
+    );
+
+    let mgr = build_index(dir.path(), &wiki_root);
+    let is = schema();
+
+    let result = search::list(
+        &search::ListOptions {
+            r#type: Some("skill".into()),
+            ..Default::default()
+        },
+        mgr.index_path(),
+        "test",
+        &is,
+        None,
+    )
+    .unwrap();
+    assert_eq!(result.total, 1);
+    assert_eq!(result.pages[0].title, "my-skill");
+}
+
+#[test]
+fn non_aliased_type_indexes_normally() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    write_page(
+        &wiki_root,
+        "concepts/moe.md",
+        &concept_page("Mixture of Experts", "MoE body"),
+    );
+
+    let mgr = build_index(dir.path(), &wiki_root);
+    let is = schema();
+
+    let results = search::search(
+        "Mixture of Experts",
+        &search::SearchOptions::default(),
+        mgr.index_path(),
+        "test",
+        &is,
+        None,
+    )
+    .unwrap();
+    assert!(results.iter().any(|r| r.title == "Mixture of Experts"));
+}
+
+#[test]
+fn unrecognized_field_indexed_as_body_text() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    write_page(
+        &wiki_root,
+        "concepts/custom.md",
+        "---\ntitle: \"Custom\"\ntype: concept\nmy_custom_field: \"unicorn rainbow\"\n---\n\nBody.\n",
+    );
+
+    let mgr = build_index(dir.path(), &wiki_root);
+    let is = schema();
+
+    let results = search::search(
+        "unicorn rainbow",
+        &search::SearchOptions::default(),
+        mgr.index_path(),
+        "test",
+        &is,
+        None,
+    )
+    .unwrap();
+    assert!(
+        results.iter().any(|r| r.slug == "concepts/custom"),
+        "unrecognized field should be searchable as body text"
+    );
+}

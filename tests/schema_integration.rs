@@ -282,9 +282,7 @@ fn schema_change_makes_index_stale() {
     {
         let eng = mgr.engine.read().unwrap();
         let space = eng.space("test").unwrap();
-        let status = llm_wiki::indexing::index_status(
-            "test",
-            &space.index_path,
+        let status = space.index_manager.status(
             &space.repo_root,
         )
         .unwrap();
@@ -312,9 +310,7 @@ fn schema_change_makes_index_stale() {
     // The old state.toml has the old hash, new registry has new hash
     // So if we check with the OLD hash, it's not stale
     // But if we check with the NEW hash, it IS stale (hash mismatch)
-    let status = llm_wiki::indexing::index_status(
-        "test",
-        &space2.index_path,
+    let status = space2.index_manager.status(
         &space2.repo_root,
     )
     .unwrap();

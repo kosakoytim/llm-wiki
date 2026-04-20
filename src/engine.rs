@@ -5,26 +5,31 @@ use std::sync::{Arc, RwLock};
 use anyhow::{bail, Result};
 
 use crate::config::{self, GlobalConfig, ResolvedConfig};
+use crate::index_manager::{IndexReport, SpaceIndexManager, UpdateReport};
 use crate::index_schema::IndexSchema;
-use crate::indexing;
 use crate::space_builder;
 use crate::type_registry::SpaceTypeRegistry;
 
-// ── SpaceState ────────────────────────────────────────────────────────────────
+// ── SpaceContext ──────────────────────────────────────────────────────────────
 
-pub struct SpaceState {
+pub struct SpaceContext {
     pub name: String,
     pub wiki_root: PathBuf,
     pub repo_root: PathBuf,
-    pub index_path: PathBuf,
     pub type_registry: SpaceTypeRegistry,
     pub index_schema: IndexSchema,
+    pub index_manager: SpaceIndexManager,
 }
 
-impl SpaceState {
+impl SpaceContext {
     pub fn resolved_config(&self, global: &GlobalConfig) -> ResolvedConfig {
         let wiki_cfg = config::load_wiki(&self.repo_root).unwrap_or_default();
         config::resolve(global, &wiki_cfg)
+    }
+
+    /// Temporary accessor for callers not yet migrated to index_manager.
+    pub fn index_path(&self) -> &Path {
+        self.index_manager.index_path()
     }
 }
 
@@ -34,7 +39,7 @@ pub struct Engine {
     pub config: GlobalConfig,
     pub config_path: PathBuf,
     pub state_dir: PathBuf,
-    pub spaces: HashMap<String, SpaceState>,
+    pub spaces: HashMap<String, SpaceContext>,
 }
 
 impl Engine {
@@ -42,7 +47,7 @@ impl Engine {
         &self.config.global.default_wiki
     }
 
-    pub fn space(&self, name: &str) -> Result<&SpaceState> {
+    pub fn space(&self, name: &str) -> Result<&SpaceContext> {
         self.spaces
             .get(name)
             .ok_or_else(|| anyhow::anyhow!("wiki \"{name}\" is not mounted"))
@@ -86,28 +91,28 @@ impl EngineManager {
                         space_builder::build_space_from_embedded(&config.index.tokenizer)
                     });
 
+            let index_manager = SpaceIndexManager::new(&entry.name, &index_path);
+
             // Ensure index directory exists
             let search_dir = index_path.join("search-index");
             std::fs::create_dir_all(&search_dir)?;
 
             // Check staleness and rebuild if needed
-            let status = indexing::index_status(&entry.name, &index_path, &repo_root);
+            let status = index_manager.status(&repo_root);
             let needs_first_build = status.as_ref().map(|s| s.built.is_none()).unwrap_or(true);
 
             if needs_first_build {
                 tracing::info!(wiki = %entry.name, "building index for the first time");
-                if let Err(e) = indexing::rebuild_index(
-                    &wiki_root, &index_path, &entry.name, &repo_root,
-                    &index_schema, &type_registry,
+                if let Err(e) = index_manager.rebuild(
+                    &wiki_root, &repo_root, &index_schema, &type_registry,
                 ) {
                     tracing::warn!(wiki = %entry.name, error = %e, "initial index build failed");
                 }
             } else if let Ok(ref s) = status {
                 if s.stale && config.index.auto_rebuild {
                     tracing::info!(wiki = %entry.name, "index stale, rebuilding");
-                    if let Err(e) = indexing::rebuild_index(
-                        &wiki_root, &index_path, &entry.name, &repo_root,
-                        &index_schema, &type_registry,
+                    if let Err(e) = index_manager.rebuild(
+                        &wiki_root, &repo_root, &index_schema, &type_registry,
                     ) {
                         tracing::warn!(wiki = %entry.name, error = %e, "index rebuild failed");
                     }
@@ -122,13 +127,13 @@ impl EngineManager {
 
             spaces.insert(
                 entry.name.clone(),
-                SpaceState {
+                SpaceContext {
                     name: entry.name.clone(),
                     wiki_root,
                     repo_root,
-                    index_path,
                     type_registry,
                     index_schema,
+                    index_manager,
                 },
             );
         }
@@ -145,34 +150,30 @@ impl EngineManager {
         })
     }
 
-    pub fn on_ingest(&self, wiki_name: &str) -> Result<indexing::UpdateReport> {
+    pub fn on_ingest(&self, wiki_name: &str) -> Result<UpdateReport> {
         let engine = self
             .engine
             .read()
             .map_err(|_| anyhow::anyhow!("lock poisoned"))?;
         let space = engine.space(wiki_name)?;
-        let last_commit = indexing::last_indexed_commit(&space.index_path);
-        indexing::update_index(
+        let last_commit = space.index_manager.last_commit();
+        space.index_manager.update(
             &space.wiki_root,
-            &space.index_path,
             &space.repo_root,
             last_commit.as_deref(),
             &space.index_schema,
-            wiki_name,
             &space.type_registry,
         )
     }
 
-    pub fn rebuild_index(&self, wiki_name: &str) -> Result<indexing::IndexReport> {
+    pub fn rebuild_index(&self, wiki_name: &str) -> Result<IndexReport> {
         let engine = self
             .engine
             .read()
             .map_err(|_| anyhow::anyhow!("lock poisoned"))?;
         let space = engine.space(wiki_name)?;
-        indexing::rebuild_index(
+        space.index_manager.rebuild(
             &space.wiki_root,
-            &space.index_path,
-            wiki_name,
             &space.repo_root,
             &space.index_schema,
             &space.type_registry,

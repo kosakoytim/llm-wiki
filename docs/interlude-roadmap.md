@@ -182,12 +182,15 @@ functions that accept `&Searcher` — they never open an index.
 
 - `src/search.rs` — change `search()` and `list()` to accept
   `&Searcher` + `&IndexSchema`. Remove all index-opening code.
+  Remove `recovery: Option<&indexing::RecoveryContext>` parameter —
+  recovery is now handled internally by `SpaceIndexManager::open()`.
+
+- `src/ops/search.rs` — stop constructing `indexing::RecoveryContext`.
+  Use `space.index_manager.searcher()` instead of passing `index_path`
+  and recovery context to `search::search()` / `search::list()`.
 
 - `src/graph.rs` — change `build_graph()` to accept `&Searcher` +
   `&IndexSchema`. Remove direct index opening.
-
-- `src/ops/search.rs` — call `space.index_manager.searcher()`, pass
-  to `search::search()` / `search::list()`.
 
 - `src/ops/graph.rs` — same: pass searcher to `graph::build_graph()`.
 
@@ -217,6 +220,20 @@ tool call (ingest/rebuild):
 
 **Scope:** `src/index_manager.rs`, `src/search.rs`, `src/graph.rs`,
 `src/ops/search.rs`, `src/ops/graph.rs`.
+
+**Cleanup (deferred from §3):**
+
+Once `src/search.rs` no longer imports `indexing::RecoveryContext` and
+`src/ops/search.rs` no longer constructs it:
+
+- Delete `src/indexing.rs`
+- Remove `pub mod indexing` from `src/lib.rs`
+- Remove `#[deprecated]` attributes and wrapper functions from
+  `src/index_manager.rs`
+- Remove `SpaceContext::index_path()` temporary accessor
+- Delete `tests/indexing.rs`
+- `cargo test` — passes
+- `cargo clippy -- -D warnings` — clean
 
 ## 5. Partial index rebuild
 

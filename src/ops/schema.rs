@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use crate::config;
 use crate::engine::{Engine, EngineManager};
 use crate::git;
-use crate::indexing;
 use crate::markdown;
 use crate::search;
 use crate::space_builder;
@@ -136,7 +135,7 @@ pub fn schema_remove(
             r#type: Some(type_name.to_string()),
             ..Default::default()
         },
-        &space.index_path,
+        space.index_path(),
         wiki_name,
         &space.index_schema,
         None,
@@ -159,7 +158,7 @@ pub fn schema_remove(
 
     // Remove pages from index
     if pages_to_remove > 0 {
-        indexing::delete_by_type(&space.index_path, &space.index_schema, type_name)?;
+        space.index_manager.delete_by_type(&space.index_schema, type_name)?;
     }
 
     // Delete page files from disk if requested

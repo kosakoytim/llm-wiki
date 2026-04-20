@@ -36,7 +36,7 @@ pub fn search(
         let wikis: Vec<(String, PathBuf)> = engine
             .spaces
             .values()
-            .map(|s| (s.name.clone(), s.index_path.clone()))
+            .map(|s| (s.name.clone(), s.index_path().to_path_buf()))
             .collect();
         return search::search_all(params.query, &opts, &wikis, &space.index_schema);
     }
@@ -49,7 +49,7 @@ pub fn search(
     search::search(
         params.query,
         &opts,
-        &space.index_path,
+        space.index_path(),
         wiki_name,
         &space.index_schema,
         recovery_ctx.as_ref(),
@@ -81,7 +81,7 @@ pub fn list(
     };
     search::list(
         &opts,
-        &space.index_path,
+        space.index_path(),
         wiki_name,
         &space.index_schema,
         recovery_ctx.as_ref(),

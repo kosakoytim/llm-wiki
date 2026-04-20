@@ -4,7 +4,7 @@ use std::path::Path;
 use llm_wiki::git;
 use llm_wiki::graph::*;
 use llm_wiki::index_schema::IndexSchema;
-use llm_wiki::indexing;
+use llm_wiki::index_manager::SpaceIndexManager;
 use llm_wiki::space_builder;
 use llm_wiki::type_registry::SpaceTypeRegistry;
 
@@ -40,7 +40,9 @@ fn write_page(wiki_root: &Path, rel_path: &str, content: &str) {
 fn build_index(dir: &Path, wiki_root: &Path) -> std::path::PathBuf {
     let index_path = dir.join("index-store");
     git::commit(dir, "index pages").unwrap();
-    indexing::rebuild_index(wiki_root, &index_path, "test", dir, &schema(), &registry()).unwrap();
+    SpaceIndexManager::new("test", &index_path)
+        .rebuild(wiki_root, dir, &schema(), &registry())
+        .unwrap();
     index_path
 }
 
