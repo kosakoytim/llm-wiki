@@ -26,11 +26,6 @@ impl SpaceContext {
         let wiki_cfg = config::load_wiki(&self.repo_root).unwrap_or_default();
         config::resolve(global, &wiki_cfg)
     }
-
-    /// Temporary accessor for callers not yet migrated to index_manager.
-    pub fn index_path(&self) -> &Path {
-        self.index_manager.index_path()
-    }
 }
 
 // ── Engine ────────────────────────────────────────────────────────────────────
@@ -91,7 +86,7 @@ impl EngineManager {
                         space_builder::build_space_from_embedded(&config.index.tokenizer)
                     });
 
-            let index_manager = SpaceIndexManager::new(&entry.name, &index_path);
+            let mut index_manager = SpaceIndexManager::new(&entry.name, &index_path);
 
             // Ensure index directory exists
             let search_dir = index_path.join("search-index");
@@ -123,6 +118,14 @@ impl EngineManager {
                         entry.name,
                     );
                 }
+            }
+
+            // Open the index for serving (hold reader in memory)
+            if let Err(e) = index_manager.open(
+                &index_schema,
+                Some((&wiki_root, &repo_root, &type_registry)),
+            ) {
+                tracing::warn!(wiki = %entry.name, error = %e, "failed to open index");
             }
 
             spaces.insert(

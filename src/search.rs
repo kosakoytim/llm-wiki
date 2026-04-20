@@ -1,16 +1,13 @@
-use std::path::{Path, PathBuf};
-
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use tantivy::{
     collector::TopDocs,
     query::{AllQuery, BooleanQuery, Occur, QueryParser, TermQuery},
     schema::{IndexRecordOption, Value},
-    Snippet, SnippetGenerator, Term,
+    Searcher, Snippet, SnippetGenerator, Term,
 };
 
 use crate::index_schema::IndexSchema;
-use crate::indexing;
 
 // ── Return types ──────────────────────────────────────────────────────────────
 
@@ -84,27 +81,18 @@ impl Default for ListOptions {
 pub fn search(
     query_str: &str,
     options: &SearchOptions,
-    index_path: &Path,
+    searcher: &Searcher,
     wiki_name: &str,
     is: &IndexSchema,
-    recovery: Option<&indexing::RecoveryContext<'_>>,
 ) -> Result<Vec<PageRef>> {
-    let search_dir = index_path.join("search-index");
-    if !search_dir.exists() {
-        bail!("search index not found — run `llm-wiki index rebuild`");
-    }
-
-    let index = indexing::open_index(&search_dir, index_path, wiki_name, is, recovery)?;
-    let reader = index.reader()?;
-    let searcher = reader.searcher();
-
     let f_slug = is.field("slug");
     let f_title = is.field("title");
     let f_summary = is.field("summary");
     let f_body = is.field("body");
     let f_type = is.field("type");
 
-    let query_parser = QueryParser::for_index(&index, vec![f_title, f_summary, f_body]);
+    let index = searcher.index();
+    let query_parser = QueryParser::for_index(index, vec![f_title, f_summary, f_body]);
     let parsed = query_parser
         .parse_query(query_str)
         .with_context(|| format!("failed to parse query: {query_str}"))?;
@@ -139,7 +127,7 @@ pub fn search(
     let top_docs = searcher.search(&final_query, &TopDocs::with_limit(options.top_k))?;
 
     let snippet_gen = if !options.no_excerpt {
-        Some(SnippetGenerator::create(&searcher, &final_query, f_body)?)
+        Some(SnippetGenerator::create(searcher, &final_query, f_body)?)
     } else {
         None
     };
@@ -181,20 +169,10 @@ pub fn search(
 
 pub fn list(
     options: &ListOptions,
-    index_path: &Path,
+    searcher: &Searcher,
     wiki_name: &str,
     is: &IndexSchema,
-    recovery: Option<&indexing::RecoveryContext<'_>>,
 ) -> Result<PageList> {
-    let search_dir = index_path.join("search-index");
-    if !search_dir.exists() {
-        bail!("search index not found — run `llm-wiki index rebuild`");
-    }
-
-    let index = indexing::open_index(&search_dir, index_path, wiki_name, is, recovery)?;
-    let reader = index.reader()?;
-    let searcher = reader.searcher();
-
     let f_slug = is.field("slug");
     let f_title = is.field("title");
     let f_type = is.field("type");
@@ -305,12 +283,12 @@ pub fn list(
 pub fn search_all(
     query_str: &str,
     options: &SearchOptions,
-    wikis: &[(String, PathBuf)],
+    wikis: &[(String, Searcher)],
     is: &IndexSchema,
 ) -> Result<Vec<PageRef>> {
     let mut all_results = Vec::new();
-    for (name, index_path) in wikis {
-        match search(query_str, options, index_path, name, is, None) {
+    for (name, searcher) in wikis {
+        match search(query_str, options, searcher, name, is) {
             Ok(results) => all_results.extend(results),
             Err(_) => continue,
         }

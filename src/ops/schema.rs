@@ -130,15 +130,15 @@ pub fn schema_remove(
     let space = engine.space(wiki_name)?;
 
     // Count pages of this type in the index
+    let searcher = space.index_manager.searcher()?;
     let list_result = search::list(
         &search::ListOptions {
             r#type: Some(type_name.to_string()),
             ..Default::default()
         },
-        space.index_path(),
+        &searcher,
         wiki_name,
         &space.index_schema,
-        None,
     )?;
     let pages_to_remove = list_result.total;
 

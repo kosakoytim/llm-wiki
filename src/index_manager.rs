@@ -8,7 +8,7 @@ use tantivy::{
     collector::TopDocs,
     directory::MmapDirectory,
     query::AllQuery,
-    Index, IndexWriter, Term,
+    Index, IndexReader, IndexWriter, Searcher, Term,
 };
 use walkdir::WalkDir;
 
@@ -46,13 +46,6 @@ pub struct IndexStatus {
     pub queryable: bool,
 }
 
-/// Optional context for auto-recovery on corrupt index.
-pub struct RecoveryContext<'a> {
-    pub wiki_root: &'a Path,
-    pub repo_root: &'a Path,
-    pub registry: &'a SpaceTypeRegistry,
-}
-
 // ── state.toml ────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,6 +65,8 @@ pub struct IndexState {
 pub struct SpaceIndexManager {
     wiki_name: String,
     index_path: PathBuf,
+    tantivy_index: Option<Index>,
+    index_reader: Option<IndexReader>,
 }
 
 impl SpaceIndexManager {
@@ -79,6 +74,8 @@ impl SpaceIndexManager {
         Self {
             wiki_name: wiki_name.into(),
             index_path: index_path.into(),
+            tantivy_index: None,
+            index_reader: None,
         }
     }
 
@@ -88,6 +85,68 @@ impl SpaceIndexManager {
 
     pub fn wiki_name(&self) -> &str {
         &self.wiki_name
+    }
+
+    /// Open the index from disk and hold the reader.
+    /// Call after rebuild/staleness check. Recovery: if open fails and
+    /// wiki_root/repo_root/registry are provided, rebuild and retry.
+    pub fn open(
+        &mut self,
+        is: &IndexSchema,
+        recovery: Option<(&Path, &Path, &SpaceTypeRegistry)>,
+    ) -> Result<()> {
+        let search_dir = self.index_path.join("search-index");
+
+        let try_open = || -> Result<Index> {
+            let dir = MmapDirectory::open(&search_dir)?;
+            Ok(Index::open(dir)?)
+        };
+
+        let index = match try_open() {
+            Ok(idx) => idx,
+            Err(e) => {
+                if let Some((wiki_root, repo_root, registry)) = recovery {
+                    tracing::warn!(
+                        wiki = %self.wiki_name,
+                        error = %e,
+                        "index corrupt, rebuilding",
+                    );
+                    if search_dir.exists() {
+                        let _ = std::fs::remove_dir_all(&search_dir);
+                    }
+                    self.rebuild(wiki_root, repo_root, is, registry)?;
+                    try_open().context("index still corrupt after rebuild")?
+                } else {
+                    return Err(e);
+                }
+            }
+        };
+
+        let reader = index.reader()?;
+        self.tantivy_index = Some(index);
+        self.index_reader = Some(reader);
+        Ok(())
+    }
+
+    /// Get a searcher. Cheap — arc clone of current segment set.
+    pub fn searcher(&self) -> Result<Searcher> {
+        self.index_reader
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("index not open"))
+            .map(|r| r.searcher())
+    }
+
+    /// Get a writer from the held index, or open from disk if not held.
+    fn writer(&self) -> Result<IndexWriter> {
+        if let Some(ref idx) = self.tantivy_index {
+            Ok(idx.writer(50_000_000)?)
+        } else {
+            let search_dir = self.index_path.join("search-index");
+            let dir = MmapDirectory::open(&search_dir)
+                .with_context(|| format!("failed to open index dir: {}", search_dir.display()))?;
+            let index = Index::open(dir).context("failed to open index")?;
+            Ok(index.writer(50_000_000)?)
+        }
     }
 
     pub fn last_commit(&self) -> Option<String> {
@@ -113,6 +172,7 @@ impl SpaceIndexManager {
         let search_dir = self.index_path.join("search-index");
         std::fs::create_dir_all(&search_dir)?;
 
+        // Always open_or_create for rebuild (schema may have changed)
         let dir = MmapDirectory::open(&search_dir)
             .with_context(|| format!("failed to open index dir: {}", search_dir.display()))?;
         let index = Index::open_or_create(dir, is.schema.clone())?;
@@ -184,11 +244,7 @@ impl SpaceIndexManager {
             return Ok(UpdateReport::default());
         }
 
-        let search_dir = self.index_path.join("search-index");
-        let dir = MmapDirectory::open(&search_dir)
-            .with_context(|| format!("failed to open index dir: {}", search_dir.display()))?;
-        let index = Index::open(dir).context("failed to open index")?;
-        let mut writer: IndexWriter = index.writer(50_000_000)?;
+        let mut writer = self.writer()?;
 
         let f_slug = is.field("slug");
         let wiki_prefix = wiki_root
@@ -281,116 +337,13 @@ impl SpaceIndexManager {
     }
 
     pub fn delete_by_type(&self, is: &IndexSchema, type_name: &str) -> Result<()> {
-        let search_dir = self.index_path.join("search-index");
-        let dir = MmapDirectory::open(&search_dir)
-            .with_context(|| format!("failed to open index dir: {}", search_dir.display()))?;
-        let index = Index::open(dir).context("failed to open index")?;
-        let mut writer: IndexWriter = index.writer(50_000_000)?;
+        let mut writer = self.writer()?;
         let f_type = is.field("type");
         writer.delete_term(Term::from_field_text(f_type, type_name));
         writer.commit()?;
         Ok(())
     }
 
-    pub fn open_index(
-        &self,
-        is: &IndexSchema,
-        recovery: Option<&RecoveryContext<'_>>,
-    ) -> Result<Index> {
-        let search_dir = self.index_path.join("search-index");
-        let try_open = || -> Result<Index> {
-            let dir = MmapDirectory::open(&search_dir)?;
-            Ok(Index::open(dir)?)
-        };
-
-        match try_open() {
-            Ok(idx) => Ok(idx),
-            Err(e) => {
-                if let Some(ctx) = recovery {
-                    tracing::warn!(
-                        wiki = %self.wiki_name,
-                        error = %e,
-                        "index corrupt, rebuilding",
-                    );
-                    if search_dir.exists() {
-                        let _ = std::fs::remove_dir_all(&search_dir);
-                    }
-                    self.rebuild(ctx.wiki_root, ctx.repo_root, is, ctx.registry)?;
-                    try_open().context("index still corrupt after rebuild")
-                } else {
-                    Err(e)
-                }
-            }
-        }
-    }
-}
-
-// ── Deprecated free-function wrappers ─────────────────────────────────────────
-
-#[deprecated(note = "use SpaceIndexManager::last_commit()")]
-pub fn last_indexed_commit(index_path: &Path) -> Option<String> {
-    SpaceIndexManager::new("", index_path).last_commit()
-}
-
-#[deprecated(note = "use SpaceIndexManager::rebuild()")]
-pub fn rebuild_index(
-    wiki_root: &Path,
-    index_path: &Path,
-    wiki_name: &str,
-    repo_root: &Path,
-    is: &IndexSchema,
-    registry: &SpaceTypeRegistry,
-) -> Result<IndexReport> {
-    SpaceIndexManager::new(wiki_name, index_path).rebuild(wiki_root, repo_root, is, registry)
-}
-
-#[deprecated(note = "use SpaceIndexManager::update()")]
-pub fn update_index(
-    wiki_root: &Path,
-    index_path: &Path,
-    repo_root: &Path,
-    last_indexed_commit: Option<&str>,
-    is: &IndexSchema,
-    wiki_name: &str,
-    registry: &SpaceTypeRegistry,
-) -> Result<UpdateReport> {
-    SpaceIndexManager::new(wiki_name, index_path).update(
-        wiki_root,
-        repo_root,
-        last_indexed_commit,
-        is,
-        registry,
-    )
-}
-
-#[deprecated(note = "use SpaceIndexManager::status()")]
-pub fn index_status(wiki_name: &str, index_path: &Path, repo_root: &Path) -> Result<IndexStatus> {
-    SpaceIndexManager::new(wiki_name, index_path).status(repo_root)
-}
-
-#[deprecated(note = "use SpaceIndexManager::delete_by_type()")]
-pub fn delete_by_type(
-    index_path: &Path,
-    is: &IndexSchema,
-    type_name: &str,
-) -> Result<()> {
-    SpaceIndexManager::new("", index_path).delete_by_type(is, type_name)
-}
-
-#[deprecated(note = "use SpaceIndexManager::open_index()")]
-pub fn open_index(
-    search_dir: &Path,
-    index_path: &Path,
-    wiki_name: &str,
-    is: &IndexSchema,
-    recovery: Option<&RecoveryContext<'_>>,
-) -> Result<Index> {
-    // The old API took search_dir separately; the new API derives it from index_path.
-    // For backward compat, if search_dir != index_path/"search-index", we use index_path
-    // that would produce the correct search_dir. Since the old callers always pass
-    // index_path.join("search-index") as search_dir, delegating directly works.
-    let _ = search_dir; // old callers pass index_path.join("search-index")
-    SpaceIndexManager::new(wiki_name, index_path).open_index(is, recovery)
 }
 
 // ── Document building (private) ───────────────────────────────────────────────

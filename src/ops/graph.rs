@@ -37,7 +37,8 @@ pub fn graph_build(
         types,
         relation: params.relation.clone(),
     };
-    let g = graph::build_graph(space.index_path(), &space.index_schema, &filter)?;
+    let searcher = space.index_manager.searcher()?;
+    let g = graph::build_graph(&searcher, &space.index_schema, &filter)?;
 
     let rendered = match fmt {
         "dot" => graph::render_dot(&g),
