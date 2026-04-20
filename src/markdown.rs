@@ -162,3 +162,25 @@ pub fn promote_to_bundle(slug: &Slug, wiki_root: &Path) -> Result<()> {
     std::fs::rename(&flat, &dest)?;
     Ok(())
 }
+
+/// Delete a page from disk. Handles both flat (.md) and bundle (slug/index.md) formats.
+/// Returns true if a file was deleted, false if the page was not found.
+pub fn delete_page(slug: &str, wiki_root: &Path) -> Result<bool> {
+    // Try flat format: slug.md
+    let flat_path = wiki_root.join(format!("{slug}.md"));
+    if flat_path.exists() {
+        std::fs::remove_file(&flat_path)?;
+        return Ok(true);
+    }
+
+    // Try bundle format: slug/index.md
+    let bundle_path = wiki_root.join(slug).join("index.md");
+    if bundle_path.exists() {
+        // Remove the entire bundle directory
+        let bundle_dir = wiki_root.join(slug);
+        std::fs::remove_dir_all(&bundle_dir)?;
+        return Ok(true);
+    }
+
+    Ok(false)
+}

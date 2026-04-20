@@ -287,21 +287,29 @@ Cleanup:
 
 Modules: `src/cli.rs`, `src/ops.rs`, `src/mcp/tools.rs`,
 `src/mcp/handlers.rs`
-Tests: `schema list` returns all types, `schema show concept`
-returns JSON Schema, `schema show concept --template` returns
-frontmatter template, `schema add` registers custom type
-Commit: `schema: CLI command and MCP tool for type introspection`
+Spec: `docs/specifications/tools/schema-management.md`
+Tests: `schema list` returns all types with `--format`,
+`schema show` returns JSON Schema, `schema show --template` returns
+frontmatter template, `schema add` registers custom type and
+validates, `schema remove` removes from index with `--dry-run`,
+`schema validate` catches invalid schemas and field conflicts
+Commit: `schema: CLI command and MCP tool for type management`
 
 CLI subcommands:
-- `llm-wiki schema list` — types + descriptions from registry
-- `llm-wiki schema show <type>` — print JSON Schema
-- `llm-wiki schema show <type> --template` — generate YAML
-  frontmatter template from required/optional fields
-- `llm-wiki schema add <type> <schema-path>` — copy schema to
-  `<wiki>/schemas/`, add `[types.<type>]` to `wiki.toml`
+- `llm-wiki schema list [--format text|json]`
+- `llm-wiki schema show <type> [--format text|json]`
+- `llm-wiki schema show <type> --template`
+- `llm-wiki schema add <type> <schema-path>`
+- `llm-wiki schema remove <type> [--delete] [--dry-run]`
+- `llm-wiki schema validate [<type>]`
 
 MCP tool `wiki_schema` with `action` parameter (`list`, `show`,
-`add`) — same logic via `src/ops.rs`.
+`add`, `remove`, `validate`) — same logic via `src/ops.rs`.
+
+All operations target a wiki (`--wiki` or default).
+
+Open question: did acp integration need update?
+
 
 ### Step 10: Integration tests
 
@@ -319,6 +327,17 @@ Commit: `tests: schema integration tests`
 - Schema change triggers rebuild (modify schema, re-ingest)
 - `schema list` / `schema show` return correct output
 - All existing Phase 1 tests still pass
+
+### Step 10bi: Integration tests
+
+ops test integration split
+
+### Step 11: Tantitvy Index with embbeded type documentation
+
+Doc: 'docs/implementation/index-schema-building.md'
+
+- Compute Tantitvy Index mapping with embedded type
+- Documente how those embeded type are mapped
 
 ### Skills (llm-wiki-skills)
 
@@ -413,6 +432,11 @@ Ideas that don't fit in the four phases:
 - Skill composition — `extends` field for wiki skills
 - Confidence propagation — compute concept confidence from source graph
 - Persistent graph index — avoid rebuilding petgraph on every call
+- Partial Rebuild - Per-type hashes are stored in `state.toml` but not compared yet. Any
+`schema_hash` mismatch triggers a full rebuild.
+- Hot reload / file watcher (future)
+- Custom tokenizer registration (future)
+- implement wiki logs 
 
 ## Related: llm-wiki-hugo-cms
 

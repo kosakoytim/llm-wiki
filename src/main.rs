@@ -1,9 +1,9 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use clap::Parser;
 
-use llm_wiki::cli::{Cli, Commands, ConfigAction, ContentAction, IndexAction, SpacesAction};
+use llm_wiki::cli::{Cli, Commands, ConfigAction, ContentAction, IndexAction, SchemaAction, SpacesAction};
 use llm_wiki::config;
 use llm_wiki::engine::EngineManager;
 use llm_wiki::ops;
@@ -429,6 +429,64 @@ fn main() -> Result<()> {
         },
 
         // ── Serve ─────────────────────────────────────────────────────
+        Commands::Schema { action } => {
+            let manager = EngineManager::build(&config_path)?;
+            let engine = manager.engine.read().map_err(|_| anyhow::anyhow!("lock"))?;
+            let wiki_name = engine.resolve_wiki_name(cli.wiki.as_deref()).to_string();
+
+            match action {
+                SchemaAction::List { format } => {
+                    let entries = ops::schema_list(&engine, &wiki_name)?;
+                    if is_json(&format) {
+                        println!("{}", serde_json::to_string_pretty(&entries)?);
+                    } else {
+                        for e in &entries {
+                            println!("{:<16}{}", e.name, e.description);
+                        }
+                    }
+                }
+                SchemaAction::Show { name, template, format: _ } => {
+                    if template {
+                        let tmpl = ops::schema_show_template(&engine, &wiki_name, &name)?;
+                        println!("{tmpl}");
+                    } else {
+                        let content = ops::schema_show(&engine, &wiki_name, &name)?;
+                        println!("{content}");
+                    }
+                }
+                SchemaAction::Add { name, schema_path } => {
+                    let msg = ops::schema_add(&engine, &wiki_name, &name, Path::new(&schema_path))?;
+                    println!("{msg}");
+                }
+                SchemaAction::Remove { name, delete, delete_pages, dry_run } => {
+                    drop(engine);
+                    let report = ops::schema_remove(&manager, &wiki_name, &name, delete, delete_pages, dry_run)?;
+                    if is_json(&None::<String>) {
+                        println!("{}", serde_json::to_string_pretty(&report)?);
+                    } else {
+                        if report.dry_run {
+                            println!("DRY RUN:");
+                        }
+                        println!("pages removed from index: {}", report.pages_removed);
+                        println!("page files deleted from disk: {}", report.pages_deleted_from_disk);
+                        println!("wiki.toml updated: {}", report.wiki_toml_updated);
+                        println!("schema file deleted: {}", report.schema_file_deleted);
+                    }
+                }
+                SchemaAction::Validate { name } => {
+                    let issues = ops::schema_validate(&engine, &wiki_name, name.as_deref())?;
+                    if issues.is_empty() {
+                        println!("ok");
+                    } else {
+                        for issue in &issues {
+                            println!("{issue}");
+                        }
+                        std::process::exit(1);
+                    }
+                }
+            }
+        }
+
         Commands::Serve { sse, acp, dry_run } => {
             if dry_run {
                 let mut transports = vec!["stdio".to_string()];

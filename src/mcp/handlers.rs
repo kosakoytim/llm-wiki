@@ -292,3 +292,68 @@ pub fn handle_graph(server: &McpServer, args: &Map<String, Value>) -> ToolHandle
     let s = serde_json::to_string_pretty(&result.report).map_err(|e| format!("{e}"))?;
     ok_text(s)
 }
+
+pub fn handle_schema(server: &McpServer, args: &Map<String, Value>) -> ToolHandlerResult {
+    let action = arg_str(args, "action").ok_or("action is required")?;
+    let engine = server.engine();
+    let wiki_name = resolve_wiki_name(&engine, args)?;
+
+    match action.as_str() {
+        "list" => {
+            let entries = ops::schema_list(&engine, &wiki_name).map_err(|e| format!("{e}"))?;
+            let s = serde_json::to_string_pretty(&entries).map_err(|e| format!("{e}"))?;
+            ok_text(s)
+        }
+        "show" => {
+            let type_name = arg_str(args, "type").ok_or("type is required for show")?;
+            let template = args
+                .get("template")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if template {
+                let tmpl = ops::schema_show_template(&engine, &wiki_name, &type_name)
+                    .map_err(|e| format!("{e}"))?;
+                ok_text(tmpl)
+            } else {
+                let content =
+                    ops::schema_show(&engine, &wiki_name, &type_name).map_err(|e| format!("{e}"))?;
+                ok_text(content)
+            }
+        }
+        "add" => {
+            let type_name = arg_str(args, "type").ok_or("type is required for add")?;
+            let schema_path =
+                arg_str(args, "schema_path").ok_or("schema_path is required for add")?;
+            let msg = ops::schema_add(
+                &engine,
+                &wiki_name,
+                &type_name,
+                std::path::Path::new(&schema_path),
+            )
+            .map_err(|e| format!("{e}"))?;
+            ok_text(msg)
+        }
+        "remove" => {
+            let type_name = arg_str(args, "type").ok_or("type is required for remove")?;
+            let delete = args.get("delete").and_then(|v| v.as_bool()).unwrap_or(false);
+            let delete_pages = args.get("delete_pages").and_then(|v| v.as_bool()).unwrap_or(false);
+            let dry_run = args.get("dry_run").and_then(|v| v.as_bool()).unwrap_or(false);
+            drop(engine);
+            let report = ops::schema_remove(&server.manager, &wiki_name, &type_name, delete, delete_pages, dry_run)
+                .map_err(|e| format!("{e}"))?;
+            let s = serde_json::to_string_pretty(&report).map_err(|e| format!("{e}"))?;
+            ok_text(s)
+        }
+        "validate" => {
+            let type_name = arg_str(args, "type");
+            let issues = ops::schema_validate(&engine, &wiki_name, type_name.as_deref())
+                .map_err(|e| format!("{e}"))?;
+            if issues.is_empty() {
+                ok_text("ok".to_string())
+            } else {
+                ok_text(issues.join("\n"))
+            }
+        }
+        _ => Err(format!("unknown action: {action}")),
+    }
+}

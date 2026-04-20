@@ -348,6 +348,24 @@ pub fn update_index(
 
 // ── open_index with recovery ──────────────────────────────────────────────────
 
+/// Delete all documents of a given type from the index.
+/// Returns the number of pages that were in the index for that type.
+pub fn delete_by_type(
+    index_path: &Path,
+    is: &IndexSchema,
+    type_name: &str,
+) -> Result<()> {
+    let search_dir = index_path.join("search-index");
+    let dir = MmapDirectory::open(&search_dir)
+        .with_context(|| format!("failed to open index dir: {}", search_dir.display()))?;
+    let index = Index::open(dir).context("failed to open index")?;
+    let mut writer: IndexWriter = index.writer(50_000_000)?;
+    let f_type = is.field("type");
+    writer.delete_term(Term::from_field_text(f_type, type_name));
+    writer.commit()?;
+    Ok(())
+}
+
 pub fn open_index(
     search_dir: &Path,
     index_path: &Path,

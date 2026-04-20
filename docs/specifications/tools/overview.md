@@ -1,16 +1,16 @@
 ---
 title: "Tool Surface Overview"
-summary: "The 16 MCP/ACP/CLI tools — design principle, grouping, and global flags."
+summary: "The MCP/ACP/CLI tools — design principle, grouping, and global flags."
 read_when:
   - Getting an overview of all available tools
   - Understanding why a tool belongs in the engine vs a skill
 status: ready
-last_updated: "2025-07-17"
+last_updated: "2025-07-18"
 ---
 
 # Tool Surface Overview
 
-The engine exposes 15 tools. Every tool is available via MCP
+The engine exposes 16 tools. Every tool is available via MCP
 (stdio + SSE), ACP, and CLI. Same tool surface, three transports.
 
 ## Design Principle
@@ -47,6 +47,13 @@ global).
 
 References:
 - [config-management.md](config-management.md)
+
+### Schema management (1 tool)
+
+`wiki_schema` — list, show, or add type schemas.
+
+References:
+- [schema-management.md](schema-management.md)
 
 ### Content operations (4 tools)
 

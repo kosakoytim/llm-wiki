@@ -122,6 +122,11 @@ impl SpaceTypeRegistry {
         self.types.get(type_name).map(|rt| &rt.aliases)
     }
 
+    /// Get the schema file path for a type (relative to repo root).
+    pub fn schema_path(&self, type_name: &str) -> Option<&str> {
+        self.types.get(type_name).map(|rt| rt.schema_path.as_str())
+    }
+
     pub fn schema_hash(&self) -> &str {
         &self.schema_hash
     }

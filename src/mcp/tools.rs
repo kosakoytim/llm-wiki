@@ -226,6 +226,23 @@ pub fn tool_list() -> Vec<Tool> {
                 &[],
             ),
         ),
+        Tool::new(
+            "wiki_schema",
+            "Inspect and manage type schemas",
+            schema(
+                json!({
+                    "action": str_prop("Action: list, show, add, remove, validate"),
+                    "type": opt_str("Type name (for show/add/remove/validate)"),
+                    "template": opt_bool("Return frontmatter template instead of schema (for show)"),
+                    "schema_path": opt_str("Path to schema file (for add)"),
+                    "delete": opt_bool("Also delete schema file (for remove)"),
+                    "delete_pages": opt_bool("Also delete page files from disk (for remove)"),
+                    "dry_run": opt_bool("Show what would be done (for remove)"),
+                    "wiki": opt_str("Target wiki name"),
+                }),
+                &["action"],
+            ),
+        ),
     ]
 }
 
@@ -249,6 +266,7 @@ pub fn call(server: &McpServer, name: &str, args: &Map<String, Value>) -> ToolRe
         "wiki_index_rebuild" => handlers::handle_index_rebuild(server, args),
         "wiki_index_status" => handlers::handle_index_status(server, args),
         "wiki_graph" => handlers::handle_graph(server, args),
+        "wiki_schema" => handlers::handle_schema(server, args),
         _ => Err(format!("unknown tool: {name}")),
     }));
     match result {

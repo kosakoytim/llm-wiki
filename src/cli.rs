@@ -106,6 +106,11 @@ pub enum Commands {
         #[command(subcommand)]
         action: IndexAction,
     },
+    /// Inspect and manage type schemas
+    Schema {
+        #[command(subcommand)]
+        action: SchemaAction,
+    },
     /// Start the wiki MCP/ACP server
     Serve {
         /// Enable SSE transport (optional port, e.g. :8080)
@@ -264,5 +269,52 @@ pub enum IndexAction {
         /// Output format: text | json
         #[arg(long)]
         format: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum SchemaAction {
+    /// List all registered types
+    List {
+        /// Output format: text | json
+        #[arg(long)]
+        format: Option<String>,
+    },
+    /// Show JSON Schema or frontmatter template for a type
+    Show {
+        /// Type name
+        name: String,
+        /// Print frontmatter template instead of schema
+        #[arg(long)]
+        template: bool,
+        /// Output format: text | json
+        #[arg(long)]
+        format: Option<String>,
+    },
+    /// Register a custom type
+    Add {
+        /// Type name
+        name: String,
+        /// Path to JSON Schema file
+        schema_path: String,
+    },
+    /// Unregister a type and remove its pages from the index
+    Remove {
+        /// Type name
+        name: String,
+        /// Also delete/modify the schema file
+        #[arg(long)]
+        delete: bool,
+        /// Also delete page .md files from disk
+        #[arg(long)]
+        delete_pages: bool,
+        /// Show what would be done without doing it
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Validate schema files and index resolution
+    Validate {
+        /// Validate a specific type only (omit for all)
+        name: Option<String>,
     },
 }

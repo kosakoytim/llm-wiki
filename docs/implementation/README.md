@@ -31,7 +31,8 @@ the design.
 
 | Document                       | Description                                                      |
 | ------------------------------ | ---------------------------------------------------------------- |
-| [mcp-server.md](mcp-server.md) | rmcp setup, tool registration, resource namespacing, stdio + SSE |
+| [mcp-server.md](mcp-server.md)   | rmcp setup, tool registration, resource namespacing, stdio + SSE |
+| [mcp-tool-pattern.md](mcp-tool-pattern.md) | Patterns for adding new MCP tools                        |
 | [acp-server.md](acp-server.md) | WikiAgent, session management, streaming, prompt dispatch        |
 
 ## CLI and Toolchain
