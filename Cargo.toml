@@ -53,7 +53,7 @@ sha2       = "0.10"
 tantivy    = "0.26"
 
 # Graph
-petgraph   = "0.6"
+petgraph   = "0.8"
 
 # Filesystem traversal
 walkdir    = "2"
