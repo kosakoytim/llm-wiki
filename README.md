@@ -122,6 +122,10 @@ Single Rust binary. No runtime, no database, no Docker.
 llm-wiki is a continuation of
 [agent-foundation](https://github.com/geronimo-iia/agent-foundation).
 
+## Contributing
+
+[Contributing guide](CONTRIBUTING.md) · [Code of conduct](CODE_OF_CONDUCT.md) · [Security policy](SECURITY.md)
+
 ## License
 
 [MIT](LICENSE-MIT) OR [Apache-2.0](LICENSE-APACHE)
