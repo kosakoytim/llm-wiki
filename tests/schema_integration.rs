@@ -1,7 +1,6 @@
 use std::fs;
 use std::path::Path;
 
-use llm_wiki::config;
 use llm_wiki::engine::WikiEngine;
 use llm_wiki::ops;
 use llm_wiki::spaces;

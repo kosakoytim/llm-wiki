@@ -46,8 +46,8 @@ jsonschema = "0.28"
 # Hashing
 sha2       = "0.10"
 
-# Markdown / frontmatter
-frontmatter = "0.4"
+# Markdown
+# (frontmatter crate removed — unused, pulled in unmaintained yaml-rust)
 
 # Full-text search
 tantivy    = "0.25"

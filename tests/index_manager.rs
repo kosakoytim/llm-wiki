@@ -53,7 +53,7 @@ fn make_manager(dir: &Path) -> SpaceIndexManager {
 }
 
 fn build_index(dir: &Path, wiki_root: &Path) -> SpaceIndexManager {
-    let mut mgr = make_manager(dir);
+    let mgr = make_manager(dir);
     git::commit(dir, "index pages").unwrap();
     mgr.rebuild(wiki_root, dir, &schema(), &registry()).unwrap();
     mgr.open(&schema(), None).unwrap();
@@ -61,7 +61,7 @@ fn build_index(dir: &Path, wiki_root: &Path) -> SpaceIndexManager {
 }
 
 /// Open a fresh searcher from disk (for tests that mutate then search).
-fn open_searcher(mgr: &SpaceIndexManager, is: &IndexSchema) -> Searcher {
+fn open_searcher(mgr: &SpaceIndexManager, _is: &IndexSchema) -> Searcher {
     let search_dir = mgr.index_path().join("search-index");
     let dir = tantivy::directory::MmapDirectory::open(&search_dir).unwrap();
     let index = tantivy::Index::open(dir).unwrap();
@@ -352,7 +352,7 @@ fn open_recovers_from_corruption() {
     let wiki_root = setup_repo(dir.path());
     write_page(&wiki_root, "concepts/foo.md", &concept_page("Foo", "body"));
 
-    let mut mgr = make_manager(dir.path());
+    let mgr = make_manager(dir.path());
     git::commit(dir.path(), "pages").unwrap();
     let is = schema();
     let reg = registry();
@@ -379,7 +379,7 @@ fn open_fails_without_recovery_on_corruption() {
     let wiki_root = setup_repo(dir.path());
     write_page(&wiki_root, "concepts/foo.md", &concept_page("Foo", "body"));
 
-    let mut mgr = make_manager(dir.path());
+    let mgr = make_manager(dir.path());
     git::commit(dir.path(), "pages").unwrap();
     mgr.rebuild(&wiki_root, dir.path(), &schema(), &registry())
         .unwrap();
