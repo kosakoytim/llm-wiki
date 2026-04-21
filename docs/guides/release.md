@@ -52,6 +52,7 @@ Tagging triggers `.github/workflows/release.yml`:
 
 Update `homebrew-tap/Formula/llm-wiki.rb`:
 - Version, URL, SHA256 for each platform
+- Commit: `chore: bump llm-wiki to x.y.z`
 - Test: `brew install geronimo-iia/tap/llm-wiki`
 
 ### asdf plugin
