@@ -30,6 +30,6 @@ jobs:
 
       - name: Security audit
         if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
-        uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cargo install cargo-audit --quiet
+          cargo audit
