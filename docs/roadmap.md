@@ -12,11 +12,18 @@ last_updated: "2025-07-20"
 | Phase | What                                                          | Status |
 | ----- | ------------------------------------------------------------- | ------ |
 | 0     | Specification rationalization                                 | ✓      |
-| 1     | Focused engine — 16 tools, MCP/ACP, tantivy 0.25              | ✓      |
+| 1     | Focused engine — 16 tools, MCP/ACP, tantivy 0.26              | ✓      |
 | 2     | Type system — JSON Schema, discovery, aliasing, `wiki_schema` | ✓      |
 | 3     | Typed graph — `x-graph-edges`, labeled edges, target warnings | ✓      |
 
 357 tests. Single Rust binary. No runtime dependencies.
+
+## Active
+
+| Task                                        | Prompt                                                 | Notes                                     |
+| ------------------------------------------- | ------------------------------------------------------ | ----------------------------------------- |
+| Replace `_slug_ord` with native string sort | [refactor-slug-sort.md](prompts/refactor-slug-sort.md) | tantivy 0.26 `order_by_string_fast_field` |
+| Upgrade rmcp 0.1 → 1.x                      | [upgrade-rmcp.md](prompts/upgrade-rmcp.md)             | SSE → Streamable HTTP, last audit warning |
 
 ## Next: Phase 4 — Skill Registry
 
