@@ -24,6 +24,7 @@ last_updated: "2025-07-20"
 | ------------------------------------------- | ------------------------------------------------------ | ----------------------------------------- |
 | Replace `_slug_ord` with native string sort | [refactor-slug-sort.md](prompts/refactor-slug-sort.md) | tantivy 0.26 `order_by_string_fast_field` |
 | Upgrade rmcp 0.1 → 1.x                      | [upgrade-rmcp.md](prompts/upgrade-rmcp.md)             | SSE → Streamable HTTP, last audit warning |
+| Upgrade agent-client-protocol 0.10 → 0.11   | [upgrade-acp.md](prompts/upgrade-acp.md)               | 70 breaking API changes                   |
 
 ## Next: Phase 4 — Skill Registry
 
