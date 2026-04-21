@@ -1,0 +1,7 @@
+# https://doc.rust-lang.org/cargo/commands/cargo-audit.html
+
+[advisories]
+ignore = [
+    # paste unmaintained — transitive via rmcp 0.1, fixed by rmcp 1.x upgrade
+    "RUSTSEC-2024-0436",
+]
