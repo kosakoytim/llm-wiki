@@ -1,5 +1,8 @@
 # llm-wiki
 
+> **Pre-release** — the engine is functional and tested but not yet
+> published to crates.io. Install from source: `cargo install --path .`
+
 **Build knowledge that compounds — not answers that evaporate.**
 
 A git-backed wiki engine that turns a folder of Markdown files into a
