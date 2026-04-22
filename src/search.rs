@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 use std::collections::HashMap;
 
 use anyhow::{Context, Result};
@@ -420,7 +421,7 @@ pub fn search_all(
     // Re-cap tags after merging
     if options.facets_top_tags > 0 && merged_facets.tags.len() > options.facets_top_tags {
         let mut entries: Vec<_> = merged_facets.tags.into_iter().collect();
-        entries.sort_by(|a, b| b.1.cmp(&a.1));
+        entries.sort_by_key(|e| Reverse(e.1));
         entries.truncate(options.facets_top_tags);
         merged_facets.tags = entries.into_iter().collect();
     }
@@ -463,7 +464,7 @@ fn collect_facet(
 
     if top_n > 0 && counts.len() > top_n {
         let mut entries: Vec<_> = counts.into_iter().collect();
-        entries.sort_by(|a, b| b.1.cmp(&a.1));
+        entries.sort_by_key(|e| Reverse(e.1));
         entries.truncate(top_n);
         return Ok(entries.into_iter().collect());
     }

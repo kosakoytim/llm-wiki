@@ -85,6 +85,7 @@ First release. Single Rust binary, 16 MCP tools, ACP agent.
 
 - Dynamic tantivy schema computed from type registry
 - FAST on all keyword fields for filtering and facet counting
+- Rust 1.95 MSRV
 - Incremental update via two-diff merge (working tree + committed changes)
 - Partial rebuild per changed type
 - Auto-recovery on index corruption
