@@ -568,8 +568,15 @@ fn hot_reload_mount_wiki_makes_it_searchable() {
 
     // Create beta wiki structure first (before mounting)
     let beta_path = dir.path().join("beta");
-    llm_wiki::spaces::create(&beta_path, "beta", Some("second wiki"), false, false, &config_path)
-        .unwrap();
+    llm_wiki::spaces::create(
+        &beta_path,
+        "beta",
+        Some("second wiki"),
+        false,
+        false,
+        &config_path,
+    )
+    .unwrap();
 
     // Write a page into beta before hot-reload mount
     let beta_wiki = beta_path.join("wiki");
@@ -605,7 +612,10 @@ fn hot_reload_mount_wiki_makes_it_searchable() {
         },
     )
     .unwrap();
-    assert!(!results.is_empty(), "beta wiki should be searchable after hot reload mount");
+    assert!(
+        !results.is_empty(),
+        "beta wiki should be searchable after hot reload mount"
+    );
 }
 
 #[test]

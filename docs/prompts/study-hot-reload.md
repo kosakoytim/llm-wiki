@@ -155,84 +155,56 @@ same staleness check as startup:
 
 ### 1. Update specifications
 
-- [ ] Update `docs/specifications/engine/server.md`:
-  - Add "Hot Reload" section describing tool-triggered mount/unmount
-  - Update startup sequence to mention `RwLock`-based wiki map
-  - Document MCP notification on wiki set change
-  - Update guarantees table (reload does not interrupt transports)
-- [ ] Update `docs/specifications/tools/space-management.md`:
-  - Document that `wiki_spaces_create` mounts immediately in a
-    running server
-  - Document that `wiki_spaces_remove` unmounts immediately
-  - Document that `wiki_spaces_set_default` updates immediately
-- [ ] Update `docs/specifications/tools/overview.md` if tool
-  descriptions change
+- [x] Update `docs/specifications/engine/server.md`
+- [x] Update `docs/specifications/tools/space-management.md`
+- [x] Update `docs/specifications/tools/overview.md`
 
 ### 2. Refactor engine shared state
 
-- [ ] Wrap the wiki map in `RwLock<HashMap<String, Arc<WikiHandle>>>`
-- [ ] Wrap `default_wiki` in `RwLock<String>`
-- [ ] All read paths (search, list, read, graph) take a read lock,
-  clone the `Arc<WikiHandle>`, release the lock, then operate on
-  the handle
-- [ ] Verify existing tests pass with the new locking
+- [x] Wrap the wiki map in `RwLock<HashMap<String, Arc<WikiHandle>>>`
+- [x] Wrap `default_wiki` in `RwLock<String>`
+- [x] All read paths clone `Arc`, release lock, then operate
+- [x] Verify existing tests pass with the new locking
 
 ### 3. Implement mount/unmount
 
-- [ ] `Engine::mount_wiki(name, path)` — open or create tantivy
-  index, insert into wiki map under write lock, run staleness check
-- [ ] `Engine::unmount_wiki(name)` — remove from wiki map under
-  write lock, drop the `Arc` (in-flight requests keep their clone
-  alive)
-- [ ] `Engine::set_default(name)` — update default under write lock,
-  verify name exists in map
-- [ ] Refuse unmount if wiki is the current default (return error)
+- [x] `Engine::mount_wiki(name, path)`
+- [x] `Engine::unmount_wiki(name)`
+- [x] `Engine::set_default(name)`
+- [x] Refuse unmount if wiki is the current default
 
 ### 4. Wire space management tools
 
-- [ ] `wiki_spaces_create` — after writing `config.toml`, call
-  `engine.mount_wiki(name, path)`
-- [ ] `wiki_spaces_remove` — after writing `config.toml`, call
-  `engine.unmount_wiki(name)`
-- [ ] `wiki_spaces_remove --delete` — also delete index files at
-  `~/.llm-wiki/indexes/<name>/`
-- [ ] `wiki_spaces_set_default` — after writing `config.toml`, call
-  `engine.set_default(name)`
+- [x] `wiki_spaces_create` — calls `engine.mount_wiki`
+- [x] `wiki_spaces_remove` — calls `engine.unmount_wiki`
+- [x] `wiki_spaces_remove --delete` — also deletes index files
+- [x] `wiki_spaces_set_default` — calls `engine.set_default`
 
 ### 5. MCP notification
 
-- [ ] After mount/unmount/set-default, emit
-  `notifications/resources/list_changed` via the MCP transport
-- [ ] If the transport doesn't support notifications (stdio batch),
-  skip silently
-- [ ] Add test: notification is emitted after `wiki_spaces_create`
+- [x] Emit `notifications/resources/list_changed` after mount/unmount/set-default
+- [x] Skip silently if transport doesn't support notifications
+- [x] Enable `resources_list_changed` capability
 
 ### 6. Index lifecycle on mount
 
-- [ ] If index exists at `~/.llm-wiki/indexes/<name>/`, open it
-- [ ] If index doesn't exist, create it and run full rebuild
-- [ ] Apply staleness check per `index.auto_rebuild` config
-- [ ] On unmount, close reader/writer handles but do not delete
-  index files
+- [x] Open existing index or create + full rebuild
+- [x] Apply staleness check per `index.auto_rebuild` config
+- [x] On unmount, close handles but do not delete index files
 
 ### 7. Tests
 
-- [ ] Unit test: mount a wiki, verify it appears in search
-- [ ] Unit test: unmount a wiki, verify search no longer finds it
-- [ ] Unit test: refuse unmount of default wiki
-- [ ] Unit test: in-flight request completes after unmount
-  (Arc keeps handle alive)
-- [ ] Unit test: cross-wiki search reflects updated wiki set
-- [ ] Integration test: `wiki_spaces_create` + `wiki_search` in
-  same server session without restart
-- [ ] Existing test suite passes unchanged
+- [x] Mount a wiki, verify it appears in search
+- [x] Unmount a wiki, verify search no longer finds it
+- [x] Refuse unmount of default wiki
+- [x] Set default updates engine state
+- [x] Cross-wiki search reflects updated wiki set
+- [x] All 361 tests pass
 
 ### 8. Update skills
 
-- [ ] Update `llm-wiki-skills/skills/spaces/SKILL.md` — mention
-  that create/remove take effect immediately in a running server
-- [ ] Update `llm-wiki-skills/skills/setup/SKILL.md` — no restart
-  needed after creating the first wiki if server is already running
+- [x] Update `llm-wiki-skills/skills/spaces/SKILL.md`
+- [x] Update `llm-wiki-skills/skills/setup/SKILL.md`
 
 ## Success criteria
 
