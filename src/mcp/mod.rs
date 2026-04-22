@@ -68,6 +68,7 @@ impl ServerHandler for McpServer {
             ServerCapabilities::builder()
                 .enable_tools()
                 .enable_resources()
+                .enable_resources_list_changed()
                 .build(),
         )
         .with_server_info(Implementation::new("llm-wiki", env!("CARGO_PKG_VERSION")))
@@ -107,6 +108,16 @@ impl ServerHandler for McpServer {
                     {
                         tracing::warn!(error = %e, uri = %uri, "resource notification failed");
                     }
+                }
+            });
+        }
+
+        // Send resource list changed notification for space operations
+        if result.notify_resources_changed {
+            let peer = context.peer.clone();
+            tokio::spawn(async move {
+                if let Err(e) = peer.notify_resource_list_changed().await {
+                    tracing::warn!(error = %e, "resource list changed notification failed");
                 }
             });
         }
