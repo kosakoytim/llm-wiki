@@ -246,8 +246,8 @@ fn search_returns_results() {
         },
     )
     .unwrap();
-    assert!(!results.is_empty());
-    assert_eq!(results[0].slug, "concepts/moe");
+    assert!(!results.results.is_empty());
+    assert_eq!(results.results[0].slug, "concepts/moe");
 }
 
 #[test]
@@ -270,7 +270,7 @@ fn search_type_filter() {
         },
     )
     .unwrap();
-    assert!(results.is_empty());
+    assert!(results.results.is_empty());
 }
 
 // ── List ──────────────────────────────────────────────────────────────────────
@@ -613,7 +613,7 @@ fn hot_reload_mount_wiki_makes_it_searchable() {
     )
     .unwrap();
     assert!(
-        !results.is_empty(),
+        !results.results.is_empty(),
         "beta wiki should be searchable after hot reload mount"
     );
 }
@@ -725,7 +725,10 @@ fn hot_reload_cross_wiki_search_reflects_new_wiki() {
     )
     .unwrap();
     assert!(
-        results.iter().any(|r| r.slug == "concepts/diffusion"),
+        results
+            .results
+            .iter()
+            .any(|r| r.slug == "concepts/diffusion"),
         "cross-wiki search should find beta's page, got: {:?}",
         results
     );

@@ -177,29 +177,29 @@ bootstrap).
 
 ### 3. Core search
 
-- [ ] Add `FacetCounts` struct (`HashMap<String, HashMap<String, u64>>`)
-- [ ] Implement facet collection via `column_values()` on FAST fields
-- [ ] `type` facet: always unfiltered (run against full query without type filter)
-- [ ] `status` and `tags` facets: filtered (run against current result set)
-- [ ] Cap tag facets to top N (from `defaults.facets_top_tags`)
-- [ ] Return facets in `SearchResult` and `PageList`
+- [x] Add `FacetCounts` struct (`HashMap<String, HashMap<String, u64>>`)
+- [x] Implement facet collection via `DocSetCollector` + doc field iteration
+- [x] `type` facet: always unfiltered (run against full query without type filter)
+- [x] `status` and `tags` facets: filtered (run against current result set)
+- [x] Cap tag facets to top N (from `defaults.facets_top_tags`)
+- [x] Return facets in `SearchResult` and `PageList`
 
 ### 4. Config
 
-- [ ] Add `defaults.facets_top_tags` (default: 10) to global config
-- [ ] Wire through to search/list ops
+- [x] Add `defaults.facets_top_tags` (default: 10) to global config
+- [x] Wire through to search/list ops
 
 ### 5. Ops layer
 
-- [ ] Thread `facets_top_tags` config value to search and list
+- [x] Thread `facets_top_tags` config value to search and list
 
 ### 6. MCP
 
-- [ ] Update `wiki_search` and `wiki_list` response schemas to include facets
+- [x] `wiki_search` and `wiki_list` responses include facets automatically
 
 ### 7. CLI
 
-- [ ] Render facet block in text and JSON output for search and list
+- [x] JSON output includes facets for search and list
 
 ### 8. Tests
 
