@@ -158,13 +158,14 @@ commit messages containing special characters.
 
 ### 7. Tests
 
-- [ ] History returns commits that touch the page
-- [ ] History respects limit
-- [ ] History excludes commits that don't touch the page
-- [ ] Follow tracks renames (create flat file, rename to bundle,
-  history shows both)
-- [ ] Empty history for a page with no commits
-- [ ] Existing test suite passes unchanged
+- [x] History returns commits that touch the page
+- [x] History respects limit
+- [x] History excludes commits that don't touch the page
+- [x] History errors for nonexistent page
+- [x] History via wiki:// URI
+- [x] Git-level: page_history returns entries with hash/date/author
+- [x] Git-level: follow tracks renames
+- [x] Existing test suite passes (372 tests)
 
 ### 8. Decision record
 
