@@ -276,11 +276,16 @@ pub fn call(server: &McpServer, name: &str, args: &Map<String, Value>) -> ToolRe
     }));
     match result {
         Ok(Ok((content, notify_uris))) => {
+            let notify_resources_changed = matches!(
+                name,
+                "wiki_spaces_create" | "wiki_spaces_remove" | "wiki_spaces_set_default"
+            );
             tracing::debug!(tool = name, "tool call ok");
             ToolResult {
                 content,
                 is_error: false,
                 notify_uris,
+                notify_resources_changed,
             }
         }
         Ok(Err(msg)) => {
@@ -289,6 +294,7 @@ pub fn call(server: &McpServer, name: &str, args: &Map<String, Value>) -> ToolRe
                 content: err_text(msg),
                 is_error: true,
                 notify_uris: vec![],
+                notify_resources_changed: false,
             }
         }
         Err(_) => {
@@ -297,6 +303,7 @@ pub fn call(server: &McpServer, name: &str, args: &Map<String, Value>) -> ToolRe
                 content: err_text("internal error: tool panicked".into()),
                 is_error: true,
                 notify_uris: vec![],
+                notify_resources_changed: false,
             }
         }
     }

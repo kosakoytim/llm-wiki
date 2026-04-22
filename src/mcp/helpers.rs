@@ -12,6 +12,7 @@ pub struct ToolResult {
     pub content: Vec<Content>,
     pub is_error: bool,
     pub notify_uris: Vec<String>,
+    pub notify_resources_changed: bool,
 }
 
 // ── Handler result type ───────────────────────────────────────────────────────

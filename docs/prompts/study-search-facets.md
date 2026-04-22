@@ -139,6 +139,49 @@ Consider adding `--facets` to `wiki_list` as well.
 - Performance: is facet collection cheap enough to always include,
   or should it be opt-in for large wikis?
 
+## Tasks
+
+### Spec updates
+
+- [ ] `docs/specifications/tools/search.md` — add `--facets` flag, faceted JSON/text output format
+- [ ] `docs/specifications/tools/list.md` — add `--facets` flag, faceted JSON/text output format
+- [ ] `docs/specifications/engine/index-management.md` — document FAST requirement on `type`, `status`, `tags` fields
+
+### Index schema
+
+- [ ] `src/index_schema.rs` — add FAST to keyword fields (`type`, `status`, `tags`) in `add_keyword`
+- [ ] Verify index rebuild picks up the FAST change (may require `wiki_index_rebuild`)
+
+### Core search
+
+- [ ] `src/search.rs` — add `FacetCounts` struct (`HashMap<String, HashMap<String, u64>>`)
+- [ ] `src/search.rs` — add `facets: Option<Vec<String>>` to `SearchOptions` and `ListOptions`
+- [ ] `src/search.rs` — implement facet collection via `column_values()` on FAST fields after query
+- [ ] `src/search.rs` — return `SearchResult { results, facets }` instead of bare `Vec<PageRef>`
+- [ ] `src/search.rs` — return `PageList { pages, total, page, page_size, facets }` with optional facets
+- [ ] `src/search.rs` — cap tag facets to top N (default 10)
+
+### Ops layer
+
+- [ ] `src/ops/search.rs` — add `facets: Option<&str>` to `SearchParams`, thread through to `SearchOptions`
+
+### MCP
+
+- [ ] `src/mcp/tools.rs` — add `facets` param (string array) to `wiki_search` and `wiki_list` schemas
+- [ ] `src/mcp/handlers.rs` — parse `facets` arg, pass to ops layer
+
+### CLI
+
+- [ ] `src/cli.rs` — add `--facets` flag to `Search` and `List` variants
+- [ ] `src/main.rs` — render facet block in text and JSON output for search and list
+
+### Tests
+
+- [ ] Test facet counts match expected distribution on a small index
+- [ ] Test facets with active filters (filtered facets)
+- [ ] Test empty facets when no results match
+- [ ] Test top-N tag capping
+
 ## Success criteria
 
 - `wiki_search("moe", facets: ["type"])` returns type distribution
