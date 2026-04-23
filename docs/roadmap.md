@@ -60,7 +60,6 @@ Engine improvements not tied to a phase:
 
 - Persistent graph index — maintain petgraph across ingests, avoid rebuilding on every call
 - Incremental graph — update petgraph on ingest instead of full rebuild
-- `wiki_diff` — changes between two commits for a page
 - `wiki_export` — static site, PDF, or EPUB
 
 ### Lower priority
