@@ -86,6 +86,20 @@ watch: schema changed, rebuilding index (42 pages, 180ms)
 - **Index staleness** — watcher keeps the index fresh, so
   `index.auto_rebuild` is less relevant when watching is active.
 
+### Concurrency: rebuild vs ingest
+
+All index operations are serialized through a single async channel.
+The watcher sends events, a single consumer processes them:
+
+- If a schema rebuild is pending, skip queued `.md` ingests (the
+  rebuild covers them)
+- If `.md` ingests are pending and a schema change arrives, discard
+  the pending ingests and do a full rebuild instead
+- Only one index write operation runs at a time
+
+This is a priority queue: rebuild > incremental ingest. No locking
+beyond what `WikiEngine` already provides.
+
 ## Open questions
 
 - Should the standalone `llm-wiki watch` also watch multiple wikis
@@ -170,12 +184,26 @@ watch: schema changed, rebuilding index (42 pages, 180ms)
   flag for live indexing
 - [ ] `llm-wiki-skills/skills/content/SKILL.md` — note that with
   `--watch`, manual ingest is not needed after external edits
+- [ ] `llm-wiki-skills/skills/ingest/SKILL.md` — note that
+  `--watch` automates the ingest step for external edits
+- [ ] `llm-wiki-skills/skills/config/SKILL.md` — add
+  `watch.debounce_ms` to config reference
 
-### 11. Finalize
+### 11. Update guides
+
+- [ ] `docs/guides/getting-started.md` — mention `--watch` in
+  serve examples
+- [ ] `docs/guides/ide-integration.md` — recommend `--watch` for
+  live indexing while editing in IDE
+
+### 12. Finalize
 
 - [ ] `cargo fmt && cargo clippy --all-targets -- -D warnings`
 - [ ] Update `CHANGELOG.md`
 - [ ] Update `docs/roadmap.md`
+- [ ] Update `docs/specifications/engine/server.md` if needed
+- [ ] Update `docs/specifications/model/global-config.md` if needed
+- [ ] Update `docs/specifications/tools/overview.md` if needed
 - [ ] Remove this prompt
 
 ## Success criteria
