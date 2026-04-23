@@ -44,6 +44,49 @@ pub struct GraphReport {
     pub output: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphMetrics {
+    pub nodes: usize,
+    pub edges: usize,
+    pub orphans: usize,
+    pub avg_connections: f64,
+    pub density: f64,
+}
+
+/// Compute health metrics from a built graph.
+pub fn compute_metrics(graph: &WikiGraph) -> GraphMetrics {
+    let nodes = graph.node_count();
+    let edges = graph.edge_count();
+
+    let orphans = graph
+        .node_indices()
+        .filter(|&idx| {
+            graph.neighbors_directed(idx, Direction::Incoming).count() == 0
+                && graph.neighbors_directed(idx, Direction::Outgoing).count() == 0
+        })
+        .count();
+
+    let avg_connections = if nodes > 0 {
+        (edges as f64 * 2.0) / nodes as f64
+    } else {
+        0.0
+    };
+
+    let density = if nodes > 1 {
+        edges as f64 / (nodes as f64 * (nodes as f64 - 1.0))
+    } else {
+        0.0
+    };
+
+    GraphMetrics {
+        nodes,
+        edges,
+        orphans,
+        avg_connections,
+        density,
+    }
+}
+
 // ── build_graph ───────────────────────────────────────────────────────────────
 
 /// Build the concept graph from the tantivy index. No file I/O.

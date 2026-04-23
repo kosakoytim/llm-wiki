@@ -245,6 +245,16 @@ pub fn tool_list() -> Vec<Tool> {
             ),
         ),
         Tool::new(
+            "wiki_stats",
+            "Wiki health dashboard",
+            schema(
+                json!({
+                    "wiki": opt_str("Target wiki name"),
+                }),
+                &[],
+            ),
+        ),
+        Tool::new(
             "wiki_schema",
             "Inspect and manage type schemas",
             schema(
@@ -285,6 +295,7 @@ pub fn call(server: &McpServer, name: &str, args: &Map<String, Value>) -> ToolRe
         "wiki_index_status" => handlers::handle_index_status(server, args),
         "wiki_graph" => handlers::handle_graph(server, args),
         "wiki_history" => handlers::handle_history(server, args),
+        "wiki_stats" => handlers::handle_stats(server, args),
         "wiki_schema" => handlers::handle_schema(server, args),
         _ => Err(format!("unknown tool: {name}")),
     }));

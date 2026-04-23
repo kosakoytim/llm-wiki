@@ -18,6 +18,7 @@ last_updated: "2025-07-21"
 | —     | Upgrade `agent-client-protocol` 0.10 → 0.11                   | ✓      |
 | —     | Replace `_slug_ord` with native string sort                   | ✓      |
 | —     | Page body templates — `schemas/<type>.md` naming convention     | ✓      |
+| —     | `wiki_stats` — wiki health dashboard                           | ✓      |
 | —     | `wiki_watch` — filesystem watcher, auto-ingest on save          | ✓      |
 | —     | `wiki_history` — git commit history for a page                | ✓      |
 | —     | Search facets — type/status/tag distributions                  | ✓      |
@@ -54,7 +55,6 @@ Engine improvements not tied to a phase:
 
 - `wiki_search` hybrid/semantic search — BM25 + vector embeddings for terminology-independent retrieval
 - `wiki_suggest` — given a page, suggest related pages to link (graph + search candidates)
-- `wiki_stats` — wiki health dashboard (page count, orphans, avg connections, staleness)
 
 ### Medium value
 

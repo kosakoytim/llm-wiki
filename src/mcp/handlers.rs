@@ -321,6 +321,14 @@ pub fn handle_history(server: &McpServer, args: &Map<String, Value>) -> ToolHand
     ok_text(s)
 }
 
+pub fn handle_stats(server: &McpServer, args: &Map<String, Value>) -> ToolHandlerResult {
+    let engine = server.engine();
+    let wiki_name = resolve_wiki_name(&engine, args)?;
+    let result = ops::stats(&engine, &wiki_name).map_err(|e| format!("{e}"))?;
+    let s = serde_json::to_string_pretty(&result).map_err(|e| format!("{e}"))?;
+    ok_text(s)
+}
+
 pub fn handle_schema(server: &McpServer, args: &Map<String, Value>) -> ToolHandlerResult {
     let action = arg_str(args, "action").ok_or("action is required")?;
     let engine = server.engine();
