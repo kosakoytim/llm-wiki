@@ -60,6 +60,10 @@ depth  = 3
 follow        = true
 default_limit = 10
 
+[suggest]
+default_limit = 5
+min_score     = 0.1
+
 # ── Global-only settings ──────────────────────────────────────────────────────
 
 [index]
@@ -120,6 +124,8 @@ These keys can appear in both `config.toml` (global) and `wiki.toml`
 | `defaults.facets_top_tags`   | `10`      | Max tag facet entries returned; `0` = all          |
 | `history.follow`             | `true`    | Track renames in `wiki_history`                    |
 | `history.default_limit`      | `10`      | Default entry count for `wiki_history`             |
+| `suggest.default_limit`      | `5`       | Max suggestions for `wiki_suggest`                 |
+| `suggest.min_score`          | `0.1`     | Minimum score threshold for suggestions            |
 | `read.no_frontmatter`        | `false`   | Strip frontmatter from `wiki_content_read` output         |
 | `ingest.auto_commit`         | `true`    | Commit after ingest                               |
 | `validation.type_strictness` | `loose`   | `strict`: unknown type is error; `loose`: warning |

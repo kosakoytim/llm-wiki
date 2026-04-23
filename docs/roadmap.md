@@ -19,6 +19,7 @@ last_updated: "2025-07-21"
 | —     | Replace `_slug_ord` with native string sort                   | ✓      |
 | —     | Page body templates — `schemas/<type>.md` naming convention     | ✓      |
 | —     | `wiki_stats` — wiki health dashboard                           | ✓      |
+| —     | `wiki_suggest` — suggest related pages to link                 | ✓      |
 | —     | `wiki_watch` — filesystem watcher, auto-ingest on save          | ✓      |
 | —     | `wiki_history` — git commit history for a page                | ✓      |
 | —     | Search facets — type/status/tag distributions                  | ✓      |
@@ -29,6 +30,7 @@ last_updated: "2025-07-21"
 
 | Task                             | Prompt                                                   | Notes                                           |
 | -------------------------------- | -------------------------------------------------------- | ----------------------------------------------- |
+| Semantic search                  | `docs/prompts/study-semantic-search.md`                  | BM25 + vector embeddings                        |
 | Cross-wiki links                 | `docs/prompts/study-cross-wiki-links.md`                 | `wiki://` URIs resolved in graph                |
 
 ## Next: Phase 4 — Skill Registry
@@ -53,14 +55,12 @@ Engine improvements not tied to a phase:
 
 ### High value
 
-- `wiki_search` hybrid/semantic search — BM25 + vector embeddings for terminology-independent retrieval
-- `wiki_suggest` — given a page, suggest related pages to link (graph + search candidates)
+- `wiki_export` — static site, PDF, or EPUB
 
 ### Medium value
 
 - Persistent graph index — maintain petgraph across ingests, avoid rebuilding on every call
 - Incremental graph — update petgraph on ingest instead of full rebuild
-- `wiki_diff` — changes between two commits for a page
 - `wiki_export` — static site, PDF, or EPUB
 
 ### Lower priority
