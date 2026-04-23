@@ -137,9 +137,18 @@ pub enum Commands {
         /// Enable ACP transport
         #[arg(long)]
         acp: bool,
+        /// Enable filesystem watcher
+        #[arg(long)]
+        watch: bool,
         /// Print what would be started, no server
         #[arg(long)]
         dry_run: bool,
+    },
+    /// Auto-ingest on file save (standalone watcher)
+    Watch {
+        /// Target wiki name
+        #[arg(long)]
+        wiki: Option<String>,
     },
     /// Inspect and manage server logs
     Logs {

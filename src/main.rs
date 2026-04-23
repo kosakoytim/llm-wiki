@@ -536,7 +536,12 @@ fn main() -> Result<()> {
             }
         }
 
-        Commands::Serve { http, acp, dry_run } => {
+        Commands::Serve {
+            http,
+            acp,
+            watch,
+            dry_run,
+        } => {
             if dry_run {
                 let mut transports = vec!["stdio".to_string()];
                 if http.is_some() {
@@ -544,6 +549,9 @@ fn main() -> Result<()> {
                 }
                 if acp {
                     transports.push("acp".to_string());
+                }
+                if watch {
+                    transports.push("watch".to_string());
                 }
                 println!("Would start: [{}]", transports.join("] ["));
                 return Ok(());
@@ -553,7 +561,27 @@ fn main() -> Result<()> {
                 .and_then(|opt| opt.and_then(|s| s.trim_start_matches(':').parse::<u16>().ok()));
 
             let rt = tokio::runtime::Runtime::new()?;
-            rt.block_on(llm_wiki::server::serve(&config_path, http_port, acp))?;
+            rt.block_on(llm_wiki::server::serve(&config_path, http_port, acp, watch))?;
+        }
+
+        Commands::Watch { wiki } => {
+            let manager = std::sync::Arc::new(WikiEngine::build(&config_path)?);
+            let debounce = {
+                let engine = manager.state.read().map_err(|_| anyhow::anyhow!("lock"))?;
+                engine.config.watch.debounce_ms
+            };
+            println!("Watching for changes (ctrl+c to stop)...");
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(async {
+                let cancel = tokio_util::sync::CancellationToken::new();
+                let cancel_for_signal = cancel.clone();
+                tokio::spawn(async move {
+                    tokio::signal::ctrl_c().await.ok();
+                    cancel_for_signal.cancel();
+                });
+                llm_wiki::watch::run_watcher(manager, debounce, cancel).await
+            })?;
+            let _ = wiki; // reserved for future single-wiki watch
         }
 
         Commands::Logs { action } => match action {

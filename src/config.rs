@@ -203,6 +203,18 @@ impl Default for HistoryConfig {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WatchConfig {
+    #[serde(default = "default_debounce_ms")]
+    pub debounce_ms: u32,
+}
+
+impl Default for WatchConfig {
+    fn default() -> Self {
+        Self { debounce_ms: 500 }
+    }
+}
+
 // ── Composite configs ─────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -229,6 +241,8 @@ pub struct GlobalConfig {
     pub history: HistoryConfig,
     #[serde(default)]
     pub logging: LoggingConfig,
+    #[serde(default)]
+    pub watch: WatchConfig,
 }
 
 /// A type entry in `[types.<name>]` of `wiki.toml`.
@@ -342,6 +356,9 @@ fn default_log_format() -> String {
 fn default_history_limit() -> u32 {
     10
 }
+fn default_debounce_ms() -> u32 {
+    500
+}
 
 // ── Functions ─────────────────────────────────────────────────────────────────
 
@@ -448,6 +465,7 @@ pub fn set_global_config_value(global: &mut GlobalConfig, key: &str, value: &str
         "logging.log_rotation" => global.logging.log_rotation = value.into(),
         "logging.log_max_files" => global.logging.log_max_files = value.parse()?,
         "logging.log_format" => global.logging.log_format = value.into(),
+        "watch.debounce_ms" => global.watch.debounce_ms = value.parse()?,
         _ => anyhow::bail!("unknown key: {key}"),
     }
     Ok(())
@@ -483,6 +501,7 @@ pub fn get_config_value(resolved: &ResolvedConfig, global: &GlobalConfig, key: &
         "logging.log_rotation" => global.logging.log_rotation.clone(),
         "logging.log_max_files" => global.logging.log_max_files.to_string(),
         "logging.log_format" => global.logging.log_format.clone(),
+        "watch.debounce_ms" => global.watch.debounce_ms.to_string(),
         "ingest.auto_commit" => resolved.ingest.auto_commit.to_string(),
         "history.follow" => resolved.history.follow.to_string(),
         "history.default_limit" => resolved.history.default_limit.to_string(),
@@ -598,6 +617,9 @@ pub fn set_wiki_config_value(wiki_cfg: &mut WikiConfig, key: &str, value: &str) 
         | "logging.log_rotation"
         | "logging.log_max_files"
         | "logging.log_format" => {
+            anyhow::bail!("{key} is a global-only key \u{2014} use --global");
+        }
+        "watch.debounce_ms" => {
             anyhow::bail!("{key} is a global-only key \u{2014} use --global");
         }
         _ => anyhow::bail!("unknown key: {key}"),

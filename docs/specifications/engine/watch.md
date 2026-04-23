@@ -38,7 +38,7 @@ Runs the watcher without MCP transports. Ctrl+C to stop.
 | Path | File type | Action |
 |------|-----------|--------|
 | `<wiki>/wiki/**/*.md` | Markdown | Incremental ingest |
-| `<wiki>/schemas/*.json` | JSON Schema | Full index rebuild |
+| `<wiki>/schemas/*.json` | JSON Schema | Smart rebuild (partial or full) |
 
 ## What it ignores
 

@@ -142,6 +142,56 @@ impl WikiEngine {
         Ok(report)
     }
 
+    /// Smart schema rebuild: checks staleness and does partial rebuild
+    /// when possible, full rebuild only when necessary.
+    pub fn schema_rebuild(&self, wiki_name: &str) -> Result<()> {
+        let engine = self
+            .state
+            .read()
+            .map_err(|_| anyhow::anyhow!("lock poisoned"))?;
+        let space = engine.space(wiki_name)?;
+        match space.index_manager.staleness_kind(&space.repo_root) {
+            Ok(StalenessKind::Current) => {}
+            Ok(StalenessKind::CommitChanged) => {
+                let last = space.index_manager.last_commit();
+                space.index_manager.update(
+                    &space.wiki_root,
+                    &space.repo_root,
+                    last.as_deref(),
+                    &space.index_schema,
+                    &space.type_registry,
+                )?;
+            }
+            Ok(StalenessKind::TypesChanged(types)) => {
+                tracing::info!(wiki = %wiki_name, types = ?types, "partial rebuild");
+                if let Err(e) = space.index_manager.rebuild_types(
+                    &types,
+                    &space.wiki_root,
+                    &space.repo_root,
+                    &space.index_schema,
+                    &space.type_registry,
+                ) {
+                    tracing::warn!(wiki = %wiki_name, error = %e, "partial rebuild failed, doing full");
+                    space.index_manager.rebuild(
+                        &space.wiki_root,
+                        &space.repo_root,
+                        &space.index_schema,
+                        &space.type_registry,
+                    )?;
+                }
+            }
+            Ok(StalenessKind::FullRebuildNeeded) | Err(_) => {
+                space.index_manager.rebuild(
+                    &space.wiki_root,
+                    &space.repo_root,
+                    &space.index_schema,
+                    &space.type_registry,
+                )?;
+            }
+        }
+        Ok(())
+    }
+
     /// Mount a wiki into the running engine. Called by space management
     /// tools for hot reload.
     pub fn mount_wiki(&self, entry: &WikiEntry) -> Result<()> {

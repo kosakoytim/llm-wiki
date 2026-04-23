@@ -22,3 +22,4 @@ pub mod slug;
 pub mod space_builder;
 pub mod spaces;
 pub mod type_registry;
+pub mod watch;
