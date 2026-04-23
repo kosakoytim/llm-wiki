@@ -2,14 +2,15 @@
 title: "Overview"
 summary: "What llm-wiki is, the problem it solves, the architecture, and how the pieces fit together — engine, type system, skill registry, and plugin skills."
 status: ready
-last_updated: "2025-07-20"
+last_updated: "2025-07-23"
 ---
 
 # llm-wiki
 
 A git-backed wiki engine that turns a folder of Markdown files into a
 searchable, structured knowledge base. Accessible from the command line,
-from any MCP-compatible agent, or from any IDE via ACP.
+from any MCP-compatible agent (stdio or Streamable HTTP), or from any
+IDE via ACP.
 
 ### Design principles
 
@@ -30,17 +31,18 @@ that each type has a JSON Schema, and that schemas declare which fields
 are indexed and how they relate in the graph. A wiki can store
 knowledge pages, agent skills, reference documents, meeting notes, or
 anything else — the engine validates and indexes them all uniformly.
-The type system is defined by the wiki owner in `wiki.toml` and
-`schemas/`, not hardcoded in the binary.
+Types are discovered automatically from `schemas/*.json` via
+`x-wiki-types`. Optional overrides in `wiki.toml` remap a type to a
+different schema file.
 
 **Document-authority compatible.** The frontmatter schema supports
 multiple document conventions in the same wiki. Knowledge pages use
 `title`, `summary`, `read_when`, `status`, `owner`, `superseded_by`.
 Skill pages use `name`, `description`, `allowed-tools` following the
 [agentskills.io](https://agentskills.io) format. The engine doesn't
-care which convention a page follows — field aliasing maps different
-field names to the same index roles (`name` → `title`, `description`
-→ `summary`). Different document authorities coexist, validated by
+care which convention a page follows — field aliasing (`x-index-aliases`)
+maps different field names to the same index roles (`name` → `title`,
+`description` → `summary`). Different document authorities coexist, validated by
 different JSON Schemas, indexed into the same tantivy fields.
 
 **Plain files, plain git.** The wiki is Markdown files in a git
@@ -55,7 +57,6 @@ that teach agents how to use the tools. Other agent platforms write
 their own skills. The engine and the skills have independent release
 cycles, independent contributors, independent distribution.
 
----
 
 ## The Problem
 
@@ -78,7 +79,6 @@ Knowledge compounds with every addition.
 | Activity log            | None                        | Git history (semantic commits)     |
 | Data ownership          | Provider systems            | Your files, your git repo          |
 
----
 
 ## Architecture
 
@@ -89,7 +89,7 @@ Three independent pieces, three repositories:
 │   llm-wiki          │   │   llm-wiki-skills   │   │   llm-wiki-hugo-cms │
 │   (engine)          │   │   (plugin)          │   │   (renderer)        │
 │                     │   │                     │   │                     │
-│   MCP tools         │   │   skills            │   │   Hugo site         │
+│   19 MCP tools      │   │   skills            │   │   Hugo site         │
 │   Rust binary       │   │   Claude Code plugin│   │   scaffold          │
 │   tantivy + git     │   │   agentskills.io    │   │   GitHub Pages CI   │
 └────────┬────────────┘   └────────┬────────────┘   └────────┬────────────┘
@@ -111,8 +111,10 @@ Three independent pieces, three repositories:
 ```
 
 **llm-wiki** (engine) — a Rust binary that manages wiki repositories.
-MCP/ACP tools for space management, content operations, search, and
-graph traversal. No embedded LLM prompts. No workflow logic.
+19 MCP tools for space management, content operations, schema
+management, search, graph traversal, history, stats, and suggestions.
+Three transports: stdio (always on), Streamable HTTP (opt-in), ACP
+(opt-in). No embedded LLM prompts. No workflow logic.
 
 **llm-wiki-skills** (plugin) — a Claude Code plugin with skills that
 teach agents how to use the engine. Also usable by any agent that reads
@@ -125,21 +127,23 @@ Deployed via GitHub Pages.
 
 ### Separation of concerns
 
-| Concern                            | Where it lives                              |
-| ---------------------------------- | ------------------------------------------- |
-| File management, git, search index | Engine (llm-wiki)                           |
-| Frontmatter validation             | Engine + JSON Schema files in the wiki repo |
-| Concept graph                      | Engine (petgraph from tantivy index)        |
-| How to ingest a source             | Skill (llm-wiki-skills)                     |
-| How to crystallize a session       | Skill (llm-wiki-skills)                     |
-| How to audit wiki structure        | Skill (llm-wiki-skills)                     |
-| How to render as a website         | Hugo (llm-wiki-hugo-cms)                    |
-| What types exist and their fields  | Wiki repo (`wiki.toml` + `schemas/`)        |
+| Concern                            | Where it lives                                    |
+| ---------------------------------- | ------------------------------------------------- |
+| File management, git, search index | Engine (llm-wiki)                                 |
+| Frontmatter validation             | Engine + JSON Schema files in the wiki repo       |
+| Type discovery and schema mgmt     | Engine (auto-discovery from `schemas/*.json`)     |
+| Concept graph                      | Engine (petgraph from tantivy index)              |
+| Page history and stats             | Engine (git log, index facets)                    |
+| Link suggestions                   | Engine (tag overlap, graph neighborhood, BM25)    |
+| How to ingest a source             | Skill (llm-wiki-skills)                           |
+| How to crystallize a session       | Skill (llm-wiki-skills)                           |
+| How to audit wiki structure        | Skill (llm-wiki-skills)                           |
+| How to render as a website         | Hugo (llm-wiki-hugo-cms)                          |
+| What types exist and their fields  | Wiki repo (`schemas/*.json` + optional `wiki.toml` overrides) |
 
 The engine is a dumb pipe. Skills are the brain. The wiki repo is the
 state.
 
----
 
 ## The Wiki Repository
 
@@ -147,12 +151,18 @@ A wiki repository is a git repo with a fixed top-level structure:
 
 ```
 my-wiki/
-├── wiki.toml           ← wiki config + type registry
-├── schemas/            ← JSON Schema per page type
+├── wiki.toml           ← wiki identity + optional type overrides
+├── schemas/            ← JSON Schema + body templates per page type
 │   ├── base.json
 │   ├── concept.json
+│   ├── concept.md      ← body template (optional)
 │   ├── paper.json
+│   ├── paper.md        ← body template (optional)
 │   ├── skill.json
+│   ├── doc.json
+│   ├── doc.md          ← body template (optional)
+│   ├── section.json
+│   ├── section.md      ← body template (optional)
 │   └── ...
 ├── inbox/              ← drop zone (human puts files here)
 ├── raw/                ← immutable archive (originals preserved)
@@ -163,12 +173,16 @@ my-wiki/
     └── skills/
 ```
 
-**`wiki.toml`** is the single source of truth for wiki identity, engine
-configuration, and the type registry. The LLM reads it via
-`wiki_config`. No `schema.md` — everything is in `wiki.toml`.
+**`wiki.toml`** is the wiki identity file — name, description, and
+optional type overrides. The LLM reads it via `wiki_config`. Types are
+discovered automatically from `schemas/*.json` — most wikis need no
+`[types.*]` entries in `wiki.toml` at all.
 
 **`schemas/`** contains JSON Schema files (Draft 2020-12) that define
-the frontmatter for each page type. The engine validates on ingest.
+the frontmatter for each page type. Each schema declares which types it
+serves via `x-wiki-types`. The engine discovers types by scanning this
+directory. Optional `.md` files alongside schemas provide body templates
+for `wiki_content_new` (e.g. `concept.md` next to `concept.json`).
 
 **`inbox/`** is the human interface — drop files here for the LLM to
 process.
@@ -182,9 +196,9 @@ it, searches it, and builds the concept graph from it.
 
 Folder structure inside `wiki/` is the owner's choice. The engine
 enforces nothing about categories — only the `inbox/` → `raw/` →
-`wiki/` flow matters.
+`wiki/` flow matters. Epistemic distinctions are carried by the `type`
+field, not by folders.
 
----
 
 ## Core Concepts
 
@@ -201,14 +215,18 @@ either `concepts/mixture-of-experts.md` or
 `wiki://concepts/moe` uses the default wiki.
 
 **Write + Ingest** — the two-step pattern. The author writes a file
-into the wiki tree, then `llm-wiki ingest` validates frontmatter
-against the type's JSON Schema, indexes in tantivy, and commits to git.
+with `wiki_content_write` (or any editor), then `wiki_ingest` validates
+frontmatter against the type's JSON Schema, updates the search index,
+and optionally commits to git.
+
+**Section** — a directory with an `index.md` of `type: section` that
+groups related pages. Section pages are excluded from search results by
+default.
 
 **Multi-wiki** — one engine process manages multiple wiki repositories
 registered in `~/.llm-wiki/config.toml`. All tools accept
 `--wiki <name>`.
 
----
 
 ## The Type System
 
@@ -269,7 +287,6 @@ filter by type and relation.
 See [type-specific-frontmatter.md](../type-specific-frontmatter.md)
 for the full type system specification.
 
----
 
 ## The Epistemic Model
 
@@ -287,18 +304,18 @@ Keeping them separate preserves provenance. A concept page cites its
 sources. A source page records what one paper said. A query-result
 traces back to both. The graph makes these relationships navigable.
 
----
 
 ## The Tools
 
 The engine exposes MCP/ACP tools in four groups:
 
-| Group              | Tools                                                                                                                  |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| Space management   | `wiki_spaces_create`, `wiki_spaces_list`, `wiki_spaces_remove`, `wiki_spaces_set_default`                              |
-| Configuration      | `wiki_config`, `wiki_schema`                                                                                           |
-| Content operations | `wiki_content_read`, `wiki_content_write`, `wiki_content_new`, `wiki_content_commit`                                   |
-| Search & index     | `wiki_search`, `wiki_list`, `wiki_ingest`, `wiki_graph`, `wiki_index_rebuild`, `wiki_index_status`                     |
+| Group              | Tools                                                                                                                                          |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Space management   | `wiki_spaces_create`, `wiki_spaces_list`, `wiki_spaces_remove`, `wiki_spaces_set_default`                                                      |
+| Configuration      | `wiki_config`                                                                                                                                  |
+| Schema management  | `wiki_schema`                                                                                                                                  |
+| Content operations | `wiki_content_read`, `wiki_content_write`, `wiki_content_new`, `wiki_content_commit`                                                           |
+| Search & index     | `wiki_search`, `wiki_list`, `wiki_ingest`, `wiki_graph`, `wiki_history`, `wiki_stats`, `wiki_suggest`, `wiki_index_rebuild`, `wiki_index_status` |
 
 Every tool is available via MCP (stdio + HTTP), ACP, and CLI. The same
 tool surface, three transports.
@@ -311,7 +328,6 @@ orchestration, LLM prompting, multi-step procedures — belongs in skills.
 See [specifications/tools/overview.md](specifications/tools/overview.md)
 for the complete tool surface.
 
----
 
 ## The Tantivy Index
 
@@ -339,7 +355,6 @@ Ingest is the only write path — it validates, aliases, indexes, and
 commits. If the index is stale, `wiki_index_rebuild` reconstructs from
 committed files.
 
----
 
 ## The Wiki as Skill Registry
 
@@ -362,7 +377,6 @@ Skills stored in the wiki can reference knowledge pages through
 `concepts` and `sources` fields — the graph connects skills to the
 knowledge they depend on.
 
----
 
 ## The Plugin Skills (llm-wiki-skills)
 
@@ -387,7 +401,6 @@ Plugin skills are engine-level — they teach how to use the tools.
 Wiki skills (`type: skill` pages) are domain-level — they teach how to
 do domain work. Both coexist. A wiki skill can extend a plugin skill.
 
----
 
 ## What It Is Not
 
@@ -400,17 +413,15 @@ do domain work. Both coexist. A wiki skill can extend a plugin skill.
 - **Not a skill runtime** — it stores and discovers skills, agents
   execute them
 
----
 
 ## Project Map
 
 | Repository                                                             | What it is                                         | Language            |
 | ---------------------------------------------------------------------- | -------------------------------------------------- | ------------------- |
-| [llm-wiki](https://github.com/geronimo-iia/llm-wiki)                   | Wiki engine — 16 MCP tools, tantivy, git, petgraph | Rust                |
+| [llm-wiki](https://github.com/geronimo-iia/llm-wiki)                   | Wiki engine — 19 MCP tools, tantivy, git, petgraph | Rust                |
 | [llm-wiki-skills](https://github.com/geronimo-iia/llm-wiki-skills)     | Claude Code plugin — 8 skills for the engine       | Markdown (SKILL.md) |
 | [llm-wiki-hugo-cms](https://github.com/geronimo-iia/llm-wiki-hugo-cms) | Hugo site scaffold — render wiki as a website      | Hugo + HTML         |
 
----
 
 ## Further Reading
 
