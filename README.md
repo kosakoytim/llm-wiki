@@ -54,13 +54,13 @@ into the wiki — updating concept pages, creating source summaries,
 flagging contradictions — and commits the result. Knowledge compounds
 with every addition.
 
-| | Traditional RAG | llm-wiki (DKR) |
-|--|-----------------|----------------|
-| When knowledge is built | At query time | At ingest time |
-| Cross-references | Ad hoc or missed | Pre-built, maintained |
-| Knowledge accumulation | Resets each query | Compounds over time |
-| Activity log | None | Git history |
-| Data ownership | Provider systems | Your files, your git repo |
+|                         | Traditional RAG   | llm-wiki (DKR)            |
+| ----------------------- | ----------------- | ------------------------- |
+| When knowledge is built | At query time     | At ingest time            |
+| Cross-references        | Ad hoc or missed  | Pre-built, maintained     |
+| Knowledge accumulation  | Resets each query | Compounds over time       |
+| Activity log            | None              | Git history               |
+| Data ownership          | Provider systems  | Your files, your git repo |
 
 ## What It Does
 
@@ -84,31 +84,31 @@ with every addition.
 
 Single Rust binary. No runtime, no database, no Docker.
 
-| Component | Technology |
-|-----------|-----------|
-| Search | [tantivy](https://crates.io/crates/tantivy) (BM25, Lucene-class) |
-| Git | [git2](https://crates.io/crates/git2) (libgit2) |
-| Graph | [petgraph](https://crates.io/crates/petgraph) |
-| MCP | [rmcp](https://crates.io/crates/rmcp) (stdio + Streamable HTTP) |
-| ACP | [agent-client-protocol](https://crates.io/crates/agent-client-protocol) |
+| Component | Technology                                                              |
+| --------- | ----------------------------------------------------------------------- |
+| Search    | [tantivy](https://crates.io/crates/tantivy) (BM25, Lucene-class)        |
+| Git       | [git2](https://crates.io/crates/git2) (libgit2)                         |
+| Graph     | [petgraph](https://crates.io/crates/petgraph)                           |
+| MCP       | [rmcp](https://crates.io/crates/rmcp) (stdio + Streamable HTTP)         |
+| ACP       | [agent-client-protocol](https://crates.io/crates/agent-client-protocol) |
 
 ## Documentation
 
-| | |
-|---|---|
-| [Getting started](docs/guides/getting-started.md) | End-to-end walkthrough |
-| [Guides](docs/guides/README.md) | Installation, IDE, custom types, CI/CD, multi-wiki |
-| [Specifications](docs/specifications/README.md) | Formal design contracts |
-| [Architecture](docs/overview.md) | Core concepts, project map |
-| [Roadmap](docs/roadmap.md) | Development phases |
-| [Decisions](docs/decisions/README.md) | Architectural decisions |
+|                                                   |                                                    |
+| ------------------------------------------------- | -------------------------------------------------- |
+| [Getting started](docs/guides/getting-started.md) | End-to-end walkthrough                             |
+| [Guides](docs/guides/README.md)                   | Installation, IDE, custom types, CI/CD, multi-wiki |
+| [Specifications](docs/specifications/README.md)   | Formal design contracts                            |
+| [Architecture](docs/overview.md)                  | Core concepts, project map                         |
+| [Roadmap](docs/roadmap.md)                        | Development phases                                 |
+| [Decisions](docs/decisions/README.md)             | Architectural decisions                            |
 
 ## Related Projects
 
-| Repository | Description |
-|-----------|-------------|
-| [llm-wiki-skills](https://github.com/geronimo-iia/llm-wiki-skills) | Claude Code plugin — workflow skills for the engine |
-| [llm-wiki-hugo-cms](https://github.com/geronimo-iia/llm-wiki-hugo-cms) | Hugo site scaffold — render wiki as a website |
+| Repository                                                             | Description                                         |
+| ---------------------------------------------------------------------- | --------------------------------------------------- |
+| [llm-wiki-skills](https://github.com/geronimo-iia/llm-wiki-skills)     | Claude Code plugin — workflow skills for the engine |
+| [llm-wiki-hugo-cms](https://github.com/geronimo-iia/llm-wiki-hugo-cms) | Hugo site scaffold — render wiki as a website       |
 
 ## Acknowledgments
 
