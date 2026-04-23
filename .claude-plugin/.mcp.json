@@ -1,6 +1,0 @@
-{
-  "llm-wiki": {
-    "command": "llm-wiki",
-    "args": ["serve"]
-  }
-}
