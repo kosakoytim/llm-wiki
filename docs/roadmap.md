@@ -17,15 +17,16 @@ last_updated: "2025-07-21"
 | 3     | Typed graph — `x-graph-edges`, labeled edges, target warnings | ✓      |
 | —     | Upgrade `agent-client-protocol` 0.10 → 0.11                   | ✓      |
 | —     | Replace `_slug_ord` with native string sort                   | ✓      |
+| —     | `wiki_history` — git commit history for a page                | ✓      |
 | —     | Search facets — type/status/tag distributions                  | ✓      |
 
-361 tests. Single Rust binary. No runtime dependencies.
+372 tests. Single Rust binary. No runtime dependencies.
 
 ## Active
 
 | Task                             | Prompt                                                   | Notes                                           |
 | -------------------------------- | -------------------------------------------------------- | ----------------------------------------------- |
-| Skill registry (llm-wiki-skills) | `llm-wiki-skills/docs/prompts/phase-4-skill-registry.md` | Transform skills repo into a llm-wiki           |
+| Cross-wiki links                 | `docs/prompts/study-cross-wiki-links.md`                 | `wiki://` URIs resolved in graph                |
 
 ## Next: Phase 4 — Skill Registry
 
@@ -47,13 +48,24 @@ activate them by injecting the body into context.
 
 Engine improvements not tied to a phase:
 
-- `wiki_diff` — changes between two commits for a page
-- `wiki_history` — git log for a specific page
-- `wiki_export` — static site, PDF, or EPUB
-- Cross-wiki links — `wiki://` URIs resolved in graph and search
-- Webhook on ingest — notify external systems
+### High value
+
 - `wiki_watch` — filesystem watcher that auto-ingests on save
-- Persistent graph index — avoid rebuilding petgraph on every call
+- `wiki_search` hybrid/semantic search — BM25 + vector embeddings for terminology-independent retrieval
+- `wiki_suggest` — given a page, suggest related pages to link (graph + search candidates)
+- `wiki_stats` — wiki health dashboard (page count, orphans, avg connections, staleness)
+
+### Medium value
+
+- Page body templates via `wiki_content_new --type` — scaffold full page body, not just frontmatter
+- Persistent graph index — maintain petgraph across ingests, avoid rebuilding on every call
+- Incremental graph — update petgraph on ingest instead of full rebuild
+- `wiki_diff` — changes between two commits for a page
+- `wiki_export` — static site, PDF, or EPUB
+
+### Lower priority
+
+- Webhook on ingest — notify external systems
 - ACP workflows beyond `research` (ingest, explore, summarize)
 
 ## Related Projects
