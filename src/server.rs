@@ -92,7 +92,12 @@ async fn serve_http(
 
 // ── serve (orchestration) ─────────────────────────────────────────────────────
 
-pub async fn serve(config_path: &std::path::Path, http_port: Option<u16>, acp: bool) -> Result<()> {
+pub async fn serve(
+    config_path: &std::path::Path,
+    http_port: Option<u16>,
+    acp: bool,
+    watch: bool,
+) -> Result<()> {
     // 1. Build WikiEngine
     let manager = Arc::new(WikiEngine::build(config_path)?);
 
@@ -112,6 +117,9 @@ pub async fn serve(config_path: &std::path::Path, http_port: Option<u16>, acp: b
     }
     if acp {
         transports.push("acp".to_string());
+    }
+    if watch {
+        transports.push("watch".to_string());
     }
     tracing::info!(
         wikis = wiki_count,
@@ -155,7 +163,24 @@ pub async fn serve(config_path: &std::path::Path, http_port: Option<u16>, acp: b
         });
     }
 
-    // 6. Start transports
+    // 6. Start watcher (if enabled)
+    let watch_handle = if watch {
+        let watch_manager = manager.clone();
+        let cancel_watch = cancel.clone();
+        let debounce = {
+            let engine = manager.state.read().map_err(|_| anyhow::anyhow!("lock"))?;
+            engine.config.watch.debounce_ms
+        };
+        Some(tokio::spawn(async move {
+            if let Err(e) = crate::watch::run_watcher(watch_manager, debounce, cancel_watch).await {
+                tracing::error!(error = %e, "watcher error");
+            }
+        }))
+    } else {
+        None
+    };
+
+    // 7. Start transports
     if acp {
         let acp_manager = manager.clone();
         let cancel_acp = cancel.clone();
@@ -185,6 +210,11 @@ pub async fn serve(config_path: &std::path::Path, http_port: Option<u16>, acp: b
         serve_http(mcp_server, resolved_port, &serve_cfg, cancel).await?;
     } else {
         serve_stdio(mcp_server, shutdown_rx).await?;
+    }
+
+    if let Some(handle) = watch_handle {
+        handle.abort();
+        let _ = handle.await;
     }
 
     tracing::info!("server stopped");
