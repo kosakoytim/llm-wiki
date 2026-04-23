@@ -10,5 +10,6 @@ mod ingest;
 mod schema;
 mod search;
 mod spaces;
+mod stats;
 mod templates;
 mod watch;

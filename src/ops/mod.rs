@@ -8,6 +8,7 @@ mod logs;
 mod schema;
 mod search;
 mod spaces;
+mod stats;
 
 pub use config::*;
 pub use content::*;
@@ -19,3 +20,4 @@ pub use logs::*;
 pub use schema::*;
 pub use search::*;
 pub use spaces::*;
+pub use stats::*;

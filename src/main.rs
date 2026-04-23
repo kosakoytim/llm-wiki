@@ -564,6 +564,49 @@ fn main() -> Result<()> {
             rt.block_on(llm_wiki::server::serve(&config_path, http_port, acp, watch))?;
         }
 
+        // ── Stats ───────────────────────────────────────────────────────
+        Commands::Stats { format } => {
+            let manager = WikiEngine::build(&config_path)?;
+            let engine = manager.state.read().map_err(|_| anyhow::anyhow!("lock"))?;
+            let wiki_name = engine.resolve_wiki_name(cli.wiki.as_deref()).to_string();
+            let result = ops::stats(&engine, &wiki_name)?;
+
+            if is_json(&format) {
+                println!("{}", serde_json::to_string_pretty(&result)?);
+            } else {
+                println!(
+                    "{} — {} pages, {} sections",
+                    result.wiki, result.pages, result.sections
+                );
+                let types: Vec<String> = result
+                    .types
+                    .iter()
+                    .map(|(k, v)| format!("{k}({v})"))
+                    .collect();
+                println!("types:     {}", types.join(" "));
+                let statuses: Vec<String> = result
+                    .status
+                    .iter()
+                    .map(|(k, v)| format!("{k}({v})"))
+                    .collect();
+                println!("status:    {}", statuses.join(" "));
+                println!("orphans:   {}", result.orphans);
+                println!(
+                    "graph:     {:.1} avg connections, {:.2} density",
+                    result.avg_connections, result.graph_density
+                );
+                println!(
+                    "staleness: fresh({}) 7d({}) 30d({})",
+                    result.staleness.fresh, result.staleness.stale_7d, result.staleness.stale_30d
+                );
+                println!(
+                    "index:     {}, built {}",
+                    if result.index.stale { "stale" } else { "ok" },
+                    result.index.built.as_deref().unwrap_or("never")
+                );
+            }
+        }
+
         Commands::Watch { wiki } => {
             let manager = std::sync::Arc::new(WikiEngine::build(&config_path)?);
             let debounce = {

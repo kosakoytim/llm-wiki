@@ -124,6 +124,12 @@ pub enum Commands {
         #[arg(long)]
         format: Option<String>,
     },
+    /// Wiki health dashboard
+    Stats {
+        /// Output format: text | json
+        #[arg(long)]
+        format: Option<String>,
+    },
     /// Inspect and manage type schemas
     Schema {
         #[command(subcommand)]
