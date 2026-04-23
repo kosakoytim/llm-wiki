@@ -53,9 +53,24 @@ activate them by injecting the body into context.
 
 Engine improvements not tied to a phase:
 
-### High value
+### TurboQuant integration
 
-- `wiki_export` — static site, PDF, or EPUB
+Attention-based reranking using the `turboquant` crate. See
+[design-origins/turboquant-pipeline.md](design-origins/turboquant-pipeline.md).
+
+- [ ] Add `turboquant` as a dependency
+- [ ] `src/pipeline.rs`: `Pipeline` struct
+- [ ] `Pipeline::compress_page(tokens, slug) → ()` — project + quantize + store
+- [ ] `Pipeline::query(query_tokens, top_k) → Vec<PageScore>` — project
+      query, scan store, rank by attention score
+- [ ] `Pipeline::recompress(slug)` — re-compress a single page
+- [ ] `Pipeline::rebuild()` — re-compress all pages from scratch
+- [ ] Hook into `wiki_ingest` — compress after indexing
+- [ ] `wiki_rerank` tool or `--rerank` flag on `wiki_search`
+- [ ] W_q / W_k / W_v weight loading from GGUF or safetensors
+- [ ] Tokenization without full model runtime
+- [ ] Tests: smoke test, relevant page ranks high, incremental update,
+      empty store, single token page
 
 ### Medium value
 
@@ -74,6 +89,7 @@ Each project has its own roadmap:
 
 | Project                                                                | Roadmap                                     |
 | ---------------------------------------------------------------------- | ------------------------------------------- |
+| [turboquant](https://github.com/geronimo-iia/turboquant)               | `docs/roadmap.md` — vector compression crate |
 | [llm-wiki-skills](https://github.com/geronimo-iia/llm-wiki-skills)     | `docs/roadmap.md` — skill sync + new skills |
 | [llm-wiki-hugo-cms](https://github.com/geronimo-iia/llm-wiki-hugo-cms) | `docs/roadmap.md` — Hugo site scaffold      |
 | [homebrew-tap](https://github.com/geronimo-iia/homebrew-tap)           | Formula updates per release                 |
