@@ -48,7 +48,7 @@ jobs:
       - name: Build
         run: |
           if [ "${{ matrix.use_cross }}" = "true" ]; then
-            cross build --release --target ${{ matrix.target }}
+            cross build --release --locked --target ${{ matrix.target }}
           else
             cargo build --release --locked --target ${{ matrix.target }}
           fi

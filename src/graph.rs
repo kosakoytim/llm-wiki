@@ -2,13 +2,13 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 use anyhow::Result;
 use chrono::Utc;
-use petgraph::graph::{DiGraph, NodeIndex};
 use petgraph::Direction;
+use petgraph::graph::{DiGraph, NodeIndex};
 use serde::{Deserialize, Serialize};
+use tantivy::Searcher;
 use tantivy::collector::TopDocs;
 use tantivy::query::AllQuery;
 use tantivy::schema::Value;
-use tantivy::Searcher;
 
 use crate::index_schema::IndexSchema;
 use crate::type_registry::SpaceTypeRegistry;
@@ -197,16 +197,16 @@ pub fn build_graph(
             }
 
             for target in targets {
-                if let Some(&to_idx) = slug_to_idx.get(target) {
-                    if from_idx != to_idx {
-                        graph.add_edge(
-                            from_idx,
-                            to_idx,
-                            LabeledEdge {
-                                relation: relation.to_string(),
-                            },
-                        );
-                    }
+                if let Some(&to_idx) = slug_to_idx.get(target)
+                    && from_idx != to_idx
+                {
+                    graph.add_edge(
+                        from_idx,
+                        to_idx,
+                        LabeledEdge {
+                            relation: relation.to_string(),
+                        },
+                    );
                 }
             }
         }
@@ -214,16 +214,16 @@ pub fn build_graph(
         // Body wiki-links → "links-to"
         if filter.relation.is_none() || filter.relation.as_deref() == Some("links-to") {
             for target in &doc_info.body_links {
-                if let Some(&to_idx) = slug_to_idx.get(target) {
-                    if from_idx != to_idx {
-                        graph.add_edge(
-                            from_idx,
-                            to_idx,
-                            LabeledEdge {
-                                relation: "links-to".into(),
-                            },
-                        );
-                    }
+                if let Some(&to_idx) = slug_to_idx.get(target)
+                    && from_idx != to_idx
+                {
+                    graph.add_edge(
+                        from_idx,
+                        to_idx,
+                        LabeledEdge {
+                            relation: "links-to".into(),
+                        },
+                    );
                 }
             }
         }

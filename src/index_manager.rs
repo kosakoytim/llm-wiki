@@ -6,8 +6,8 @@ use chrono::Utc;
 use git2::Delta;
 use serde::{Deserialize, Serialize};
 use tantivy::{
-    collector::TopDocs, directory::MmapDirectory, query::AllQuery, Index, IndexReader, IndexWriter,
-    Searcher, Term,
+    Index, IndexReader, IndexWriter, Searcher, Term, collector::TopDocs, directory::MmapDirectory,
+    query::AllQuery,
 };
 use walkdir::WalkDir;
 

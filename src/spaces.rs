@@ -1,9 +1,9 @@
 use std::path::Path;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 
-use crate::config::{load_global, save_global, GlobalConfig, WikiEntry};
+use crate::config::{GlobalConfig, WikiEntry, load_global, save_global};
 use crate::default_schemas::default_schemas;
 use crate::git;
 
@@ -69,10 +69,10 @@ pub fn create(
 
     // Initial commit
     let commit_result = git::commit(&path, &format!("create: {name}"));
-    if let Ok(ref hash) = commit_result {
-        if !hash.is_empty() {
-            committed = true;
-        }
+    if let Ok(ref hash) = commit_result
+        && !hash.is_empty()
+    {
+        committed = true;
     }
 
     // Register

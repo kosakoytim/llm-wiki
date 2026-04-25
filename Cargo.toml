@@ -1,14 +1,14 @@
 [package]
 name = "llm-wiki"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 rust-version = "1.95"
 description = "Git-backed wiki engine with MCP server — bring your own LLM"
 authors = ["Jerome Guibert <jguibert@gmail.com>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/geronimo-iia/llm-wiki"
 homepage = "https://github.com/geronimo-iia/llm-wiki"
-documentation = "https://github.com/geronimo-iia/llm-wiki#readme"
+documentation = "https://docs.rs/llm-wiki"
 readme = "README.md"
 keywords = ["wiki", "knowledge-base", "mcp", "git"]
 categories = ["command-line-utilities", "development-tools"]

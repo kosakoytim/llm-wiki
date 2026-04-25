@@ -8,8 +8,8 @@ use agent_client_protocol::schema::{
     SessionCapabilities, SessionId, SessionInfo, SessionListCapabilities, StopReason,
 };
 use agent_client_protocol::{
-    on_receive_dispatch, on_receive_notification, on_receive_request, Agent, ByteStreams, Client,
-    ConnectionTo, Dispatch,
+    Agent, ByteStreams, Client, ConnectionTo, Dispatch, on_receive_dispatch,
+    on_receive_notification, on_receive_request,
 };
 use anyhow::Result;
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
@@ -18,7 +18,7 @@ use crate::engine::WikiEngine;
 
 use super::helpers::{clear_active_run, resolve_wiki_name, send_text, session_cwd};
 use super::research::run_research;
-use super::{dispatch_workflow, extract_prompt_text, AcpSession, Sessions};
+use super::{AcpSession, Sessions, dispatch_workflow, extract_prompt_text};
 
 pub async fn serve_acp(manager: Arc<WikiEngine>) -> Result<()> {
     let sessions: Sessions = Arc::new(std::sync::Mutex::new(HashMap::new()));
@@ -143,11 +143,11 @@ pub async fn serve_acp(manager: Arc<WikiEngine>) -> Result<()> {
                     let wiki_name = resolve_wiki_name(&mgr, &sessions, &req.session_id);
 
                     // Mark active run
-                    if let Ok(mut s) = sessions.lock() {
-                        if let Some(sess) = s.get_mut(&session_id_str) {
-                            sess.active_run =
-                                Some(format!("run-{}", chrono::Utc::now().timestamp_millis()));
-                        }
+                    if let Ok(mut s) = sessions.lock()
+                        && let Some(sess) = s.get_mut(&session_id_str)
+                    {
+                        sess.active_run =
+                            Some(format!("run-{}", chrono::Utc::now().timestamp_millis()));
                     }
 
                     let query_text = if query.is_empty() { &text } else { query };

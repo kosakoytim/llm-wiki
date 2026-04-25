@@ -12,6 +12,7 @@ use crate::type_registry::SpaceTypeRegistry;
 
 // ── SpaceContext ──────────────────────────────────────────────────────────────
 
+/// All runtime state for a single mounted wiki space.
 pub struct SpaceContext {
     pub name: String,
     pub wiki_root: PathBuf,
@@ -30,6 +31,7 @@ impl SpaceContext {
 
 // ── EngineState ──────────────────────────────────────────────────────────────
 
+/// Shared mutable state protected by [`WikiEngine`]'s `RwLock`.
 pub struct EngineState {
     pub config: GlobalConfig,
     pub config_path: PathBuf,
@@ -59,6 +61,9 @@ impl EngineState {
 
 // ── WikiEngine ─────────────────────────────────────────────────────────────
 
+/// Central engine — owns all wiki spaces and exposes index/mount operations.
+///
+/// Cheap to clone (`Arc` inside). Safe to share across async tasks.
 pub struct WikiEngine {
     pub state: Arc<RwLock<EngineState>>,
 }
@@ -317,14 +322,14 @@ fn mount_space(entry: &WikiEntry, state_dir: &Path, config: &GlobalConfig) -> Re
                     index_manager.rebuild(&wiki_root, &repo_root, &index_schema, &type_registry);
             }
         }
-    } else if let Ok(ref s) = status {
-        if s.stale {
-            tracing::warn!(
-                wiki = %entry.name,
-                "index stale — run `llm-wiki index rebuild --wiki {}`",
-                entry.name,
-            );
-        }
+    } else if let Ok(ref s) = status
+        && s.stale
+    {
+        tracing::warn!(
+            wiki = %entry.name,
+            "index stale — run `llm-wiki index rebuild --wiki {}`",
+            entry.name,
+        );
     }
 
     // Open the index for serving

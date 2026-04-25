@@ -1,6 +1,6 @@
 use jsonschema::Validator;
 use llm_wiki::default_schemas::default_schemas;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 fn compile(name: &str) -> Validator {
     let schemas = default_schemas();

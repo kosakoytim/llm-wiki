@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use jsonschema::Validator;
 use serde_yaml::Value;
 use sha2::{Digest, Sha256};

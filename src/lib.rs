@@ -1,5 +1,6 @@
-// llm-wiki engine library
-// Modules added incrementally — see docs/roadmap.md Phase 1
+//! Git-backed wiki engine. Full-text search, typed pages, concept graph,
+//! MCP and ACP transports. The CLI is the primary interface; this crate also
+//! exposes the engine internals for embedding or testing.
 
 pub mod acp;
 pub mod cli;

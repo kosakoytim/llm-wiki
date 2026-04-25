@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 use crate::frontmatter;
 use crate::slug::Slug;
@@ -36,11 +36,11 @@ pub fn read_page(slug: &Slug, wiki_root: &Path, no_frontmatter: bool) -> Result<
 /// Creates parent directories if needed. Does not validate or commit.
 pub fn write_page(slug: &str, content: &str, wiki_root: &Path) -> Result<PathBuf> {
     // Try to resolve existing page first
-    if let Ok(s) = Slug::try_from(slug) {
-        if let Ok(path) = s.resolve(wiki_root) {
-            std::fs::write(&path, content)?;
-            return Ok(path);
-        }
+    if let Ok(s) = Slug::try_from(slug)
+        && let Ok(path) = s.resolve(wiki_root)
+    {
+        std::fs::write(&path, content)?;
+        return Ok(path);
     }
 
     // New file — write as flat page

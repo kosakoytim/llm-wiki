@@ -32,10 +32,10 @@ pub fn commit(repo_root: &Path, message: &str) -> Result<String> {
     let parent = repo.head().ok().and_then(|h| h.peel_to_commit().ok());
 
     // Skip if tree matches parent (nothing changed)
-    if let Some(ref p) = parent {
-        if p.tree_id() == tree_oid {
-            return Ok(String::new());
-        }
+    if let Some(ref p) = parent
+        && p.tree_id() == tree_oid
+    {
+        return Ok(String::new());
     }
 
     let parents: Vec<&git2::Commit> = parent.iter().collect();
@@ -60,10 +60,10 @@ pub fn commit_paths(repo_root: &Path, paths: &[&Path], message: &str) -> Result<
 
     let parent = repo.head().ok().and_then(|h| h.peel_to_commit().ok());
 
-    if let Some(ref p) = parent {
-        if p.tree_id() == tree_oid {
-            return Ok(String::new());
-        }
+    if let Some(ref p) = parent
+        && p.tree_id() == tree_oid
+    {
+        return Ok(String::new());
     }
 
     let parents: Vec<&git2::Commit> = parent.iter().collect();
@@ -130,15 +130,14 @@ fn collect_md_changes(diff: &git2::Diff, wiki_prefix: &Path) -> Vec<ChangedFile>
     diff.foreach(
         &mut |delta, _| {
             let path = delta.new_file().path().or_else(|| delta.old_file().path());
-            if let Some(p) = path {
-                if p.starts_with(wiki_prefix)
-                    && p.extension().and_then(|e| e.to_str()) == Some("md")
-                {
-                    changes.push(ChangedFile {
-                        path: p.to_path_buf(),
-                        status: delta.status(),
-                    });
-                }
+            if let Some(p) = path
+                && p.starts_with(wiki_prefix)
+                && p.extension().and_then(|e| e.to_str()) == Some("md")
+            {
+                changes.push(ChangedFile {
+                    path: p.to_path_buf(),
+                    status: delta.status(),
+                });
             }
             true
         },
@@ -163,11 +162,11 @@ pub fn collect_changed_files(
     let mut changes = HashMap::new();
 
     // B: last indexed commit vs HEAD (insert first so A wins on duplicates)
-    if let Some(from_hash) = last_indexed_commit {
-        if let Ok(files) = changed_since_commit(repo_root, wiki_root, from_hash) {
-            for f in files {
-                changes.insert(f.path, f.status);
-            }
+    if let Some(from_hash) = last_indexed_commit
+        && let Ok(files) = changed_since_commit(repo_root, wiki_root, from_hash)
+    {
+        for f in files {
+            changes.insert(f.path, f.status);
         }
     }
 

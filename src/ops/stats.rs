@@ -100,7 +100,7 @@ fn compute_staleness(
                 fresh: 0,
                 stale_7d: 0,
                 stale_30d: 0,
-            })
+            });
         }
     };
 

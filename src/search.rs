@@ -4,11 +4,11 @@ use std::collections::HashMap;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use tantivy::{
+    Order, Searcher, Term,
     collector::{Count, TopDocs},
     query::{AllQuery, BooleanQuery, Occur, QueryParser, TermQuery},
     schema::{IndexRecordOption, Value},
     snippet::{Snippet, SnippetGenerator},
-    Order, Searcher, Term,
 };
 
 use crate::index_schema::IndexSchema;
@@ -16,6 +16,7 @@ use crate::index_schema::IndexSchema;
 // ── Return types ──────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// A single search result with BM25 score and optional highlighted excerpt.
 pub struct PageRef {
     pub slug: String,
     pub uri: String,
@@ -25,6 +26,7 @@ pub struct PageRef {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Lightweight page metadata returned by listing operations.
 pub struct PageSummary {
     pub slug: String,
     pub uri: String,
@@ -187,8 +189,8 @@ pub fn search(
             .to_string();
         let uri = format!("wiki://{wiki_name}/{slug}");
 
-        let excerpt = snippet_gen.as_ref().map(|gen| {
-            let snippet: Snippet = gen.snippet_from_doc(&doc);
+        let excerpt = snippet_gen.as_ref().map(|sg| {
+            let snippet: Snippet = sg.snippet_from_doc(&doc);
             snippet.to_html()
         });
 
@@ -454,10 +456,10 @@ fn collect_facet(
     for doc_addr in &doc_addrs {
         let doc: tantivy::TantivyDocument = searcher.doc(*doc_addr)?;
         for val in doc.get_all(field) {
-            if let Some(s) = val.as_str() {
-                if !s.is_empty() {
-                    *counts.entry(s.to_string()).or_insert(0) += 1;
-                }
+            if let Some(s) = val.as_str()
+                && !s.is_empty()
+            {
+                *counts.entry(s.to_string()).or_insert(0) += 1;
             }
         }
     }

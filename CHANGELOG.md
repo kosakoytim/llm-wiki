@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] — TBD
+## [0.1.0] — 2026-04-26
 
 First release. Single Rust binary, 19 MCP tools, ACP agent.
 
@@ -18,7 +18,7 @@ First release. Single Rust binary, 19 MCP tools, ACP agent.
 - Hot reload — `mount_wiki` / `unmount_wiki` / `set_default` at runtime
 - Interior mutability in `SpaceIndexManager` (`RwLock<IndexInner>`)
 - Graceful shutdown via `watch` channel + `AtomicBool` across all transports
-- tantivy 0.25 for full-text search
+- tantivy 0.26 for full-text search
 - Sorted list pagination via `order_by_string_fast_field` on slug
 
 ### ACP

@@ -52,10 +52,12 @@ fn schema_show_returns_valid_json_schema() {
         schema["$schema"],
         "https://json-schema.org/draft/2020-12/schema"
     );
-    assert!(schema["required"]
-        .as_array()
-        .unwrap()
-        .contains(&serde_json::json!("read_when")));
+    assert!(
+        schema["required"]
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!("read_when"))
+    );
 }
 
 #[test]

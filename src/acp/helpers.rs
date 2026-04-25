@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
+use agent_client_protocol::Client;
+use agent_client_protocol::ConnectionTo;
 use agent_client_protocol::schema::{
     ContentBlock, ContentChunk, SessionId, SessionNotification, SessionUpdate, TextContent,
     ToolCall, ToolCallId, ToolCallStatus, ToolCallUpdate, ToolCallUpdateFields, ToolKind,
 };
-use agent_client_protocol::Client;
-use agent_client_protocol::ConnectionTo;
 
 use crate::engine::WikiEngine;
 
@@ -88,9 +88,9 @@ pub fn session_cwd(manager: &WikiEngine) -> PathBuf {
 }
 
 pub fn clear_active_run(sessions: &Sessions, session_id: &str) {
-    if let Ok(mut s) = sessions.lock() {
-        if let Some(sess) = s.get_mut(session_id) {
-            sess.active_run = None;
-        }
+    if let Ok(mut s) = sessions.lock()
+        && let Some(sess) = s.get_mut(session_id)
+    {
+        sess.active_run = None;
     }
 }

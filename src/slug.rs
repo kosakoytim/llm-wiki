@@ -1,7 +1,7 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 /// A validated slug — path relative to wiki root, no extension.
 ///
@@ -77,12 +77,12 @@ impl TryFrom<&str> for Slug {
             bail!("slug cannot contain path traversal: {s}");
         }
         // Reject if the last segment has a file extension
-        if let Some(last) = s.rsplit('/').next() {
-            if let Some(dot) = last.rfind('.') {
-                let ext = &last[dot + 1..];
-                if !ext.is_empty() {
-                    bail!("slug cannot have a file extension: {s}");
-                }
+        if let Some(last) = s.rsplit('/').next()
+            && let Some(dot) = last.rfind('.')
+        {
+            let ext = &last[dot + 1..];
+            if !ext.is_empty() {
+                bail!("slug cannot have a file extension: {s}");
             }
         }
         Ok(Slug(s.to_string()))
@@ -199,10 +199,10 @@ pub enum ReadTarget {
 /// 2. If the last segment has a non-.md extension, split into parent slug + filename → asset
 pub fn resolve_read_target(input: &str, wiki_root: &Path) -> Result<ReadTarget> {
     // Step 1: try as page (may fail if input has an extension)
-    if let Ok(slug) = Slug::try_from(input) {
-        if let Ok(path) = slug.resolve(wiki_root) {
-            return Ok(ReadTarget::Page(path));
-        }
+    if let Ok(slug) = Slug::try_from(input)
+        && let Ok(path) = slug.resolve(wiki_root)
+    {
+        return Ok(ReadTarget::Page(path));
     }
 
     // Step 2: check last segment for non-.md extension (asset)

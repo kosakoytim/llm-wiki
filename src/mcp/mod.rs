@@ -5,6 +5,8 @@ pub mod tools;
 use std::future::Future;
 use std::sync::Arc;
 
+use rmcp::ErrorData as McpError;
+use rmcp::ServerHandler;
 use rmcp::model::AnnotateAble;
 use rmcp::model::{
     CallToolRequestParams, CallToolResult, Implementation, ListResourcesResult, ListToolsResult,
@@ -12,8 +14,6 @@ use rmcp::model::{
     ResourceContents, ServerCapabilities, ServerInfo,
 };
 use rmcp::service::{RequestContext, RoleServer};
-use rmcp::ErrorData as McpError;
-use rmcp::ServerHandler;
 
 use crate::engine::{EngineState, WikiEngine};
 use crate::markdown;
@@ -157,18 +157,17 @@ impl ServerHandler for McpServer {
                     return std::future::ready(Err(McpError::internal_error(
                         "engine lock poisoned",
                         None,
-                    )))
+                    )));
                 }
             };
             match WikiUri::resolve(uri, None, &engine.config) {
                 Ok((entry, slug)) => {
                     let wiki_root = std::path::PathBuf::from(&entry.path).join("wiki");
                     match markdown::read_page(&slug, &wiki_root, false) {
-                        Ok(content) => Ok(ReadResourceResult::new(vec![ResourceContents::text(
-                            content,
-                            uri.to_string(),
-                        )
-                        .with_mime_type("text/markdown")])),
+                        Ok(content) => Ok(ReadResourceResult::new(vec![
+                            ResourceContents::text(content, uri.to_string())
+                                .with_mime_type("text/markdown"),
+                        ])),
                         Err(e) => Err(McpError::internal_error(
                             format!("failed to read: {e}"),
                             None,

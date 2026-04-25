@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use llm_wiki::slug::{resolve_read_target, ReadTarget, Slug, WikiUri};
+use llm_wiki::slug::{ReadTarget, Slug, WikiUri, resolve_read_target};
 
 // ── Slug construction ─────────────────────────────────────────────────────────
 

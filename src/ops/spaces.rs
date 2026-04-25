@@ -18,16 +18,16 @@ pub fn spaces_create(
     let report = spaces::create(path, name, description, force, set_default, config_path)?;
 
     // Hot reload: mount the new wiki in the running engine
-    if report.registered {
-        if let Some(engine) = engine {
-            let entry = WikiEntry {
-                name: name.to_string(),
-                path: report.path.clone(),
-                description: description.map(|s| s.to_string()),
-                remote: None,
-            };
-            engine.mount_wiki(&entry)?;
-        }
+    if report.registered
+        && let Some(engine) = engine
+    {
+        let entry = WikiEntry {
+            name: name.to_string(),
+            path: report.path.clone(),
+            description: description.map(|s| s.to_string()),
+            remote: None,
+        };
+        engine.mount_wiki(&entry)?;
     }
 
     Ok(report)

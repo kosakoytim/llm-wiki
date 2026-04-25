@@ -1,12 +1,12 @@
 use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 use crate::config;
 use crate::engine::EngineState;
 use crate::git;
 use crate::markdown;
-use crate::slug::{resolve_read_target, ReadTarget, Slug, WikiUri};
+use crate::slug::{ReadTarget, Slug, WikiUri, resolve_read_target};
 
 pub enum ContentReadResult {
     Page(String),

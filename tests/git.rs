@@ -123,9 +123,11 @@ fn changed_wiki_files_detects_modified_file() {
     fs::write(wiki.join("page.md"), "---\ntitle: New\n---\n").unwrap();
 
     let changes = git::changed_wiki_files(dir.path(), &wiki).unwrap();
-    assert!(changes
-        .iter()
-        .any(|c| c.path.ends_with("page.md") && c.status == git2::Delta::Modified));
+    assert!(
+        changes
+            .iter()
+            .any(|c| c.path.ends_with("page.md") && c.status == git2::Delta::Modified)
+    );
 }
 
 #[test]
@@ -141,9 +143,11 @@ fn changed_wiki_files_detects_deleted_file() {
     fs::remove_file(wiki.join("page.md")).unwrap();
 
     let changes = git::changed_wiki_files(dir.path(), &wiki).unwrap();
-    assert!(changes
-        .iter()
-        .any(|c| c.path.ends_with("page.md") && c.status == git2::Delta::Deleted));
+    assert!(
+        changes
+            .iter()
+            .any(|c| c.path.ends_with("page.md") && c.status == git2::Delta::Deleted)
+    );
 }
 
 #[test]

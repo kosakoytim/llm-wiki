@@ -5,10 +5,10 @@ use anyhow::Result;
 
 use crate::config;
 use crate::default_schemas;
-use crate::index_schema::{classify_field, FieldClass, IndexSchema, SchemaBuilder};
+use crate::index_schema::{FieldClass, IndexSchema, SchemaBuilder, classify_field};
 use crate::type_registry::{
-    self, compile_schema_from_value, compute_hashes, extract_aliases, sha256_hex,
-    validate_base_invariant, SpaceTypeRegistry,
+    self, SpaceTypeRegistry, compile_schema_from_value, compute_hashes, extract_aliases,
+    sha256_hex, validate_base_invariant,
 };
 
 /// Build both SpaceTypeRegistry and IndexSchema from a wiki's schema

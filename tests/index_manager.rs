@@ -565,17 +565,23 @@ fn non_aliased_type_indexes_normally() {
         &is,
     )
     .unwrap();
-    assert!(results
-        .results
-        .iter()
-        .any(|r| r.title == "Mixture of Experts"));
+    assert!(
+        results
+            .results
+            .iter()
+            .any(|r| r.title == "Mixture of Experts")
+    );
 }
 
 #[test]
 fn unrecognized_field_indexed_as_body_text() {
     let dir = tempfile::tempdir().unwrap();
     let wiki_root = setup_repo(dir.path());
-    write_page(&wiki_root, "concepts/custom.md", "---\ntitle: \"Custom\"\ntype: concept\nmy_custom_field: \"unicorn rainbow\"\n---\n\nBody.\n");
+    write_page(
+        &wiki_root,
+        "concepts/custom.md",
+        "---\ntitle: \"Custom\"\ntype: concept\nmy_custom_field: \"unicorn rainbow\"\n---\n\nBody.\n",
+    );
 
     let mgr = build_index(dir.path(), &wiki_root);
     let is = schema();

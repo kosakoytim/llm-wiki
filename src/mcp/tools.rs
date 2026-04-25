@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use rmcp::model::Tool;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
-use super::handlers;
-use super::helpers::{err_text, ToolResult};
 use super::McpServer;
+use super::handlers;
+use super::helpers::{ToolResult, err_text};
 
 // ── Schema helpers ────────────────────────────────────────────────────────────
 
@@ -38,7 +38,7 @@ fn opt_int(desc: &str) -> Value {
     json!({"type": "integer", "description": desc})
 }
 
-// ── Tool definitions (15 tools) ───────────────────────────────────────────────
+// ── Tool definitions (19 tools) ───────────────────────────────────────────────
 
 pub fn tool_list() -> Vec<Tool> {
     vec![

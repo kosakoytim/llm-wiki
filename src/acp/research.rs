@@ -5,7 +5,7 @@ use crate::engine::WikiEngine;
 use crate::ops;
 
 use super::helpers::{clear_active_run, send_text, send_tool_call, send_tool_result};
-use super::{make_tool_id, Sessions};
+use super::{Sessions, make_tool_id};
 
 // ── Reusable workflow steps ───────────────────────────────────────────────────
 

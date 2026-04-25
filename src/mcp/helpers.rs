@@ -63,10 +63,10 @@ pub fn resolve_wiki_name(
 
 pub fn collect_page_uris(path: &Path, wiki_root: &Path, wiki_name: &str) -> Vec<String> {
     if path.is_file() {
-        if path.extension().and_then(|e| e.to_str()) == Some("md") {
-            if let Ok(slug) = Slug::from_path(path, wiki_root) {
-                return vec![format!("wiki://{wiki_name}/{slug}")];
-            }
+        if path.extension().and_then(|e| e.to_str()) == Some("md")
+            && let Ok(slug) = Slug::from_path(path, wiki_root)
+        {
+            return vec![format!("wiki://{wiki_name}/{slug}")];
         }
         return vec![];
     }

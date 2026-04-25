@@ -3,7 +3,7 @@ use std::path::Path;
 
 use anyhow::Result;
 use tantivy::schema::{
-    Field, IndexRecordOption, Schema, TextFieldIndexing, TextOptions, FAST, STORED, STRING,
+    FAST, Field, IndexRecordOption, STORED, STRING, Schema, TextFieldIndexing, TextOptions,
 };
 
 use crate::config;
@@ -113,10 +113,10 @@ pub(crate) fn classify_field(prop: &serde_json::Value, is_slug_field: bool) -> F
         "boolean" => FieldClass::Keyword,
         "array" => {
             // Array of strings with enum items → keyword
-            if let Some(items) = prop.get("items") {
-                if items.get("enum").is_some() || items.get("const").is_some() {
-                    return FieldClass::Keyword;
-                }
+            if let Some(items) = prop.get("items")
+                && (items.get("enum").is_some() || items.get("const").is_some())
+            {
+                return FieldClass::Keyword;
             }
             FieldClass::Text
         }

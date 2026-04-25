@@ -2,7 +2,7 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 pub fn logs_path(config_path: &Path) -> PathBuf {
     let state_dir = config_path.parent().unwrap_or(Path::new("."));

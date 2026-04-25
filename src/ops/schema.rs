@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 
 use crate::config;
@@ -191,24 +191,22 @@ pub fn schema_remove(
 
     // Delete schema file if requested
     let mut schema_file_deleted = false;
-    if delete {
-        if let Some(schema_path) = space.type_registry.schema_path(type_name) {
-            let full_path = space.repo_root.join(schema_path);
-            if full_path.exists() {
-                // Check if other types use this schema
-                let content = std::fs::read_to_string(&full_path).unwrap_or_default();
-                if let Ok(schema) = serde_json::from_str::<serde_json::Value>(&content) {
-                    let wiki_types = schema
-                        .get("x-wiki-types")
-                        .and_then(|v| v.as_object())
-                        .map(|obj| obj.len())
-                        .unwrap_or(0);
-                    if wiki_types <= 1 {
-                        std::fs::remove_file(&full_path)?;
-                        schema_file_deleted = true;
-                    }
-                    // If multiple types use this schema, don't delete
+    if delete && let Some(schema_path) = space.type_registry.schema_path(type_name) {
+        let full_path = space.repo_root.join(schema_path);
+        if full_path.exists() {
+            // Check if other types use this schema
+            let content = std::fs::read_to_string(&full_path).unwrap_or_default();
+            if let Ok(schema) = serde_json::from_str::<serde_json::Value>(&content) {
+                let wiki_types = schema
+                    .get("x-wiki-types")
+                    .and_then(|v| v.as_object())
+                    .map(|obj| obj.len())
+                    .unwrap_or(0);
+                if wiki_types <= 1 {
+                    std::fs::remove_file(&full_path)?;
+                    schema_file_deleted = true;
                 }
+                // If multiple types use this schema, don't delete
             }
         }
     }
@@ -219,8 +217,10 @@ pub fn schema_remove(
     if resolved.ingest.auto_commit
         && (pages_deleted_from_disk > 0 || wiki_toml_updated || schema_file_deleted)
     {
-        let msg = format!("schema remove: {type_name} — {} pages, wiki.toml={wiki_toml_updated}, schema={schema_file_deleted}",
-            pages_deleted_from_disk);
+        let msg = format!(
+            "schema remove: {type_name} — {} pages, wiki.toml={wiki_toml_updated}, schema={schema_file_deleted}",
+            pages_deleted_from_disk
+        );
         let _ = git::commit(&repo_root, &msg);
     }
 
@@ -331,10 +331,10 @@ fn generate_template(schema: &serde_json::Value, type_name: &str) -> String {
 
     // Common optional fields
     for field in &["summary", "status", "last_updated", "tags"] {
-        if !required.contains(field) {
-            if let Some(prop) = properties.get(*field) {
-                lines.push(format_template_field(field, prop, type_name));
-            }
+        if !required.contains(field)
+            && let Some(prop) = properties.get(*field)
+        {
+            lines.push(format_template_field(field, prop, type_name));
         }
     }
 

@@ -86,15 +86,14 @@ fn validate_edge_targets(space: &crate::engine::SpaceContext) -> Result<Vec<Stri
             }
             if let Some(field_handle) = is.try_field(&decl.field) {
                 for val in doc.get_all(field_handle) {
-                    if let Some(target) = val.as_str() {
-                        if let Some(target_type) = slug_types.get(target) {
-                            if !decl.target_types.contains(target_type) {
-                                warnings.push(format!(
-                                    "{}: edge '{}' target '{}' has type '{}', expected one of {:?}",
-                                    slug, decl.relation, target, target_type, decl.target_types
-                                ));
-                            }
-                        }
+                    if let Some(target) = val.as_str()
+                        && let Some(target_type) = slug_types.get(target)
+                        && !decl.target_types.contains(target_type)
+                    {
+                        warnings.push(format!(
+                            "{}: edge '{}' target '{}' has type '{}', expected one of {:?}",
+                            slug, decl.relation, target, target_type, decl.target_types
+                        ));
                     }
                 }
             }

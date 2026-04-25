@@ -314,14 +314,18 @@ fn search_all_merges_wikis() {
     let results = search_all("MoE", &SearchOptions::default(), &wikis).unwrap();
 
     assert!(results.results.len() >= 2);
-    assert!(results
-        .results
-        .iter()
-        .any(|r| r.uri.starts_with("wiki://a/")));
-    assert!(results
-        .results
-        .iter()
-        .any(|r| r.uri.starts_with("wiki://b/")));
+    assert!(
+        results
+            .results
+            .iter()
+            .any(|r| r.uri.starts_with("wiki://a/"))
+    );
+    assert!(
+        results
+            .results
+            .iter()
+            .any(|r| r.uri.starts_with("wiki://b/"))
+    );
 }
 
 #[test]

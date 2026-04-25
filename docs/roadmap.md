@@ -2,7 +2,7 @@
 title: "Roadmap"
 summary: "Development roadmap for llm-wiki."
 status: ready
-last_updated: "2025-07-21"
+last_updated: "2026-04-26"
 ---
 
 # Roadmap
@@ -17,20 +17,20 @@ last_updated: "2025-07-21"
 | 3     | Typed graph — `x-graph-edges`, labeled edges, target warnings | ✓      |
 | —     | Upgrade `agent-client-protocol` 0.10 → 0.11                   | ✓      |
 | —     | Replace `_slug_ord` with native string sort                   | ✓      |
-| —     | Page body templates — `schemas/<type>.md` naming convention     | ✓      |
-| —     | `wiki_stats` — wiki health dashboard                           | ✓      |
-| —     | `wiki_suggest` — suggest related pages to link                 | ✓      |
-| —     | `wiki_watch` — filesystem watcher, auto-ingest on save          | ✓      |
+| —     | Page body templates — `schemas/<type>.md` naming convention   | ✓      |
+| —     | `wiki_stats` — wiki health dashboard                          | ✓      |
+| —     | `wiki_suggest` — suggest related pages to link                | ✓      |
+| —     | `wiki_watch` — filesystem watcher, auto-ingest on save        | ✓      |
 | —     | `wiki_history` — git commit history for a page                | ✓      |
-| —     | Search facets — type/status/tag distributions                  | ✓      |
+| —     | Search facets — type/status/tag distributions                 | ✓      |
 
 372 tests. Single Rust binary. No runtime dependencies.
 
 ## Active
 
-| Task                             | Prompt                                                   | Notes                                           |
-| -------------------------------- | -------------------------------------------------------- | ----------------------------------------------- |
-| Cross-wiki links                 | `docs/prompts/study-cross-wiki-links.md`                 | `wiki://` URIs resolved in graph                |
+| Task             | Prompt                                   | Notes                            |
+| ---------------- | ---------------------------------------- | -------------------------------- |
+| Cross-wiki links | `docs/prompts/study-cross-wiki-links.md` | `wiki://` URIs resolved in graph |
 
 ## Next: Phase 4 — Skill Registry
 
@@ -52,25 +52,6 @@ activate them by injecting the body into context.
 
 Engine improvements not tied to a phase:
 
-### QJL Sketch integration
-
-Attention-based reranking using the `qjl-sketch` crate. See
-[design-origins/qjl-sketch-pipeline.md](design-origins/qjl-sketch-pipeline.md).
-
-- [ ] Add `qjl-sketch` as a dependency
-- [ ] `src/pipeline.rs`: `Pipeline` struct
-- [ ] `Pipeline::compress_page(tokens, slug) → ()` — project + quantize + store
-- [ ] `Pipeline::query(query_tokens, top_k) → Vec<PageScore>` — project
-      query, scan store, rank by attention score
-- [ ] `Pipeline::recompress(slug)` — re-compress a single page
-- [ ] `Pipeline::rebuild()` — re-compress all pages from scratch
-- [ ] Hook into `wiki_ingest` — compress after indexing
-- [ ] `wiki_rerank` tool or `--rerank` flag on `wiki_search`
-- [ ] W_q / W_k / W_v weight loading from GGUF or safetensors
-- [ ] Tokenization without full model runtime
-- [ ] Tests: smoke test, relevant page ranks high, incremental update,
-      empty store, single token page
-
 ### Medium value
 
 - Persistent graph index — maintain petgraph across ingests, avoid rebuilding on every call
@@ -86,10 +67,9 @@ Attention-based reranking using the `qjl-sketch` crate. See
 
 Each project has its own roadmap:
 
-| Project                                                                | Roadmap                                     |
-| ---------------------------------------------------------------------- | ------------------------------------------- |
-| [qjl-sketch](https://github.com/geronimo-iia/qjl-sketch)               | `docs/roadmap.md` — vector compression crate |
-| [llm-wiki-skills](https://github.com/geronimo-iia/llm-wiki-skills)     | `docs/roadmap.md` — skill sync + new skills |
-| [llm-wiki-hugo-cms](https://github.com/geronimo-iia/llm-wiki-hugo-cms) | `docs/roadmap.md` — Hugo site scaffold      |
-| [homebrew-tap](https://github.com/geronimo-iia/homebrew-tap)           | Formula updates per release                 |
-| [asdf-llm-wiki](https://github.com/geronimo-iia/asdf-llm-wiki)         | Plugin updates per release                  |
+| Project                                                                | Roadmap                                      |
+| ---------------------------------------------------------------------- | -------------------------------------------- |
+| [llm-wiki-skills](https://github.com/geronimo-iia/llm-wiki-skills)     | `docs/roadmap.md` — skill sync + new skills  |
+| [llm-wiki-hugo-cms](https://github.com/geronimo-iia/llm-wiki-hugo-cms) | `docs/roadmap.md` — Hugo site scaffold       |
+| [homebrew-tap](https://github.com/geronimo-iia/homebrew-tap)           | Formula updates per release                  |
+| [asdf-llm-wiki](https://github.com/geronimo-iia/asdf-llm-wiki)         | Plugin updates per release                   |

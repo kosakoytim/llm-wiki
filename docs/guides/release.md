@@ -2,20 +2,20 @@
 
 ## Distribution Channels
 
-| Channel | Command | Notes |
-|---------|---------|-------|
-| Source build | `cargo install llm-wiki` | Always available |
-| Pre-built binary | `cargo binstall llm-wiki` | Via GitHub releases |
-| Homebrew | `brew install geronimo-iia/tap/llm-wiki` | macOS/Linux |
-| asdf | `asdf install llm-wiki latest` | Version manager |
+| Channel          | Command                                  | Notes               |
+| ---------------- | ---------------------------------------- | ------------------- |
+| Source build     | `cargo install llm-wiki`                 | Always available    |
+| Pre-built binary | `cargo binstall llm-wiki`                | Via GitHub releases |
+| Homebrew         | `brew install geronimo-iia/tap/llm-wiki` | macOS/Linux         |
+| asdf             | `asdf install llm-wiki latest`           | Version manager     |
 
 ### Repositories
 
-| Repo | Purpose |
-|------|---------|
-| [llm-wiki](https://github.com/geronimo-iia/llm-wiki) | Engine source + CI |
-| [homebrew-tap](https://github.com/geronimo-iia/homebrew-tap) | Homebrew formula |
-| [asdf-llm-wiki](https://github.com/geronimo-iia/asdf-llm-wiki) | asdf plugin |
+| Repo                                                           | Purpose            |
+| -------------------------------------------------------------- | ------------------ |
+| [llm-wiki](https://github.com/geronimo-iia/llm-wiki)           | Engine source + CI |
+| [homebrew-tap](https://github.com/geronimo-iia/homebrew-tap)   | Homebrew formula   |
+| [asdf-llm-wiki](https://github.com/geronimo-iia/asdf-llm-wiki) | asdf plugin        |
 
 ## Pre-Release Checklist
 
