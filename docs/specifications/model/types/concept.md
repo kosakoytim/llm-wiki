@@ -35,22 +35,23 @@ Two types share this schema:
 A claim is a factual statement extracted from a source, with optional
 confidence and location:
 
-| Field        | Type   | Required | Description                                   |
-| ------------ | ------ | -------- | --------------------------------------------- |
-| `text`       | string | yes      | The claim as a factual statement              |
-| `confidence` | string | no       | `high`, `medium`, `low` — claim-level confidence, distinct from page-level `confidence` |
-| `source`     | string | no       | Slug of the source page                       |
-| `section`    | string | no       | Section in the source where the claim appears |
+| Field        | Type          | Required | Description                                   |
+| ------------ | ------------- | -------- | --------------------------------------------- |
+| `text`       | string        | yes      | The claim as a factual statement              |
+| `confidence` | float 0.0–1.0 | no       | Certainty of this claim. Same scale as page-level `confidence`. |
+| `source`     | string        | no       | Slug of the source page                       |
+| `section`    | string        | no       | Section in the source where the claim appears |
+
+Conventional values: `0.9` = well-corroborated; `0.5` = single source or caveats; `0.2` = speculative.
+Absence means no certainty signal was recorded (distinct from `0.5` neutral).
 
 ```yaml
 claims:
   - text: "Sparse MoE reduces effective compute 8x"
-    confidence: high
+    confidence: 0.9
     source: sources/switch-transformer-2021
     section: "Results"
 ```
-
-> `claims[].confidence` is a string enum (`high`/`medium`/`low`) scoped to the claim object. It is distinct from the page-level `confidence` float field.
 
 ## Edge Declarations
 
@@ -77,6 +78,6 @@ concepts: [concepts/scaling-laws]
 confidence: 0.9
 claims:
   - text: "Sparse MoE reduces effective compute 8x"
-    confidence: high
+    confidence: 0.9
     section: "Results"
 ```

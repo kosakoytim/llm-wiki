@@ -1,7 +1,7 @@
 ---
 title: "claims[].confidence as float"
 summary: "Align claims[].confidence with page-level confidence — change from string enum to float 0.0–1.0."
-status: proposed
+status: implemented
 last_updated: "2026-04-27"
 depends_on: confidence
 ---
@@ -143,24 +143,24 @@ EOF
 ### Engine — `llm-wiki` (branch: `feat/confidence-search-ranking`)
 
 #### Schemas (JSON)
-- [ ] `schemas/concept.json`: change `claims[].confidence` from `type: string, enum: [...]` to `type: number, minimum: 0.0, maximum: 1.0`.
-- [ ] `schemas/paper.json`: same change.
+- [x] `schemas/concept.json`: change `claims[].confidence` from `type: string, enum: [...]` to `type: number, minimum: 0.0, maximum: 1.0`.
+- [x] `schemas/paper.json`: same change.
 
 #### Tests
-- [ ] `tests/default_schemas.rs` `concept_accepts_full_template`: change `"confidence": "high"` inside claims item to `"confidence": 0.9`.
-- [ ] `tests/default_schemas.rs` `paper_accepts_source_template`: same.
-- [ ] Add test: `concept_rejects_string_confidence_in_claim` — assert `claims[].confidence: "high"` is now invalid.
-- [ ] Add test: `paper_rejects_string_confidence_in_claim` — same.
+- [x] `tests/default_schemas.rs` `concept_accepts_full_template`: change `"confidence": "high"` inside claims item to `"confidence": 0.9`.
+- [x] `tests/default_schemas.rs` `paper_accepts_source_template`: same.
+- [x] Add test: `concept_rejects_string_confidence_in_claim` — assert `claims[].confidence: "high"` is now invalid.
+- [x] Add test: `paper_rejects_string_confidence_in_claim` — same.
 
 #### Specification docs
-- [ ] `docs/specifications/model/types/concept.md`: update Claims table row and example; remove the `claims[].confidence` distinction note (types are now uniform).
-- [ ] `docs/specifications/model/types/source.md`: update template example `confidence: high` in claims → `confidence: 0.9`.
+- [x] `docs/specifications/model/types/concept.md`: update Claims table row and example; remove the `claims[].confidence` distinction note (types are now uniform).
+- [x] `docs/specifications/model/types/source.md`: update template example `confidence: high` in claims → `confidence: 0.9`.
 
 ### Skills — `llm-wiki-skills` (branch: `feat/claims-confidence-float`)
 
-- [ ] `skills/frontmatter/SKILL.md`: rewrite `### confidence` table from string enum to float scale; update anti-pattern row.
-- [ ] `skills/frontmatter/SKILL.md`: update `### claims` example: `confidence: high` → `confidence: 0.9`.
-- [ ] `skills/ingest/SKILL.md`: update any claim examples using string confidence.
-- [ ] `skills/frontmatter/references/type-taxonomy.md`: update confidence prose.
+- [x] `skills/frontmatter/SKILL.md`: rewrite `### confidence` table from string enum to float scale; update anti-pattern row.
+- [x] `skills/frontmatter/SKILL.md`: update `### claims` example: `confidence: high` → `confidence: 0.9`.
+- [x] `skills/ingest/SKILL.md`: update any claim examples using string confidence.
+- [x] `skills/frontmatter/references/type-taxonomy.md`: update confidence prose.
 </content>
 </invoke>

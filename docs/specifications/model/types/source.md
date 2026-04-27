@@ -62,7 +62,7 @@ concepts: [concepts/mixture-of-experts, concepts/scaling-laws]
 confidence: 0.9
 claims:
   - text: "Switch routing achieves 4x speedup"
-    confidence: high
+    confidence: 0.9
     source: sources/switch-transformer-2021
     section: "Abstract"
 ```

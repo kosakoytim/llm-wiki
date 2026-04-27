@@ -78,8 +78,10 @@
             "description": "The claim as a factual statement"
           },
           "confidence": {
-            "type": "string",
-            "enum": ["high", "medium", "low"]
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Certainty of this claim. 0.0=speculative, 1.0=verified."
           },
           "source": {
             "type": "string",

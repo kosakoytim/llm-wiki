@@ -81,9 +81,19 @@ fn concept_accepts_full_template() {
         "confidence": 0.9,
         "claims": [{
             "text": "Sparse MoE reduces effective compute 8x",
-            "confidence": "high",
+            "confidence": 0.9,
             "section": "Results"
         }]
+    })));
+}
+
+#[test]
+fn concept_rejects_string_confidence_in_claim() {
+    let v = compile("concept.json");
+    assert!(!v.is_valid(&json!({
+        "title": "Test", "type": "concept",
+        "read_when": ["test"],
+        "claims": [{"text": "some claim", "confidence": "high"}]
     })));
 }
 
@@ -110,7 +120,16 @@ fn paper_accepts_source_template() {
         "read_when": ["Looking for MoE benchmark results"],
         "concepts": ["concepts/mixture-of-experts"],
         "confidence": 0.9,
-        "claims": [{"text": "Switch routing achieves 4x speedup", "confidence": "high"}]
+        "claims": [{"text": "Switch routing achieves 4x speedup", "confidence": 0.9}]
+    })));
+}
+
+#[test]
+fn paper_rejects_string_confidence_in_claim() {
+    let v = compile("paper.json");
+    assert!(!v.is_valid(&json!({
+        "title": "Test", "type": "paper",
+        "claims": [{"text": "some claim", "confidence": "high"}]
     })));
 }
 
