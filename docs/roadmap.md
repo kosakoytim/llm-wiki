@@ -31,7 +31,7 @@ ordered by priority:
 | 2b  | ✅ | Flat `[search.status]` map for arbitrary status multipliers                   |   ✦    |   —    |
 | 3   | ✅ | Backlinks (`backlinks:` param on `wiki_content_read`)                         |   ✦    |   ✦    |
 | 4   | ✅ | Lint system (`wiki_lint` tool, 5 deterministic rules)                         |   ✦    |   ✦    |
-| 5   | — | Incremental validation (git-diff scoped)                                      |   ✦    |   —    |
+| 5   | ✅ | Incremental validation (git-diff scoped)                                      |   ✦    |   —    |
 | 6   | — | Privacy redaction (`redact:` flag on `wiki_ingest`)                           |   ✦    |   —    |
 | 7   | — | Crystallize skill improvements (two-step extraction, confidence calibration)  |   —    |   ✦    |
 | 8   | — | Graph community detection (Louvain, `wiki_stats` + `wiki_suggest`)            |   ✦    |   ✦    |
