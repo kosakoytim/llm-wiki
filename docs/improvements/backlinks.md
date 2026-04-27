@@ -50,12 +50,75 @@ No file writes, no git commits, no index mutation. The index is the source of tr
 
 The index query gives the right answer at the right time with no state to go stale.
 
+## Branch & PR — `llm-wiki`
+
+```bash
+git checkout -b feat/backlinks
+```
+
+When implementation is complete and all tests pass:
+
+```bash
+git push -u origin feat/backlinks
+gh pr create \
+  --title "feat: backlinks param on wiki_content_read" \
+  --milestone "v0.2.0" \
+  --body "$(cat <<'EOF'
+Implements imp-3 (backlinks).
+
+- Add `backlinks: bool` parameter to `wiki_content_read`
+- `backlinks_for` term query on `body_links` tantivy field
+- `BacklinkRef { slug, title }` in response when `backlinks: true`
+
+Closes geronimo-iia/llm-wiki#22 (imp-3)
+
+Spec: docs/improvements/backlinks.md
+EOF
+)"
+```
+
+## Branch & PR — `llm-wiki-skills`
+
+```bash
+# in llm-wiki-skills repo
+git checkout -b feat/backlinks
+```
+
+When done:
+
+```bash
+git push -u origin feat/backlinks
+gh pr create \
+  --repo geronimo-iia/llm-wiki-skills \
+  --milestone "v0.4.0" \
+  --title "feat: document backlinks param in content and research skills" \
+  --body "$(cat <<'EOF'
+Aligns skill documentation with the backlinks feature added in llm-wiki imp-3.
+
+- `skills/content/SKILL.md`: document `backlinks: true` on `wiki_content_read`
+- `skills/research/SKILL.md`: note backlinks as a discovery technique
+
+Companion to llm-wiki feat/backlinks (imp-3).
+Closes geronimo-iia/llm-wiki-skills#1 (imp-3)
+EOF
+)"
+```
+
+> Merge timing: skills PR requires `llm-wiki` v0.2.0 imp-3 to be merged first.
+
 ## Tasks
 
-- [ ] Add `backlinks_for(slug: &str, searcher: &Searcher, is: &IndexSchema) -> Vec<BacklinkRef>` in `src/ops/content.rs`; term query on `body_links` keyword field; return `Vec<{ slug, title }>`.
-- [ ] Add `BacklinkRef { slug: String, title: String }` struct to the content ops return types; derive `Serialize`.
+### Engine — `llm-wiki` (branch: `feat/backlinks`)
+
+- [ ] Add `BacklinkRef { slug: String, title: String }` struct to content ops return types; derive `Serialize`.
+- [ ] Add `backlinks_for(slug: &str, searcher: &Searcher, is: &IndexSchema) -> Vec<BacklinkRef>` in `src/ops/content.rs`; term query on `body_links` keyword field.
 - [ ] Add `backlinks: bool` parameter to `wiki_content_read` MCP tool definition in `src/tools.rs`.
 - [ ] In `handlers::handle_content_read`, when `backlinks: true`, call `backlinks_for` and include the result in the JSON response.
 - [ ] Update `wiki_content_read` response schema in `docs/specifications/tools/content-operations.md`.
 - [ ] Unit test: two pages link to a third; `backlinks_for` returns both; a page with no incoming links returns an empty vec.
 - [ ] Unit test: `backlinks: false` (default) returns no `backlinks` field in the response (no overhead for the common case).
+
+### Skills — `llm-wiki-skills` (branch: `feat/backlinks`)
+
+- [ ] `skills/content/SKILL.md`: document `backlinks: true` parameter on `wiki_content_read`; show example response with `backlinks` array.
+- [ ] `skills/research/SKILL.md`: add backlinks as a discovery technique (when tracing what references a page).
