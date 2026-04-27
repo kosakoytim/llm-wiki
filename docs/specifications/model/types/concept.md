@@ -27,7 +27,7 @@ Two types share this schema:
 | `tldr`       | string       | no       | none    | One-sentence key takeaway                       |
 | `sources`    | list[string] | no       | `[]`    | Slugs of source pages that contributed claims   |
 | `concepts`   | list[string] | no       | `[]`    | Slugs of concept pages this page depends on     |
-| `confidence` | string       | no       | none    | `high`, `medium`, `low`                         |
+| `confidence` | float 0.0–1.0 | no      | `0.5`   | Certainty of page content. See [base.md](base.md). Legacy strings `high`/`medium`/`low` are read as `0.9`/`0.5`/`0.2`. |
 | `claims`     | list[claim]  | no       | `[]`    | Structured claims extracted from sources        |
 
 ## Claims
@@ -35,17 +35,20 @@ Two types share this schema:
 A claim is a factual statement extracted from a source, with optional
 confidence and location:
 
-| Field        | Type   | Required | Description                                   |
-| ------------ | ------ | -------- | --------------------------------------------- |
-| `text`       | string | yes      | The claim as a factual statement              |
-| `confidence` | string | no       | `high`, `medium`, `low`                       |
-| `source`     | string | no       | Slug of the source page                       |
-| `section`    | string | no       | Section in the source where the claim appears |
+| Field        | Type          | Required | Description                                   |
+| ------------ | ------------- | -------- | --------------------------------------------- |
+| `text`       | string        | yes      | The claim as a factual statement              |
+| `confidence` | float 0.0–1.0 | no       | Certainty of this claim. Same scale as page-level `confidence`. |
+| `source`     | string        | no       | Slug of the source page                       |
+| `section`    | string        | no       | Section in the source where the claim appears |
+
+Conventional values: `0.9` = well-corroborated; `0.5` = single source or caveats; `0.2` = speculative.
+Absence means no certainty signal was recorded (distinct from `0.5` neutral).
 
 ```yaml
 claims:
   - text: "Sparse MoE reduces effective compute 8x"
-    confidence: high
+    confidence: 0.9
     source: sources/switch-transformer-2021
     section: "Results"
 ```
@@ -72,9 +75,9 @@ last_updated: "2025-07-17"
 tags: [mixture-of-experts, scaling, transformers]
 sources: [sources/switch-transformer-2021]
 concepts: [concepts/scaling-laws]
-confidence: high
+confidence: 0.9
 claims:
   - text: "Sparse MoE reduces effective compute 8x"
-    confidence: high
+    confidence: 0.9
     section: "Results"
 ```
