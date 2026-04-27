@@ -126,6 +126,39 @@ Fix any `Error` findings before closing the session. `Warning` findings
 > broken-link and orphan checks.
 ```
 
+## Branch & PR — `llm-wiki-skills`
+
+```bash
+# in llm-wiki-skills repo
+git checkout -b feat/crystallize
+```
+
+When implementation is complete:
+
+```bash
+git push -u origin feat/crystallize
+gh pr create \
+  --repo geronimo-iia/llm-wiki-skills \
+  --milestone "v0.4.0" \
+  --title "feat: crystallize — two-step extraction, confidence calibration, post-ingest lint" \
+  --body "$(cat <<'EOF'
+Implements imp-7 (crystallize skill improvements).
+
+- Add analysis step before writes: extraction plan with user confirmation
+- Add confidence calibration table (7-row, session knowledge types)
+- Add post-ingest lint step: wiki_lint(rules: "broken-link,orphan")
+- Bump skill version to 0.3.0
+
+Closes geronimo-iia/llm-wiki-skills#1 (imp-7)
+
+Spec: https://github.com/geronimo-iia/llm-wiki/blob/main/docs/improvements/crystallize.md
+EOF
+)"
+```
+
+> No `llm-wiki` engine PR needed — this is a skill-only change.
+> Engine dependencies (`wiki_lint`, `confidence`) shipped in v0.2.0.
+
 ## Tasks
 
 ### Skill — `llm-wiki-skills/skills/crystallize/SKILL.md`
@@ -137,8 +170,7 @@ Fix any `Error` findings before closing the session. `Warning` findings
   `## Create a new page`; include the 7-row calibration table and
   guidance on adjusting up/down.
 - [ ] In `## Validate and index`, add the post-ingest lint call
-  `wiki_lint(rules: "broken-link,orphan")` with the forward-compat note
-  about engine v0.2.0.
+  `wiki_lint(rules: "broken-link,orphan")`.
 - [ ] Update `metadata.version` from `0.2.0` to `0.3.0`.
 - [ ] Update `last_updated` to today's date.
 
@@ -148,5 +180,9 @@ Fix any `Error` findings before closing the session. `Warning` findings
   update; verify the plan is presented before any write.
 - [ ] Verify `confidence` is set on all output pages and matches the
   calibration table.
-- [ ] After engine v0.2.0 ships `wiki_lint`, verify the lint step runs
-  cleanly on crystallize output.
+- [ ] Verify the lint step runs cleanly on crystallize output.
+
+### Issue update
+After merging:
+- Check off imp-7 in `geronimo-iia/llm-wiki-skills#1`
+- Mark `status: implemented` in this file
