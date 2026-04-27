@@ -230,6 +230,7 @@ pub fn tool_list() -> Vec<Tool> {
                     "type": opt_str("Comma-separated page types to include"),
                     "relation": opt_str("Filter edges by relation label"),
                     "output": opt_str("File path for output (default: stdout/return)"),
+                    "cross_wiki": opt_bool("Merge all mounted wikis into a unified graph"),
                     "wiki": opt_str("Target wiki name"),
                 }),
                 &[],

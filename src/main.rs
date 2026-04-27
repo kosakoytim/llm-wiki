@@ -364,6 +364,7 @@ fn main() -> Result<()> {
             r#type,
             relation,
             output,
+            cross_wiki,
         } => {
             let manager = WikiEngine::build(&config_path)?;
             let engine = manager.state.read().map_err(|_| anyhow::anyhow!("lock"))?;
@@ -379,6 +380,7 @@ fn main() -> Result<()> {
                     type_filter: r#type.as_deref(),
                     relation,
                     output: output.as_deref(),
+                    cross_wiki,
                 },
             )?;
 

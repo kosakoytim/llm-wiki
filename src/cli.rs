@@ -107,6 +107,9 @@ pub enum Commands {
         /// File path for output (default: stdout)
         #[arg(long)]
         output: Option<String>,
+        /// Merge all mounted wikis into a unified graph
+        #[arg(long)]
+        cross_wiki: bool,
     },
     /// Manage the tantivy search index
     Index {

@@ -2,6 +2,81 @@ use std::collections::HashSet;
 
 use crate::frontmatter::ParsedPage;
 
+// ── ParsedLink ────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ParsedLink {
+    Local(String),
+    CrossWiki { wiki: String, slug: String },
+}
+
+impl ParsedLink {
+    pub fn parse(s: &str) -> Self {
+        if let Some(rest) = s.strip_prefix("wiki://")
+            && let Some(slash) = rest.find('/')
+        {
+            return ParsedLink::CrossWiki {
+                wiki: rest[..slash].to_string(),
+                slug: rest[slash + 1..].to_string(),
+            };
+        }
+        ParsedLink::Local(s.to_string())
+    }
+
+    pub fn as_raw(&self) -> &str {
+        match self {
+            ParsedLink::Local(s) => s,
+            ParsedLink::CrossWiki { wiki, slug } => {
+                // We store the original string form; callers needing the raw
+                // form reconstruct it. This returns the slug portion only for
+                // local use; graph.rs uses the wiki/slug fields directly.
+                let _ = wiki;
+                slug
+            }
+        }
+    }
+}
+
+/// Like `extract_links` but returns typed `ParsedLink` values distinguishing
+/// local slugs from `wiki://name/slug` cross-wiki references.
+/// Use this in graph.rs. The original `extract_links` stays for index consumers.
+pub fn extract_parsed_links(page: &ParsedPage) -> Vec<ParsedLink> {
+    let mut result = Vec::new();
+    let mut seen = HashSet::new();
+
+    for slug in page.string_list("sources") {
+        let raw = slug.to_string();
+        if seen.insert(raw.clone()) {
+            result.push(ParsedLink::parse(&raw));
+        }
+    }
+    for slug in page.string_list("concepts") {
+        let raw = slug.to_string();
+        if seen.insert(raw.clone()) {
+            result.push(ParsedLink::parse(&raw));
+        }
+    }
+    extract_parsed_wikilinks(&page.body, &mut seen, &mut result);
+
+    result
+}
+
+fn extract_parsed_wikilinks(text: &str, seen: &mut HashSet<String>, result: &mut Vec<ParsedLink>) {
+    let mut rest = text;
+    while let Some(start) = rest.find("[[") {
+        let after = &rest[start + 2..];
+        if let Some(end) = after.find("]]") {
+            let raw = after[..end].trim().to_string();
+            if !raw.is_empty() && seen.insert(raw.clone()) {
+                result.push(ParsedLink::parse(&raw));
+            }
+            rest = &after[end + 2..];
+        } else {
+            break;
+        }
+    }
+}
+
 /// Extract all linked slugs from a parsed page: frontmatter `sources`,
 /// `concepts`, and body `[[wikilinks]]`. Deduplicated, order preserved.
 pub fn extract_links(page: &ParsedPage) -> Vec<String> {

@@ -55,6 +55,7 @@ pub fn run_lint(
         None | Some("") => [
             "orphan",
             "broken-link",
+            "broken-cross-wiki-link",
             "missing-fields",
             "stale",
             "unknown-type",
@@ -76,8 +77,14 @@ pub fn run_lint(
     if active_rules.contains("orphan") {
         findings.extend(rule_orphan(&searcher, is)?);
     }
-    if active_rules.contains("broken-link") {
-        findings.extend(rule_broken_link(&searcher, is)?);
+    if active_rules.contains("broken-link") || active_rules.contains("broken-cross-wiki-link") {
+        let mounted: HashSet<String> = engine.spaces.keys().cloned().collect();
+        findings.extend(rule_broken_link(
+            &searcher,
+            is,
+            active_rules.contains("broken-cross-wiki-link"),
+            &mounted,
+        )?);
     }
     if active_rules.contains("missing-fields") {
         findings.extend(rule_missing_fields(&searcher, is, &space.type_registry)?);
@@ -201,7 +208,12 @@ fn slug_exists(searcher: &tantivy::Searcher, is: &IndexSchema, slug: &str) -> Re
     Ok(!results.is_empty())
 }
 
-fn rule_broken_link(searcher: &tantivy::Searcher, is: &IndexSchema) -> Result<Vec<LintFinding>> {
+fn rule_broken_link(
+    searcher: &tantivy::Searcher,
+    is: &IndexSchema,
+    check_cross_wiki: bool,
+    mounted_wiki_names: &HashSet<String>,
+) -> Result<Vec<LintFinding>> {
     let f_slug = is.field("slug");
     let link_fields = [
         "body_links",
@@ -236,8 +248,20 @@ fn rule_broken_link(searcher: &tantivy::Searcher, is: &IndexSchema) -> Result<Ve
                     Some(s) => s,
                     None => continue,
                 };
-                // Skip cross-wiki links (imp-10's concern)
                 if target.starts_with("wiki://") {
+                    if check_cross_wiki
+                        && let Some(wiki_name) = target
+                            .strip_prefix("wiki://")
+                            .and_then(|r| r.split('/').next())
+                        && !mounted_wiki_names.contains(wiki_name)
+                    {
+                        findings.push(LintFinding {
+                            slug: slug.clone(),
+                            rule: "broken-cross-wiki-link",
+                            severity: Severity::Warning,
+                            message: format!("cross-wiki link to unmounted wiki: {target}"),
+                        });
+                    }
                     continue;
                 }
                 if !slug_exists(searcher, is, target)? {
