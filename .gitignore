@@ -1,4 +1,5 @@
 /target
+README-draft.md
 
 # tantivy search index — gitignored, rebuilt on demand via `wiki search --rebuild-index`
 .wiki/search-index/
