@@ -328,6 +328,7 @@ pub fn handle_graph(server: &McpServer, args: &Map<String, Value>) -> ToolHandle
             type_filter: arg_str(args, "type").as_deref(),
             relation: arg_str(args, "relation"),
             output: arg_str(args, "output").as_deref(),
+            cross_wiki: arg_bool(args, "cross_wiki"),
         },
     )
     .map_err(|e| format!("{e}"))?;

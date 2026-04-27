@@ -15,6 +15,7 @@ pub struct GraphParams<'a> {
     pub type_filter: Option<&'a str>,
     pub relation: Option<String>,
     pub output: Option<&'a str>,
+    pub cross_wiki: bool,
 }
 
 pub fn graph_build(
@@ -37,13 +38,37 @@ pub fn graph_build(
         types,
         relation: params.relation.clone(),
     };
-    let searcher = space.index_manager.searcher()?;
-    let g = graph::build_graph(
-        &searcher,
-        &space.index_schema,
-        &filter,
-        &space.type_registry,
-    )?;
+    let g = if params.cross_wiki {
+        // Collect (name, searcher) pairs; Arc keeps schema/registry alive
+        let space_data: Vec<(String, tantivy::Searcher)> = engine
+            .spaces
+            .iter()
+            .filter_map(|(name, sp)| sp.index_manager.searcher().ok().map(|s| (name.clone(), s)))
+            .collect();
+        let tuples: Vec<(
+            &str,
+            &tantivy::Searcher,
+            &crate::index_schema::IndexSchema,
+            &crate::type_registry::SpaceTypeRegistry,
+        )> = space_data
+            .iter()
+            .filter_map(|(name, searcher)| {
+                engine
+                    .spaces
+                    .get(name)
+                    .map(|sp| (name.as_str(), searcher, &sp.index_schema, &sp.type_registry))
+            })
+            .collect();
+        graph::build_graph_cross_wiki(&tuples, &filter)?
+    } else {
+        let searcher = space.index_manager.searcher()?;
+        graph::build_graph(
+            &searcher,
+            &space.index_schema,
+            &filter,
+            &space.type_registry,
+        )?
+    };
 
     let rendered = match fmt {
         "dot" => graph::render_dot(&g),

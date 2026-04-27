@@ -560,3 +560,135 @@ fn render_llms_shows_hubs_and_isolated() {
     assert!(output.contains("**Isolated nodes"));
     assert!(output.contains("Isolated"));
 }
+
+// ── cross-wiki graph ──────────────────────────────────────────────────────────
+
+fn page_with_cross_wiki_link(title: &str, target: &str) -> String {
+    format!(
+        "---\ntitle: \"{title}\"\ntype: concept\nstatus: active\nsources:\n  - {target}\n---\n\nBody.\n"
+    )
+}
+
+#[test]
+fn build_graph_with_cross_wiki_target_produces_external_node() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    write_page(
+        &wiki_root,
+        "concepts/local.md",
+        &page_with_cross_wiki_link("Local", "wiki://other/concepts/remote"),
+    );
+
+    let mgr = build_index(dir.path(), &wiki_root);
+    let is = schema();
+    let g = build_graph(
+        &mgr.searcher().unwrap(),
+        &is,
+        &default_filter(),
+        &registry(),
+    )
+    .unwrap();
+
+    // Should have 2 nodes: local + external placeholder
+    assert_eq!(g.node_count(), 2);
+
+    let external = g
+        .node_indices()
+        .find(|&idx| g[idx].external)
+        .expect("external node should exist");
+    assert_eq!(g[external].r#type, "external");
+    assert!(g[external].title.contains("wiki://other/concepts/remote"));
+
+    // Should have 1 edge
+    assert_eq!(g.edge_count(), 1);
+}
+
+#[test]
+fn build_graph_cross_wiki_resolves_cross_wiki_edge() {
+    // Two wikis: wiki-a has a page linking to wiki-b
+    let dir_a = tempfile::tempdir().unwrap();
+    let wiki_root_a = setup_repo(dir_a.path());
+    write_page(
+        &wiki_root_a,
+        "concepts/concept-a.md",
+        &page_with_cross_wiki_link("ConceptA", "wiki://wiki-b/concepts/concept-b"),
+    );
+
+    let dir_b = tempfile::tempdir().unwrap();
+    let wiki_root_b = setup_repo(dir_b.path());
+    write_page(
+        &wiki_root_b,
+        "concepts/concept-b.md",
+        &simple_page("ConceptB", "concept"),
+    );
+
+    let index_a = dir_a.path().join("idx");
+    let index_b = dir_b.path().join("idx");
+    let (is, reg) = schema_and_registry();
+
+    git::commit(dir_a.path(), "pages").unwrap();
+    git::commit(dir_b.path(), "pages").unwrap();
+
+    let mgr_a = SpaceIndexManager::new("wiki-a", &index_a);
+    mgr_a
+        .rebuild(&wiki_root_a, dir_a.path(), &is, &reg)
+        .unwrap();
+    mgr_a.open(&is, None).unwrap();
+
+    let mgr_b = SpaceIndexManager::new("wiki-b", &index_b);
+    mgr_b
+        .rebuild(&wiki_root_b, dir_b.path(), &is, &reg)
+        .unwrap();
+    mgr_b.open(&is, None).unwrap();
+
+    let searcher_a = mgr_a.searcher().unwrap();
+    let searcher_b = mgr_b.searcher().unwrap();
+
+    let filter = GraphFilter::default();
+    let tuples: Vec<(&str, &tantivy::Searcher, &IndexSchema, &SpaceTypeRegistry)> = vec![
+        ("wiki-a", &searcher_a, &is, &reg),
+        ("wiki-b", &searcher_b, &is, &reg),
+    ];
+
+    let g = build_graph_cross_wiki(&tuples, &filter).unwrap();
+
+    // Both wikis: 2 local nodes, cross-wiki edge should be resolved (no external)
+    let external_count = g.node_indices().filter(|&idx| g[idx].external).count();
+    assert_eq!(
+        external_count, 0,
+        "cross-wiki edge should resolve to local node"
+    );
+    assert_eq!(g.node_count(), 2);
+    assert_eq!(g.edge_count(), 1);
+}
+
+#[test]
+fn render_mermaid_external_node_has_class_def() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    write_page(
+        &wiki_root,
+        "concepts/local.md",
+        &page_with_cross_wiki_link("Local", "wiki://other/concepts/remote"),
+    );
+
+    let mgr = build_index(dir.path(), &wiki_root);
+    let is = schema();
+    let g = build_graph(
+        &mgr.searcher().unwrap(),
+        &is,
+        &default_filter(),
+        &registry(),
+    )
+    .unwrap();
+
+    let mermaid = render_mermaid(&g);
+    assert!(
+        mermaid.contains("classDef external"),
+        "should have external classDef"
+    );
+    assert!(
+        mermaid.contains(":::external"),
+        "external node should have :::external class"
+    );
+}

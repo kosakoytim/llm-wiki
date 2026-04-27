@@ -369,3 +369,86 @@ fn integration_known_bad_wiki() {
     );
     assert!(report.errors > 0, "should have errors");
 }
+
+// ── broken-cross-wiki-link ────────────────────────────────────────────────────
+
+fn build_engine_with_name(dir: &Path, wiki_root: &Path, name: &str) -> EngineState {
+    let index_path = dir.join("index-store");
+    git::commit(dir, "index pages").unwrap();
+    let mgr = SpaceIndexManager::new(name, &index_path);
+    mgr.rebuild(wiki_root, dir, &schema(), &registry()).unwrap();
+    mgr.open(&schema(), None).unwrap();
+
+    let space = Arc::new(SpaceContext {
+        name: name.to_string(),
+        wiki_root: wiki_root.to_path_buf(),
+        repo_root: dir.to_path_buf(),
+        type_registry: registry(),
+        index_schema: schema(),
+        index_manager: mgr,
+    });
+
+    let mut spaces = HashMap::new();
+    spaces.insert(name.to_string(), space);
+
+    EngineState {
+        config: GlobalConfig::default(),
+        config_path: dir.join("config.toml"),
+        state_dir: dir.to_path_buf(),
+        spaces,
+    }
+}
+
+#[test]
+fn broken_cross_wiki_link_to_unmounted_wiki_is_warning() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    write_page(
+        &wiki_root,
+        "concepts/a.md",
+        "---\ntitle: \"A\"\ntype: concept\nread_when: [\"x\"]\nsources:\n  - wiki://unmounted/concepts/b\n---\n\nBody.\n",
+    );
+
+    let engine = build_engine_with_name(dir.path(), &wiki_root, "mywiki");
+    let report = run_lint(&engine, "mywiki", Some("broken-cross-wiki-link"), None).unwrap();
+
+    let cross_wiki_findings = slugs_for_rule(&report.findings, "broken-cross-wiki-link");
+    assert!(
+        cross_wiki_findings.contains(&"concepts/a".to_string()),
+        "should flag cross-wiki link to unmounted wiki: {cross_wiki_findings:?}"
+    );
+    // Should be Warning severity, not Error
+    let finding = report
+        .findings
+        .iter()
+        .find(|f| f.rule == "broken-cross-wiki-link")
+        .unwrap();
+    assert_eq!(finding.severity, Severity::Warning);
+}
+
+#[test]
+fn broken_cross_wiki_link_to_mounted_wiki_no_finding() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    write_page(
+        &wiki_root,
+        "concepts/a.md",
+        "---\ntitle: \"A\"\ntype: concept\nread_when: [\"x\"]\nsources:\n  - wiki://mywiki/concepts/local\n---\n\nBody.\n",
+    );
+    // Provide a second page so there's an incoming link to concepts/a
+    write_page(
+        &wiki_root,
+        "concepts/b.md",
+        "---\ntitle: \"B\"\ntype: concept\nread_when: [\"x\"]\n---\n\nSee [[concepts/a]].\n",
+    );
+
+    // Engine named "mywiki" — the wiki:// link targets "mywiki" which IS mounted
+    let engine = build_engine_with_name(dir.path(), &wiki_root, "mywiki");
+    let report = run_lint(&engine, "mywiki", Some("broken-cross-wiki-link"), None).unwrap();
+
+    let cross_wiki_findings = slugs_for_rule(&report.findings, "broken-cross-wiki-link");
+    assert!(
+        cross_wiki_findings.is_empty(),
+        "mounted wiki should not produce findings: {cross_wiki_findings:?}"
+    );
+}

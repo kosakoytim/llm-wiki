@@ -12,6 +12,7 @@ use tantivy::query::AllQuery;
 use tantivy::schema::Value;
 
 use crate::index_schema::IndexSchema;
+use crate::links::ParsedLink;
 use crate::type_registry::SpaceTypeRegistry;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -21,6 +22,8 @@ pub struct PageNode {
     pub slug: String,
     pub title: String,
     pub r#type: String,
+    #[serde(default)]
+    pub external: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -145,6 +148,7 @@ pub fn build_graph(
             slug: slug.clone(),
             title,
             r#type: page_type.clone(),
+            external: false,
         };
         let idx = graph.add_node(node);
         slug_to_idx.insert(slug.clone(), idx);
@@ -198,7 +202,8 @@ pub fn build_graph(
             }
 
             for target in targets {
-                if let Some(&to_idx) = slug_to_idx.get(target)
+                let to_idx = resolve_or_external(target, &mut graph, &mut slug_to_idx);
+                if let Some(to_idx) = to_idx
                     && from_idx != to_idx
                 {
                     graph.add_edge(
@@ -215,7 +220,8 @@ pub fn build_graph(
         // Body wiki-links → "links-to"
         if filter.relation.is_none() || filter.relation.as_deref() == Some("links-to") {
             for target in &doc_info.body_links {
-                if let Some(&to_idx) = slug_to_idx.get(target)
+                let to_idx = resolve_or_external(target, &mut graph, &mut slug_to_idx);
+                if let Some(to_idx) = to_idx
                     && from_idx != to_idx
                 {
                     graph.add_edge(
@@ -238,6 +244,125 @@ pub fn build_graph(
     Ok(graph)
 }
 
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+/// Resolve a target slug to a node index. If the target is a `wiki://` URI,
+/// insert an external placeholder node on demand. Returns `None` only for
+/// plain local slugs that don't exist in the index.
+fn resolve_or_external(
+    target: &str,
+    graph: &mut WikiGraph,
+    slug_to_idx: &mut HashMap<String, NodeIndex>,
+) -> Option<NodeIndex> {
+    if target.starts_with("wiki://") {
+        let key = target.to_string();
+        let idx = *slug_to_idx.entry(key.clone()).or_insert_with(|| {
+            let (_wiki, slug) = match ParsedLink::parse(target) {
+                ParsedLink::CrossWiki { wiki, slug } => (wiki, slug),
+                ParsedLink::Local(_) => ("external".to_string(), target.to_string()),
+            };
+            graph.add_node(PageNode {
+                slug: slug.clone(),
+                title: key.clone(),
+                r#type: "external".to_string(),
+                external: true,
+            })
+        });
+        Some(idx)
+    } else {
+        slug_to_idx.get(target).copied()
+    }
+}
+
+// ── build_graph_cross_wiki ────────────────────────────────────────────────────
+
+/// Build a unified graph merging all provided wikis. Cross-wiki edges that
+/// were external placeholders in single-wiki graphs become resolved connections
+/// when both endpoint wikis are present in `wikis`.
+pub fn build_graph_cross_wiki(
+    wikis: &[(&str, &Searcher, &IndexSchema, &SpaceTypeRegistry)],
+    filter: &GraphFilter,
+) -> Result<WikiGraph> {
+    // Build per-wiki graphs and merge into one, prefixing slugs with wiki name
+    let mut merged = WikiGraph::new();
+    // Map from "wikiname/slug" -> NodeIndex in merged graph
+    let mut global_idx: HashMap<String, NodeIndex> = HashMap::new();
+
+    // First: add all local (non-external) nodes from each wiki
+    for (wiki_name, searcher, is, registry) in wikis {
+        let g = build_graph(searcher, is, filter, registry)?;
+        for idx in g.node_indices() {
+            let node = &g[idx];
+            if node.external {
+                continue; // will re-resolve below
+            }
+            let key = format!("{wiki_name}/{}", node.slug);
+            let new_idx = merged.add_node(PageNode {
+                slug: key.clone(),
+                title: node.title.clone(),
+                r#type: node.r#type.clone(),
+                external: false,
+            });
+            global_idx.insert(key, new_idx);
+        }
+    }
+
+    // Second: add edges, re-resolving cross-wiki targets
+    for (wiki_name, searcher, is, registry) in wikis {
+        let g = build_graph(searcher, is, filter, registry)?;
+        for edge_idx in g.edge_indices() {
+            let (from, to) = g.edge_endpoints(edge_idx).unwrap();
+            let from_node = &g[from];
+            let to_node = &g[to];
+
+            let from_key = format!("{wiki_name}/{}", from_node.slug);
+            let from_merged = match global_idx.get(&from_key) {
+                Some(&i) => i,
+                None => continue,
+            };
+
+            // to_node is external if it has external=true; its title is the wiki:// URI
+            let to_key = if to_node.external {
+                // title was set to "wiki://otherwiki/slug"
+                if let ParsedLink::CrossWiki { wiki, slug } = ParsedLink::parse(&to_node.title) {
+                    format!("{wiki}/{slug}")
+                } else {
+                    continue;
+                }
+            } else {
+                format!("{wiki_name}/{}", to_node.slug)
+            };
+
+            let to_merged = match global_idx.get(&to_key) {
+                Some(&i) => i,
+                None => {
+                    // target wiki not mounted — keep as external placeholder
+                    *global_idx.entry(to_key.clone()).or_insert_with(|| {
+                        merged.add_node(PageNode {
+                            slug: to_key.clone(),
+                            title: to_node.title.clone(),
+                            r#type: "external".to_string(),
+                            external: true,
+                        })
+                    })
+                }
+            };
+
+            if from_merged != to_merged {
+                merged.add_edge(
+                    from_merged,
+                    to_merged,
+                    LabeledEdge {
+                        relation: g[edge_idx].relation.clone(),
+                    },
+                );
+            }
+        }
+    }
+
+    Ok(merged)
+}
+
 // ── render_llms ───────────────────────────────────────────────────────────────
 
 /// Natural language description of graph structure for direct LLM consumption.
@@ -245,10 +370,20 @@ pub fn render_llms(graph: &WikiGraph) -> String {
     let nodes = graph.node_count();
     let edges = graph.edge_count();
 
-    // Group nodes by type
+    // Separate external placeholder nodes
+    let external_refs: Vec<String> = graph
+        .node_indices()
+        .filter(|&idx| graph[idx].external)
+        .map(|idx| graph[idx].title.clone())
+        .collect();
+
+    // Group local nodes by type
     let mut by_type: HashMap<String, Vec<String>> = HashMap::new();
     for idx in graph.node_indices() {
         let node = &graph[idx];
+        if node.external {
+            continue;
+        }
         by_type
             .entry(node.r#type.clone())
             .or_default()
@@ -333,6 +468,16 @@ pub fn render_llms(graph: &WikiGraph) -> String {
         ));
     }
 
+    if !external_refs.is_empty() {
+        let mut sorted = external_refs.clone();
+        sorted.sort();
+        out.push_str(&format!(
+            "\n**External references ({}):** {}\n",
+            sorted.len(),
+            sorted.join(", ")
+        ));
+    }
+
     out
 }
 
@@ -344,15 +489,22 @@ pub fn render_mermaid(graph: &WikiGraph) -> String {
     // Collect unique types for classDef
     let mut types_seen: HashSet<String> = HashSet::new();
 
+    let mut has_external = false;
+
     // Declare nodes with titles and type classes
     for idx in graph.node_indices() {
         let node = &graph[idx];
-        let safe_slug = mermaid_id(&node.slug);
-        out.push_str(&format!(
-            "  {safe_slug}[\"{}\"]:::{}\n",
-            node.title, node.r#type
-        ));
-        types_seen.insert(node.r#type.clone());
+        let safe_id = mermaid_id(&node.title);
+        if node.external {
+            out.push_str(&format!("  {safe_id}[\"{}\"]:::external\n", node.title));
+            has_external = true;
+        } else {
+            out.push_str(&format!(
+                "  {safe_id}[\"{}\"]:::{}\n",
+                node.title, node.r#type
+            ));
+            types_seen.insert(node.r#type.clone());
+        }
     }
 
     out.push('\n');
@@ -360,14 +512,17 @@ pub fn render_mermaid(graph: &WikiGraph) -> String {
     // Edges with relation labels
     for edge in graph.edge_indices() {
         let (from, to) = graph.edge_endpoints(edge).unwrap();
-        let from_id = mermaid_id(&graph[from].slug);
-        let to_id = mermaid_id(&graph[to].slug);
+        let from_id = mermaid_id(&graph[from].title);
+        let to_id = mermaid_id(&graph[to].title);
         let relation = &graph[edge].relation;
         out.push_str(&format!("  {from_id} -->|{relation}| {to_id}\n"));
     }
 
-    // classDef for known types
+    // classDef for known types + external
     out.push('\n');
+    if has_external {
+        out.push_str("  classDef external fill:#eee,stroke:#999,stroke-dasharray:5 5\n");
+    }
     let type_colors = [
         ("concept", "#cce5ff"),
         ("query-result", "#cce5ff"),
@@ -388,7 +543,7 @@ pub fn render_mermaid(graph: &WikiGraph) -> String {
 }
 
 fn mermaid_id(slug: &str) -> String {
-    slug.replace(['/', '-'], "_")
+    slug.replace("://", "__").replace(['/', '-', ':'], "_")
 }
 
 // ── render_dot ────────────────────────────────────────────────────────────────
@@ -398,18 +553,34 @@ pub fn render_dot(graph: &WikiGraph) -> String {
 
     for idx in graph.node_indices() {
         let node = &graph[idx];
-        out.push_str(&format!(
-            "  \"{}\" [label=\"{}\" type=\"{}\"];\n",
-            node.slug, node.title, node.r#type
-        ));
+        if node.external {
+            out.push_str(&format!(
+                "  \"{}\" [label=\"{}\" type=\"external\" style=\"dashed\"];\n",
+                node.title, node.title
+            ));
+        } else {
+            out.push_str(&format!(
+                "  \"{}\" [label=\"{}\" type=\"{}\"];\n",
+                node.slug, node.title, node.r#type
+            ));
+        }
     }
 
     for edge in graph.edge_indices() {
         let (from, to) = graph.edge_endpoints(edge).unwrap();
         let relation = &graph[edge].relation;
+        let from_id = if graph[from].external {
+            &graph[from].title
+        } else {
+            &graph[from].slug
+        };
+        let to_id = if graph[to].external {
+            &graph[to].title
+        } else {
+            &graph[to].slug
+        };
         out.push_str(&format!(
-            "  \"{}\" -> \"{}\" [label=\"{}\"];\n",
-            graph[from].slug, graph[to].slug, relation
+            "  \"{from_id}\" -> \"{to_id}\" [label=\"{relation}\"];\n"
         ));
     }
 

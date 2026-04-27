@@ -21,6 +21,7 @@ fn graph_build_returns_nodes() {
             type_filter: None,
             relation: None,
             output: None,
+            cross_wiki: false,
         },
     )
     .unwrap();
@@ -45,6 +46,7 @@ fn graph_build_dot_format() {
             type_filter: None,
             relation: None,
             output: None,
+            cross_wiki: false,
         },
     )
     .unwrap();

@@ -1,5 +1,5 @@
 use llm_wiki::frontmatter;
-use llm_wiki::links::{extract_body_wikilinks, extract_links};
+use llm_wiki::links::{ParsedLink, extract_body_wikilinks, extract_links, extract_parsed_links};
 
 #[test]
 fn extract_links_from_sources() {
@@ -77,4 +77,51 @@ fn extract_body_wikilinks_ignores_empty() {
 fn extract_body_wikilinks_unclosed_bracket() {
     let links = extract_body_wikilinks("See [[concepts/moe and nothing else.");
     assert!(links.is_empty());
+}
+
+// ── ParsedLink ────────────────────────────────────────────────────────────────
+
+#[test]
+fn parsed_link_local() {
+    assert_eq!(
+        ParsedLink::parse("concepts/moe"),
+        ParsedLink::Local("concepts/moe".to_string())
+    );
+}
+
+#[test]
+fn parsed_link_cross_wiki() {
+    assert_eq!(
+        ParsedLink::parse("wiki://other/concepts/foo"),
+        ParsedLink::CrossWiki {
+            wiki: "other".to_string(),
+            slug: "concepts/foo".to_string(),
+        }
+    );
+}
+
+#[test]
+fn parsed_link_cross_wiki_no_slash_is_local() {
+    // "wiki://nopath" has no slash after the wiki name — treated as local
+    assert_eq!(
+        ParsedLink::parse("wiki://nopath"),
+        ParsedLink::Local("wiki://nopath".to_string())
+    );
+}
+
+#[test]
+fn extract_parsed_links_returns_cross_wiki_variant() {
+    let page = frontmatter::parse(
+        "---\ntitle: \"Test\"\ntype: concept\nsources:\n  - wiki://other/concepts/foo\n  - concepts/local\n---\n\nBody with [[wiki://third/bar]].\n",
+    );
+    let links = extract_parsed_links(&page);
+    assert!(links.contains(&ParsedLink::CrossWiki {
+        wiki: "other".to_string(),
+        slug: "concepts/foo".to_string(),
+    }));
+    assert!(links.contains(&ParsedLink::Local("concepts/local".to_string())));
+    assert!(links.contains(&ParsedLink::CrossWiki {
+        wiki: "third".to_string(),
+        slug: "bar".to_string(),
+    }));
 }
