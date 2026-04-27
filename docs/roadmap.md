@@ -35,7 +35,7 @@ ordered by priority:
 | 6   | ✅ | Privacy redaction (`redact:` flag on `wiki_ingest`)                           |   ✦    |   —    |
 | 7   | ✅ | Crystallize skill improvements (two-step extraction, confidence calibration)  |   —    |   ✦    |
 | 8   | — | Graph community detection (Louvain, `wiki_stats` + `wiki_suggest`)            |   ✦    |   ✦    |
-| 9   | — | `llms` format + `wiki_export` (file-writing, default `llms.txt` at wiki root) |   ✦    |   ✦    |
+| 9   | ✅ | `llms` format + `wiki_export` (file-writing, default `llms.txt` at wiki root) |   ✦    |   ✦    |
 | 10  | — | Cross-wiki links (`wiki://` URIs in graph, `wiki_graph(cross_wiki: true)`)    |   ✦    |   ✦    |
 | 11  | — | Ingest two-step: analysis pass before write (entities, contradictions, plan)  |   —    |   ✦    |
 | 12  | — | Review skill: prioritized queue from lint + draft/low-confidence pages        |   —    |   ✦    |
