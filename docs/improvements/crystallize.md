@@ -1,7 +1,7 @@
 ---
 title: "Crystallize Skill Improvements"
 summary: "Two-step extraction pass, confidence calibration table, post-ingest lint step. Skill-only changes — no engine work required."
-status: proposed
+status: implemented
 last_updated: "2026-04-27"
 depends_on: lint, confidence
 ---
@@ -163,24 +163,24 @@ EOF
 
 ### Skill — `llm-wiki-skills/skills/crystallize/SKILL.md`
 
-- [ ] Add `## Analyse before writing` section after `## Search for an
+- [x] Add `## Analyse before writing` section after `## Search for an
   existing home`; describe the extraction plan format and require user
   confirmation before writes.
-- [ ] Add `## Confidence calibration for session knowledge` table before
+- [x] Add `## Confidence calibration for session knowledge` table before
   `## Create a new page`; include the 7-row calibration table and
   guidance on adjusting up/down.
-- [ ] In `## Validate and index`, add the post-ingest lint call
+- [x] In `## Validate and index`, add the post-ingest lint call
   `wiki_lint(rules: "broken-link,orphan")`.
-- [ ] Update `metadata.version` from `0.2.0` to `0.3.0`.
-- [ ] Update `last_updated` to today's date.
+- [x] Update `metadata.version` from `0.2.0` to `0.3.0`.
+- [x] Update `last_updated` to today's date.
 
 ### Tests / validation
 
-- [ ] Manually run crystallize on a session transcript after the skill
+- [x] Manually run crystallize on a session transcript after the skill
   update; verify the plan is presented before any write.
-- [ ] Verify `confidence` is set on all output pages and matches the
+- [x] Verify `confidence` is set on all output pages and matches the
   calibration table.
-- [ ] Verify the lint step runs cleanly on crystallize output.
+- [x] Verify the lint step runs cleanly on crystallize output.
 
 ### Issue update
 After merging:
