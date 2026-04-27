@@ -89,7 +89,7 @@ pub enum Commands {
     },
     /// Generate a concept graph
     Graph {
-        /// Output format: mermaid | dot
+        /// Output format: mermaid | dot | llms
         #[arg(long)]
         format: Option<String>,
         /// Subgraph from this node (slug)
@@ -160,6 +160,18 @@ pub enum Commands {
     Schema {
         #[command(subcommand)]
         action: SchemaAction,
+    },
+    /// Export the full wiki to a file (llms.txt, llms-full, or json)
+    Export {
+        /// Output path (relative to wiki root or absolute; default: llms.txt)
+        #[arg(long)]
+        path: Option<String>,
+        /// Export format: llms-txt | llms-full | json
+        #[arg(long)]
+        format: Option<String>,
+        /// Page status filter: active | all (default: active, excludes archived)
+        #[arg(long)]
+        status: Option<String>,
     },
     /// Start the wiki MCP/ACP server
     Serve {

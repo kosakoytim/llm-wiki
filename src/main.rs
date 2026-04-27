@@ -9,6 +9,7 @@ use llm_wiki::cli::{
 use llm_wiki::config;
 use llm_wiki::engine::WikiEngine;
 use llm_wiki::ops;
+use llm_wiki::search;
 
 fn global_config_path() -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
@@ -253,6 +254,8 @@ fn main() -> Result<()> {
 
             if is_json(&format) {
                 println!("{}", serde_json::to_string_pretty(&results)?);
+            } else if format.as_deref() == Some("llms") {
+                print!("{}", search::render_search_llms(&results));
             } else {
                 for r in &results.results {
                     println!("slug:  {}", r.slug);
@@ -290,6 +293,8 @@ fn main() -> Result<()> {
 
             if is_json(&format) {
                 println!("{}", serde_json::to_string_pretty(&result)?);
+            } else if format.as_deref() == Some("llms") {
+                print!("{}", search::render_list_llms(&result));
             } else {
                 for p in &result.pages {
                     println!(
@@ -383,6 +388,34 @@ fn main() -> Result<()> {
             } else {
                 println!("Wrote graph to {}", result.report.output);
             }
+        }
+
+        // ── Export ────────────────────────────────────────────────────
+        Commands::Export {
+            path,
+            format,
+            status,
+        } => {
+            let manager = WikiEngine::build(&config_path)?;
+            let engine = manager.state.read().map_err(|_| anyhow::anyhow!("lock"))?;
+            let wiki_name = engine.resolve_wiki_name(cli.wiki.as_deref()).to_string();
+
+            let export_format = ops::ExportFormat::parse(format.as_deref().unwrap_or("llms-txt"));
+            let include_archived = status.as_deref() == Some("all");
+
+            let report = ops::export(
+                &engine,
+                &ops::ExportOptions {
+                    wiki: wiki_name,
+                    path,
+                    format: export_format,
+                    include_archived,
+                },
+            )?;
+            println!(
+                "Exported {} pages ({} bytes) → {}",
+                report.pages_written, report.bytes, report.path
+            );
         }
 
         // ── Index ─────────────────────────────────────────────────────

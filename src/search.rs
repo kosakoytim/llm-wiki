@@ -25,6 +25,8 @@ pub struct PageRef {
     pub score: f32,
     pub confidence: f32,
     pub excerpt: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,6 +39,8 @@ pub struct PageSummary {
     pub status: String,
     pub tags: Vec<String>,
     pub confidence: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -129,12 +133,16 @@ pub fn search(
 ) -> Result<SearchResult> {
     let f_slug = is.field("slug");
     let f_title = is.field("title");
-    let f_summary = is.field("summary");
+    let f_summary = is.try_field("summary");
     let f_body = is.field("body");
     let f_type = is.field("type");
 
     let index = searcher.index();
-    let query_parser = QueryParser::for_index(index, vec![f_title, f_summary, f_body]);
+    let mut query_fields = vec![f_title, f_body];
+    if let Some(f) = f_summary {
+        query_fields.insert(1, f);
+    }
+    let query_parser = QueryParser::for_index(index, query_fields);
     let parsed = query_parser
         .parse_query(query_str)
         .with_context(|| format!("failed to parse query: {query_str}"))?;
@@ -235,6 +243,12 @@ pub fn search(
             snippet.to_html()
         });
 
+        let summary = f_summary
+            .and_then(|f| doc.get_first(f))
+            .and_then(|v| v.as_str())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string());
+
         results.push(PageRef {
             slug,
             uri,
@@ -242,6 +256,7 @@ pub fn search(
             score,
             confidence,
             excerpt,
+            summary,
         });
     }
 
@@ -293,6 +308,7 @@ pub fn list(
     let f_status = is.field("status");
     let f_tags = is.field("tags");
     let f_confidence = is.try_field("confidence");
+    let f_summary = is.try_field("summary");
 
     let query: Box<dyn tantivy::query::Query> = {
         let mut clauses: Vec<(Occur, Box<dyn tantivy::query::Query>)> = Vec::new();
@@ -405,6 +421,12 @@ pub fn list(
             .and_then(|v| v.as_f64())
             .unwrap_or(0.5) as f32;
 
+        let summary = f_summary
+            .and_then(|f| doc.get_first(f))
+            .and_then(|v| v.as_str())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string());
+
         let uri = format!("wiki://{wiki_name}/{slug}");
 
         summaries.push(PageSummary {
@@ -415,6 +437,7 @@ pub fn list(
             status,
             tags,
             confidence,
+            summary,
         });
     }
 
@@ -521,4 +544,74 @@ fn collect_facet(
     }
 
     Ok(counts)
+}
+
+// ── llms renderers ────────────────────────────────────────────────────────────
+
+/// Render a `PageList` as LLM-optimized markdown: pages grouped by type,
+/// one line per page with summary. Archived pages shown with strikethrough.
+pub fn render_list_llms(result: &PageList) -> String {
+    // Group by type, sorted by count desc then name asc
+    let mut by_type: std::collections::HashMap<String, Vec<&PageSummary>> =
+        std::collections::HashMap::new();
+    for page in &result.pages {
+        by_type.entry(page.r#type.clone()).or_default().push(page);
+    }
+    let mut groups: Vec<(String, Vec<&PageSummary>)> = by_type.into_iter().collect();
+    groups.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
+
+    let mut out = String::new();
+    for (type_name, mut pages) in groups {
+        pages.sort_by(|a, b| {
+            b.confidence
+                .partial_cmp(&a.confidence)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then(a.title.cmp(&b.title))
+        });
+        out.push_str(&format!("## {} ({})\n\n", type_name, pages.len()));
+        for page in pages {
+            let summary = page.summary.as_deref().unwrap_or("");
+            let line = if page.status == "archived" {
+                if summary.is_empty() {
+                    format!("- ~~[{}]({})~~\n", page.title, page.uri)
+                } else {
+                    format!("- ~~[{}]({}): {}~~\n", page.title, page.uri, summary)
+                }
+            } else if summary.is_empty() {
+                format!("- [{}]({})\n", page.title, page.uri)
+            } else {
+                format!("- [{}]({}): {}\n", page.title, page.uri, summary)
+            };
+            out.push_str(&line);
+        }
+        out.push('\n');
+    }
+
+    if result.total > result.page_size {
+        let total_pages = (result.total + result.page_size - 1) / result.page_size.max(1);
+        out.push_str(&format!(
+            "_Page {}/{} — {} total pages_\n",
+            result.page, total_pages, result.total
+        ));
+    }
+
+    out
+}
+
+/// Render a `SearchResult` as LLM-optimized markdown: one line per result
+/// with title, uri, and summary. No score, no excerpt block.
+pub fn render_search_llms(result: &SearchResult) -> String {
+    if result.results.is_empty() {
+        return "No results found.\n".to_string();
+    }
+    let mut out = String::new();
+    for r in &result.results {
+        let summary = r.summary.as_deref().unwrap_or("");
+        if summary.is_empty() {
+            out.push_str(&format!("- [{}]({})\n", r.title, r.uri));
+        } else {
+            out.push_str(&format!("- [{}]({}): {}\n", r.title, r.uri, summary));
+        }
+    }
+    out
 }

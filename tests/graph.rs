@@ -484,3 +484,79 @@ fn build_graph_multiple_edge_types_from_same_page() {
     assert!(has_fed_by, "expected fed-by edge");
     assert!(has_depends_on, "expected depends-on edge");
 }
+
+// ── render_llms ───────────────────────────────────────────────────────────────
+
+#[test]
+fn render_llms_shows_node_and_edge_counts() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    write_page(
+        &wiki_root,
+        "concepts/a.md",
+        &page_with_body_links("Alpha", "See [[concepts/b]]."),
+    );
+    write_page(&wiki_root, "concepts/b.md", &simple_page("Beta", "concept"));
+    write_page(&wiki_root, "sources/s.md", &simple_page("Source", "paper"));
+
+    let mgr = build_index(dir.path(), &wiki_root);
+    let is = schema();
+    let g = build_graph(
+        &mgr.searcher().unwrap(),
+        &is,
+        &default_filter(),
+        &registry(),
+    )
+    .unwrap();
+
+    let output = render_llms(&g);
+    assert!(output.contains("3 nodes"));
+    assert!(output.contains("1 edge"));
+    assert!(output.contains("**concept**"));
+    assert!(output.contains("**paper**"));
+    assert!(output.contains("`links-to`"));
+}
+
+#[test]
+fn render_llms_shows_hubs_and_isolated() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_root = setup_repo(dir.path());
+    // Hub: a linked from b and c
+    write_page(
+        &wiki_root,
+        "concepts/a.md",
+        &page_with_body_links("Hub", "See [[concepts/b]] and [[concepts/c]]."),
+    );
+    write_page(
+        &wiki_root,
+        "concepts/b.md",
+        &simple_page("Spoke1", "concept"),
+    );
+    write_page(
+        &wiki_root,
+        "concepts/c.md",
+        &simple_page("Spoke2", "concept"),
+    );
+    // Isolated: no edges
+    write_page(
+        &wiki_root,
+        "concepts/z.md",
+        &simple_page("Isolated", "concept"),
+    );
+
+    let mgr = build_index(dir.path(), &wiki_root);
+    let is = schema();
+    let g = build_graph(
+        &mgr.searcher().unwrap(),
+        &is,
+        &default_filter(),
+        &registry(),
+    )
+    .unwrap();
+
+    let output = render_llms(&g);
+    assert!(output.contains("Key hubs:"));
+    assert!(output.contains("Hub"));
+    assert!(output.contains("**Isolated nodes"));
+    assert!(output.contains("Isolated"));
+}

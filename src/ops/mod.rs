@@ -1,5 +1,6 @@
 mod config;
 mod content;
+pub mod export;
 mod graph;
 mod history;
 mod index;
@@ -15,6 +16,7 @@ mod suggest;
 
 pub use config::*;
 pub use content::*;
+pub use export::*;
 pub use graph::*;
 pub use history::*;
 pub use index::*;

@@ -166,6 +166,7 @@ pub fn tool_list() -> Vec<Tool> {
                     "top_k": opt_int("Max results"),
                     "wiki": opt_str("Target wiki name"),
                     "cross_wiki": opt_bool("Search across all wikis"),
+                    "format": opt_str("Output format: json | llms (default: json)"),
                 }),
                 &["query"],
             ),
@@ -180,6 +181,7 @@ pub fn tool_list() -> Vec<Tool> {
                     "page": opt_int("Page number, 1-based"),
                     "page_size": opt_int("Results per page"),
                     "wiki": opt_str("Target wiki name"),
+                    "format": opt_str("Output format: json | llms (default: json)"),
                 }),
                 &[],
             ),
@@ -222,7 +224,7 @@ pub fn tool_list() -> Vec<Tool> {
             "Generate concept graph, returns GraphReport",
             schema(
                 json!({
-                    "format": opt_str("Output format: mermaid | dot"),
+                    "format": opt_str("Output format: mermaid | dot | llms (default: mermaid)"),
                     "root": opt_str("Subgraph from this node (slug)"),
                     "depth": opt_int("Hop limit from root"),
                     "type": opt_str("Comma-separated page types to include"),
@@ -231,6 +233,19 @@ pub fn tool_list() -> Vec<Tool> {
                     "wiki": opt_str("Target wiki name"),
                 }),
                 &[],
+            ),
+        ),
+        Tool::new(
+            "wiki_export",
+            "Export the full wiki to a file (llms.txt, llms-full, or json)",
+            schema(
+                json!({
+                    "wiki": str_prop("Target wiki name"),
+                    "path": opt_str("Output path (relative to wiki root or absolute; default: llms.txt)"),
+                    "format": opt_str("Export format: llms-txt | llms-full | json (default: llms-txt)"),
+                    "status": opt_str("Page status filter: active | all (default: active, excludes archived)"),
+                }),
+                &["wiki"],
             ),
         ),
         Tool::new(
@@ -325,6 +340,7 @@ pub fn call(server: &McpServer, name: &str, args: &Map<String, Value>) -> ToolRe
         "wiki_lint" => handlers::handle_lint(server, args),
         "wiki_suggest" => handlers::handle_suggest(server, args),
         "wiki_schema" => handlers::handle_schema(server, args),
+        "wiki_export" => handlers::handle_export(server, args),
         _ => Err(format!("unknown tool: {name}")),
     }));
     match result {

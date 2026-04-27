@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use anyhow::Result;
@@ -235,6 +236,104 @@ pub fn build_graph(
     }
 
     Ok(graph)
+}
+
+// ── render_llms ───────────────────────────────────────────────────────────────
+
+/// Natural language description of graph structure for direct LLM consumption.
+pub fn render_llms(graph: &WikiGraph) -> String {
+    let nodes = graph.node_count();
+    let edges = graph.edge_count();
+
+    // Group nodes by type
+    let mut by_type: HashMap<String, Vec<String>> = HashMap::new();
+    for idx in graph.node_indices() {
+        let node = &graph[idx];
+        by_type
+            .entry(node.r#type.clone())
+            .or_default()
+            .push(node.title.clone());
+    }
+
+    // Sort type groups by count descending
+    let mut type_groups: Vec<(String, Vec<String>)> = by_type.into_iter().collect();
+    type_groups.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
+
+    // Count edge relations
+    let mut relation_counts: HashMap<String, usize> = HashMap::new();
+    for edge in graph.edge_indices() {
+        *relation_counts
+            .entry(graph[edge].relation.clone())
+            .or_default() += 1;
+    }
+    let mut relations: Vec<(String, usize)> = relation_counts.into_iter().collect();
+    relations.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+
+    // Compute per-node total degree for hub detection
+    let mut degree: Vec<(usize, String)> = graph
+        .node_indices()
+        .map(|idx| {
+            let d = graph.neighbors_directed(idx, Direction::Incoming).count()
+                + graph.neighbors_directed(idx, Direction::Outgoing).count();
+            (d, graph[idx].title.clone())
+        })
+        .collect();
+    degree.sort_by_key(|a| Reverse(a.0));
+    let top_hubs: Vec<String> = degree
+        .iter()
+        .take(5)
+        .filter(|(d, _)| *d > 0)
+        .map(|(d, t)| format!("{t} ({d} edges)"))
+        .collect();
+
+    // Isolated nodes (no edges at all)
+    let isolated: Vec<String> = graph
+        .node_indices()
+        .filter(|&idx| {
+            graph.neighbors_directed(idx, Direction::Incoming).count() == 0
+                && graph.neighbors_directed(idx, Direction::Outgoing).count() == 0
+        })
+        .map(|idx| graph[idx].title.clone())
+        .collect();
+
+    let cluster_count = type_groups.len();
+
+    let mut out = String::new();
+    out.push_str(&format!(
+        "The wiki graph has {nodes} nodes and {edges} edges across {cluster_count} type groups.\n\n"
+    ));
+
+    for (type_name, mut titles) in type_groups {
+        titles.sort();
+        let count = titles.len();
+        let sample = if titles.len() > 8 {
+            format!("{}, ...", titles[..8].join(", "))
+        } else {
+            titles.join(", ")
+        };
+        out.push_str(&format!("**{type_name}** ({count} nodes): {sample}\n"));
+    }
+
+    if !top_hubs.is_empty() {
+        out.push_str(&format!("\nKey hubs: {}\n", top_hubs.join(", ")));
+    }
+
+    if !relations.is_empty() {
+        out.push_str("\n**Edges by relation:**\n");
+        for (rel, count) in &relations {
+            out.push_str(&format!("- `{rel}` ({count})\n"));
+        }
+    }
+
+    if !isolated.is_empty() {
+        out.push_str(&format!(
+            "\n**Isolated nodes ({}):** {}\n",
+            isolated.len(),
+            isolated.join(", ")
+        ));
+    }
+
+    out
 }
 
 // ── render_mermaid ────────────────────────────────────────────────────────────

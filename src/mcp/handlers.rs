@@ -207,6 +207,7 @@ pub fn handle_content_commit(server: &McpServer, args: &Map<String, Value>) -> T
 pub fn handle_search(server: &McpServer, args: &Map<String, Value>) -> ToolHandlerResult {
     let query = arg_str_req(args, "query")?;
     let cross_wiki = arg_bool(args, "cross_wiki");
+    let format = arg_str(args, "format");
     let engine = server.engine();
     let wiki_name = resolve_wiki_name(&engine, args)?;
 
@@ -216,7 +217,7 @@ pub fn handle_search(server: &McpServer, args: &Map<String, Value>) -> ToolHandl
         &ops::SearchParams {
             query: &query,
             type_filter: arg_str(args, "type").as_deref(),
-            no_excerpt: arg_bool(args, "no_excerpt"),
+            no_excerpt: format.as_deref() == Some("llms") || arg_bool(args, "no_excerpt"),
             top_k: arg_usize(args, "top_k"),
             include_sections: arg_bool(args, "include_sections"),
             cross_wiki,
@@ -224,8 +225,12 @@ pub fn handle_search(server: &McpServer, args: &Map<String, Value>) -> ToolHandl
     )
     .map_err(|e| format!("{e}"))?;
 
-    let s = serde_json::to_string_pretty(&results).map_err(|e| format!("{e}"))?;
-    ok_text(s)
+    if format.as_deref() == Some("llms") {
+        ok_text(crate::search::render_search_llms(&results))
+    } else {
+        let s = serde_json::to_string_pretty(&results).map_err(|e| format!("{e}"))?;
+        ok_text(s)
+    }
 }
 
 // ── List ──────────────────────────────────────────────────────────────────────
@@ -233,6 +238,7 @@ pub fn handle_search(server: &McpServer, args: &Map<String, Value>) -> ToolHandl
 pub fn handle_list(server: &McpServer, args: &Map<String, Value>) -> ToolHandlerResult {
     let engine = server.engine();
     let wiki_name = resolve_wiki_name(&engine, args)?;
+    let format = arg_str(args, "format");
 
     let result = ops::list(
         &engine,
@@ -244,8 +250,12 @@ pub fn handle_list(server: &McpServer, args: &Map<String, Value>) -> ToolHandler
     )
     .map_err(|e| format!("{e}"))?;
 
-    let s = serde_json::to_string_pretty(&result).map_err(|e| format!("{e}"))?;
-    ok_text(s)
+    if format.as_deref() == Some("llms") {
+        ok_text(crate::search::render_list_llms(&result))
+    } else {
+        let s = serde_json::to_string_pretty(&result).map_err(|e| format!("{e}"))?;
+        ok_text(s)
+    }
 }
 
 // ── Ingest ────────────────────────────────────────────────────────────────────
@@ -450,4 +460,28 @@ pub fn handle_schema(server: &McpServer, args: &Map<String, Value>) -> ToolHandl
         }
         _ => Err(format!("unknown action: {action}")),
     }
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+
+pub fn handle_export(server: &McpServer, args: &Map<String, Value>) -> ToolHandlerResult {
+    let wiki = arg_str_req(args, "wiki")?;
+    let engine = server.engine();
+
+    let format = ops::ExportFormat::parse(arg_str(args, "format").as_deref().unwrap_or("llms-txt"));
+    let include_archived = arg_str(args, "status").as_deref() == Some("all");
+
+    let report = ops::export(
+        &engine,
+        &ops::ExportOptions {
+            wiki: wiki.clone(),
+            path: arg_str(args, "path"),
+            format,
+            include_archived,
+        },
+    )
+    .map_err(|e| format!("{e}"))?;
+
+    let s = serde_json::to_string_pretty(&report).map_err(|e| format!("{e}"))?;
+    ok_text(s)
 }

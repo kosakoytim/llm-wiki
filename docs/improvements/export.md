@@ -1,7 +1,7 @@
 ---
 title: "llms Format + wiki_export"
 summary: "Add format: llms to wiki_list, wiki_search, wiki_graph for LLM-readable tool responses; wiki_export MCP tool writes a file (all pages, no pagination)."
-status: proposed
+status: implemented
 last_updated: "2026-04-27"
 depends_on: confidence
 ---
@@ -274,107 +274,107 @@ EOF
 
 ### Engine — `src/graph.rs`
 
-- [ ] Add `pub fn render_llms(graph: &WikiGraph) -> String`: natural language
+- [x] Add `pub fn render_llms(graph: &WikiGraph) -> String`: natural language
   summary — node count, edge count, cluster count (if `compute_communities`
   is available), nodes grouped by type, top hubs by degree, edge relation
   counts, isolated nodes list.
-- [ ] Add `"llms"` as a valid `format` option in the graph tool/CLI; route
+- [x] Add `"llms"` as a valid `format` option in the graph tool/CLI; route
   to `render_llms`.
 
 ### Engine — `src/search.rs` / `src/ops/list.rs`
 
-- [ ] Add `Format::Llms` variant to the list/search output format enum.
-- [ ] Implement `llms` renderer for `ListResult`: group pages by type (count
+- [x] Add `Format::Llms` variant to the list/search output format enum.
+- [x] Implement `llms` renderer for `ListResult`: group pages by type (count
   desc), one line per page `- [title](uri): summary`, `~~title~~` for
   archived.
-- [ ] Implement `llms` renderer for `SearchResult`: `- [title](uri): summary`
+- [x] Implement `llms` renderer for `SearchResult`: `- [title](uri): summary`
   per result, no score, no excerpt block.
-- [ ] Add `--format llms` to `llm-wiki list` and `llm-wiki search` CLI.
+- [x] Add `--format llms` to `llm-wiki list` and `llm-wiki search` CLI.
 
 ### Engine — `src/ops/export.rs`
 
-- [ ] Create `src/ops/export.rs`; define `ExportOptions { wiki, path, format,
+- [x] Create `src/ops/export.rs`; define `ExportOptions { wiki, path, format,
   status }` and `ExportFormat { LlmsTxt, LlmsFull, Json }`.
-- [ ] Implement `fn export(engine, options) -> Result<ExportReport>`: walk
+- [x] Implement `fn export(engine, options) -> Result<ExportReport>`: walk
   index, filter, sort, render, write to resolved path.
-- [ ] `llms-txt` renderer: same output as `Format::Llms` on `wiki_list` but
+- [x] `llms-txt` renderer: same output as `Format::Llms` on `wiki_list` but
   unbounded (all pages), with wiki name + description header.
-- [ ] `llms-full` renderer: `llms-txt` output + full page body per entry
+- [x] `llms-full` renderer: `llms-txt` output + full page body per entry
   separated by `---`; read body from disk.
-- [ ] `json` renderer: JSON array of `{ slug, uri, title, type, status,
+- [x] `json` renderer: JSON array of `{ slug, uri, title, type, status,
   confidence, summary, body }`.
-- [ ] Path resolution: relative paths resolved against wiki root.
-- [ ] Return `ExportReport { path: String, pages_written: usize, bytes: usize, format: String }`.
+- [x] Path resolution: relative paths resolved against wiki root.
+- [x] Return `ExportReport { path: String, pages_written: usize, bytes: usize, format: String }`.
 
 ### Engine — MCP + CLI
 
-- [ ] Add `wiki_export` to `src/tools.rs` with parameters `wiki` (required),
+- [x] Add `wiki_export` to `src/tools.rs` with parameters `wiki` (required),
   `path` (optional, default `"llms.txt"` relative to wiki root), `format`,
   `status`.
-- [ ] Add `export` subcommand to `src/cli.rs` with `--wiki` (required),
+- [x] Add `export` subcommand to `src/cli.rs` with `--wiki` (required),
   `--path` (optional, default `llms.txt` at wiki root), `--format`,
   `--status`.
 
 ### Spec docs
 
-- [ ] Update `docs/specifications/tools/list.md`: add `llms` to `--format`
+- [x] Update `docs/specifications/tools/list.md`: add `llms` to `--format`
   options; document grouped output format.
-- [ ] Update `docs/specifications/tools/search.md`: add `llms` to
+- [x] Update `docs/specifications/tools/search.md`: add `llms` to
   `--format` options; document `- [title](uri): summary` output.
-- [ ] Update `docs/specifications/tools/graph.md`: add `llms` to
+- [x] Update `docs/specifications/tools/graph.md`: add `llms` to
   `--format` options; document natural language output structure.
-- [ ] Create `docs/specifications/tools/export.md`: document `wiki_export`
+- [x] Create `docs/specifications/tools/export.md`: document `wiki_export`
   parameters, formats, path resolution, response struct.
 
 ### Skill — `llm-wiki-skills/skills/crystallize/SKILL.md`
 
-- [ ] Add `wiki_list(format: "llms")` as the first step in
+- [x] Add `wiki_list(format: "llms")` as the first step in
   `## Search for an existing home`; retain `wiki_search` for targeted
   follow-up.
-- [ ] Update `metadata.version` to `0.3.0` and `last_updated`.
+- [x] Update `metadata.version` to `0.3.0` and `last_updated`.
 
 ### Skill — `llm-wiki-skills/skills/ingest/SKILL.md`
 
-- [ ] In step 2c, add `wiki_list(format: "llms")` as the first-file
+- [x] In step 2c, add `wiki_list(format: "llms")` as the first-file
   orientation call; note subsequent files in the same session can skip it.
-- [ ] Update `metadata.version` to `0.4.0` and `last_updated`.
+- [x] Update `metadata.version` to `0.4.0` and `last_updated`.
 
 ### Skill — `llm-wiki-skills/skills/research/SKILL.md`
 
-- [ ] Add `## Orient` section before `## Search`: use
+- [x] Add `## Orient` section before `## Search`: use
   `wiki_list(format: "llms")` for broad/coverage questions; use
   `wiki_search` for narrow queries.
-- [ ] Update `metadata.version` to `0.3.0` and `last_updated`.
+- [x] Update `metadata.version` to `0.3.0` and `last_updated`.
 
 ### Skill — `llm-wiki-skills/skills/lint/SKILL.md`
 
-- [ ] Replace `wiki_list(page_size: 100)` with `wiki_list(format: "llms")`
-  for structural enumeration.
-- [ ] Update `metadata.version` to `0.3.0` and `last_updated`.
+- [x] Add `wiki_list(format: "llms")` for structural enumeration (Structural
+  orientation section added in Judgment-based checks).
+- [x] Update `metadata.version` to `0.3.0` and `last_updated`.
 
 ### Skill — `llm-wiki-skills/skills/graph/SKILL.md`
 
-- [ ] Replace manual Mermaid interpretation guidance in
+- [x] Replace manual Mermaid interpretation guidance in
   `## Interpret the graph` with `wiki_graph(format: "llms")` as the
   primary interpretation call; retain `wiki_graph(format: "mermaid")` for
   visualization use cases.
-- [ ] Update `metadata.version` to `0.3.0` and `last_updated`.
+- [x] Update `metadata.version` to `0.3.0` and `last_updated`.
 
 ### Tests
 
-- [ ] `render_llms` on a graph with 3 type groups → correct section headers,
+- [x] `render_llms` on a graph with 3 type groups → correct section headers,
   hub list, relation counts.
-- [ ] `Format::Llms` on `wiki_list`: pages grouped by type, archived
+- [x] `Format::Llms` on `wiki_list`: pages grouped by type, archived
   page rendered with strikethrough.
-- [ ] `wiki_export(format: "llms-txt")`: all pages written, response
+- [x] `wiki_export(format: "llms-txt")`: all pages written, response
   contains correct `pages_written` count.
-- [ ] `wiki_export(format: "llms-full")`: each page entry followed by body
+- [x] `wiki_export(format: "llms-full")`: each page entry followed by body
   and `---` separator.
-- [ ] Path resolution: relative path resolves to wiki root.
-- [ ] `wiki_export(status: "all")` includes archived pages;
+- [x] Path resolution: relative path resolves to wiki root.
+- [x] `wiki_export(status: "all")` includes archived pages;
   default excludes them.
 
 ### Issue update
 After merging:
 - Check off imp-9 in `geronimo-iia/llm-wiki#22` and `geronimo-iia/llm-wiki-skills#1`
-- Mark `status: implemented` in this file
+- Mark `status: implemented` in this file ✓
