@@ -9,7 +9,7 @@ Run these scenarios in Claude with the llm-wiki MCP plugin active.
 Each scenario specifies: the skill to invoke, the test document or context to use,
 and the expected behavior checklist.
 
-## Installation
+## Setup
 
 **1. Install the engine binary:**
 
@@ -31,44 +31,19 @@ claude plugin add https://github.com/geronimo-iia/llm-wiki-skills
 claude --plugin-dir ./llm-wiki-skills
 ```
 
-**3. Start the engine:**
+**3. Create the test environment** (from the llm-wiki repo root):
 
 ```bash
-llm-wiki serve
+source ./docs/testing/scripts/setup-test-env.sh
 ```
 
----
+This creates `~/llm-wiki-testing/` with both wikis registered and indexed,
+and exports `LLM_WIKI_TEST_DIR` and `LLM_WIKI_CONFIG` in your shell.
 
-## Setup required before running scenarios
-
-**1. Create and register both wikis:**
-
-```bash
-# research wiki
-llm-wiki spaces create tests/fixtures/wikis/research --name research
-# notes wiki (cross-wiki target)
-llm-wiki spaces create tests/fixtures/wikis/notes --name notes
-# set research as default
-llm-wiki spaces set-default research
-```
-
-**2. Build the index:**
+**4. Start the engine pointing at the test config:**
 
 ```bash
-llm-wiki index rebuild --wiki research
-llm-wiki index rebuild --wiki notes
-```
-
-**3. Copy inbox documents:**
-
-```bash
-cp tests/fixtures/inbox/* tests/fixtures/wikis/research/inbox/
-```
-
-**4. Start the engine** (if not already running):
-
-```bash
-llm-wiki serve
+llm-wiki --config "$LLM_WIKI_CONFIG" serve
 ```
 
 ---
@@ -82,7 +57,7 @@ llm-wiki serve
 
 **Follow-up if it asks for a path:**
 ```
-tests/fixtures/wikis/research
+~/llm-wiki-testing/wikis/research
 ```
 
 **Expected:**
