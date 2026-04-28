@@ -136,7 +136,10 @@ impl SpaceIndexManager {
             }
         };
 
-        let reader = index.reader()?;
+        let reader = index
+            .reader_builder()
+            .reload_policy(tantivy::ReloadPolicy::Manual)
+            .try_into()?;
         let mut inner = self
             .inner
             .write()
@@ -349,8 +352,10 @@ impl SpaceIndexManager {
             match try_open() {
                 Ok(index) => {
                     let queryable = index
-                        .reader()
-                        .map(|r| {
+                        .reader_builder()
+                        .reload_policy(tantivy::ReloadPolicy::Manual)
+                        .try_into()
+                        .map(|r: IndexReader| {
                             r.searcher()
                                 .search(&AllQuery, &TopDocs::with_limit(1).order_by_score())
                                 .is_ok()

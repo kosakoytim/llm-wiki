@@ -146,8 +146,14 @@ fn louvain_phase1(
     sorted_nodes.sort_by_key(|n| n.index());
 
     let mut moved = false;
+    let max_passes = sorted_nodes.len().max(10) * 10;
+    let mut pass = 0;
 
     loop {
+        if pass >= max_passes {
+            break;
+        }
+        pass += 1;
         let mut any_move = false;
         for &node in &sorted_nodes {
             let current_c = *community.get(&node).unwrap();

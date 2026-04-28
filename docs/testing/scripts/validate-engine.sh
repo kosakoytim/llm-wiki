@@ -65,7 +65,7 @@ echo "binary:   $($BINARY --version 2>/dev/null || echo unknown)"
 echo "test dir: $TEST_DIR"
 
 # Re-copy inbox fixtures so each run starts with a clean inbox
-cp "$FIXTURES"/inbox/* "$RESEARCH_ROOT/wiki/inbox/"
+\cp -f "$FIXTURES"/inbox/* "$RESEARCH_ROOT/wiki/inbox/"
 
 CLI="$BINARY --config $CONFIG_FILE"
 
