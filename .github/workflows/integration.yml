@@ -39,7 +39,7 @@ jobs:
         run: |
           go install github.com/f/mcptools/cmd/mcptools@latest
           ln -s "$(go env GOPATH)/bin/mcptools" /usr/local/bin/mcp
-          mcp --version
+          mcp version
 
       - name: Install jq
         run: sudo apt-get install -y jq
