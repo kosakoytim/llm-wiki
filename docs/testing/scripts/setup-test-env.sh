@@ -39,13 +39,21 @@ done
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-green() { printf '\033[32m%s\033[0m\n' "$*"; }
-red()   { printf '\033[31m%s\033[0m\n' "$*"; }
+green()  { printf '\033[32m%s\033[0m\n' "$*"; }
+red()    { printf '\033[31m%s\033[0m\n' "$*"; }
+yellow() { printf '\033[33m%s\033[0m\n' "$*"; }
 
 if ! command -v "$BINARY" &>/dev/null && [ ! -x "$BINARY" ]; then
     red "ERROR: '$BINARY' not found."
     echo "Build with 'cargo build --release' and set LLM_WIKI_BIN or add to PATH."
     return 1 2>/dev/null || exit 1
+fi
+
+if ! command -v mcp &>/dev/null; then
+    yellow "WARNING: 'mcp' (mcptools) not found — MCP server validation will not work."
+    echo "Install with:"
+    echo "  brew tap f/mcptools && brew install mcp"
+    echo "  or download from https://github.com/f/mcptools/releases"
 fi
 
 # ── Main ─────────────────────────────────────────────────────────────────────
