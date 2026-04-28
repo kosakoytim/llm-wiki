@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`wiki_resolve` tool** — resolves a slug or `wiki://` URI to its local filesystem path (`slug`, `wiki`, `wiki_root`, `path`, `exists`, `bundle`); enables direct file writes without MCP content round-trips (tool count: 21 → 22)
+- **`wiki_content_new` returns JSON** — response now includes `uri`, `slug`, `path`, `wiki_root`, `bundle`; LLM gets the local path immediately after page creation with no follow-up `wiki_resolve` call
+- **`LintFinding.path` field** — every lint finding now includes the absolute filesystem path to the offending file; enables direct `Edit` without a follow-up resolve call
+
 - **Privacy redaction** — `wiki_ingest` accepts `redact: true`; 6 built-in patterns (GitHub PAT, OpenAI key, Anthropic key, AWS access key, Bearer token, email); per-wiki `[redact]` in `wiki.toml` (disable built-ins, add custom patterns); `redacted: Vec<RedactionReport>` in `IngestReport`; body-only, lossy by design
 - **Incremental validation** — `wiki_ingest` now validates only git-changed files since the last indexed commit; `unchanged_count` added to `IngestReport`; `dry_run: true` continues to validate all files; fallback to full validation when `last_commit` is absent or git errors
 - **`wiki_lint` tool** — 5 deterministic index-based lint rules (`orphan`, `broken-link`, `missing-fields`, `stale`, `unknown-type`); JSON report with `findings`, `errors`, `warnings`, `total`; `lint` CLI subcommand exits non-zero on any `error` finding; `[lint]` config section with `stale_days` and `stale_confidence_threshold`

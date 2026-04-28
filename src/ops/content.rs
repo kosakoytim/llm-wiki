@@ -131,6 +131,14 @@ pub fn content_write(
     })
 }
 
+pub struct ContentNewResult {
+    pub uri: String,
+    pub slug: String,
+    pub path: PathBuf,
+    pub wiki_root: PathBuf,
+    pub bundle: bool,
+}
+
 pub fn content_new(
     engine: &EngineState,
     uri: &str,
@@ -139,7 +147,7 @@ pub fn content_new(
     bundle: bool,
     name: Option<&str>,
     type_: Option<&str>,
-) -> Result<String> {
+) -> Result<ContentNewResult> {
     let (entry, slug) = WikiUri::resolve(uri, wiki_flag, &engine.config)?;
     let repo_root = PathBuf::from(&entry.path);
     let wiki_root = repo_root.join("wiki");
@@ -151,8 +159,8 @@ pub fn content_new(
     };
     let body_template = resolve_body_template(&repo_root, type_name);
 
-    if section {
-        markdown::create_section(&slug, &wiki_root, body_template.as_deref())?;
+    let path = if section {
+        markdown::create_section(&slug, &wiki_root, body_template.as_deref())?
     } else {
         markdown::create_page(
             &slug,
@@ -161,9 +169,16 @@ pub fn content_new(
             name,
             type_,
             body_template.as_deref(),
-        )?;
-    }
-    Ok(format!("wiki://{}/{slug}", entry.name))
+        )?
+    };
+
+    Ok(ContentNewResult {
+        uri: format!("wiki://{}/{slug}", entry.name),
+        slug: slug.as_str().to_string(),
+        path,
+        wiki_root,
+        bundle,
+    })
 }
 
 /// Resolve a body template for a type.

@@ -38,7 +38,7 @@ fn opt_int(desc: &str) -> Value {
     json!({"type": "integer", "description": desc})
 }
 
-// ── Tool definitions (20 tools) ───────────────────────────────────────────────
+// ── Tool definitions (22 tools) ───────────────────────────────────────────────
 
 pub fn tool_list() -> Vec<Tool> {
     vec![
@@ -297,6 +297,17 @@ pub fn tool_list() -> Vec<Tool> {
             ),
         ),
         Tool::new(
+            "wiki_resolve",
+            "Resolve a slug or wiki:// URI to its local filesystem path. Use before writing content directly to disk.",
+            schema(
+                json!({
+                    "uri": str_prop("Slug or wiki:// URI"),
+                    "wiki": opt_str("Target wiki name (optional, uses default)"),
+                }),
+                &["uri"],
+            ),
+        ),
+        Tool::new(
             "wiki_schema",
             "Inspect and manage type schemas",
             schema(
@@ -339,6 +350,7 @@ pub fn call(server: &McpServer, name: &str, args: &Map<String, Value>) -> ToolRe
         "wiki_history" => handlers::handle_history(server, args),
         "wiki_stats" => handlers::handle_stats(server, args),
         "wiki_lint" => handlers::handle_lint(server, args),
+        "wiki_resolve" => handlers::handle_resolve(server, args),
         "wiki_suggest" => handlers::handle_suggest(server, args),
         "wiki_schema" => handlers::handle_schema(server, args),
         "wiki_export" => handlers::handle_export(server, args),

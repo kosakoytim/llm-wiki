@@ -1,7 +1,10 @@
+use std::path::PathBuf;
+
 use rmcp::model::Content;
 use serde_json::{Map, Value};
 
 use crate::ops;
+use crate::slug::{ReadTarget, WikiUri, resolve_read_target};
 
 use super::McpServer;
 use super::helpers::*;
@@ -126,7 +129,6 @@ pub fn handle_content_read(server: &McpServer, args: &Map<String, Value>) -> Too
     {
         ops::ContentReadResult::Page(content) => {
             if include_backlinks {
-                use crate::slug::WikiUri;
                 let wiki_name = engine.resolve_wiki_name(wiki_flag.as_deref()).to_string();
                 let (_entry, slug) = WikiUri::resolve(&uri, wiki_flag.as_deref(), &engine.config)
                     .map_err(|e| format!("{e}"))?;
@@ -174,7 +176,7 @@ pub fn handle_content_new(server: &McpServer, args: &Map<String, Value>) -> Tool
     let engine = server.engine();
     let wiki_flag = arg_str(args, "wiki");
 
-    let result_uri = ops::content_new(
+    let result = ops::content_new(
         &engine,
         &uri,
         wiki_flag.as_deref(),
@@ -184,7 +186,47 @@ pub fn handle_content_new(server: &McpServer, args: &Map<String, Value>) -> Tool
         type_.as_deref(),
     )
     .map_err(|e| format!("{e}"))?;
-    ok_text(result_uri)
+    let s = serde_json::to_string_pretty(&serde_json::json!({
+        "uri":       result.uri,
+        "slug":      result.slug,
+        "path":      result.path,
+        "wiki_root": result.wiki_root,
+        "bundle":    result.bundle,
+    }))
+    .map_err(|e| format!("{e}"))?;
+    ok_text(s)
+}
+
+pub fn handle_resolve(server: &McpServer, args: &Map<String, Value>) -> ToolHandlerResult {
+    let uri = arg_str_req(args, "uri")?;
+    let engine = server.engine();
+    let wiki_flag = arg_str(args, "wiki");
+
+    let (entry, slug) =
+        WikiUri::resolve(&uri, wiki_flag.as_deref(), &engine.config).map_err(|e| format!("{e}"))?;
+    let wiki_root = PathBuf::from(&entry.path).join("wiki");
+
+    let (path, exists, bundle) = match resolve_read_target(slug.as_str(), &wiki_root) {
+        Ok(ReadTarget::Page(p)) => {
+            let bundle = p.ends_with("index.md");
+            (p, true, bundle)
+        }
+        _ => {
+            let p = wiki_root.join(format!("{}.md", slug.as_str()));
+            (p, false, false)
+        }
+    };
+
+    let s = serde_json::to_string_pretty(&serde_json::json!({
+        "slug":      slug.as_str(),
+        "wiki":      entry.name,
+        "wiki_root": wiki_root,
+        "path":      path,
+        "exists":    exists,
+        "bundle":    bundle,
+    }))
+    .map_err(|e| format!("{e}"))?;
+    ok_text(s)
 }
 
 pub fn handle_content_commit(server: &McpServer, args: &Map<String, Value>) -> ToolHandlerResult {
