@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--config <path>` global flag to override the config file path
 - `LLM_WIKI_CONFIG` environment variable as a fallback config path override
 
+### Fixed
+- `llm-wiki stats` and any command using community detection hung indefinitely — `louvain_phase1` could oscillate forever when node moves mid-pass altered `sigma_tot` for subsequent nodes; capped at `n × 10` passes
+- `SpaceIndexManager::status()` now uses `ReloadPolicy::Manual` to avoid spawning a competing file_watcher thread against the open `IndexReader`
+
 ## [0.2.0] — Unreleased
 
 ### Added
