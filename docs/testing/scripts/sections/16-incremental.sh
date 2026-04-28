@@ -4,7 +4,7 @@ section "16. Incremental validation"
 
 MODIFIED="$RESEARCH_ROOT/wiki/concepts/scaling-laws.md"
 echo "" >> "$MODIFIED"
+# Suppress stderr so log lines don't corrupt the JSON output fed to jq
 run_json "incremental ingest reports unchanged_count" \
          '.unchanged_count >= 0' "true" \
-         $CLI ingest concepts/scaling-laws.md --format json 2>/dev/null || \
-    skip "incremental unchanged_count" "format json not supported on ingest"
+         bash -c "$CLI ingest concepts/scaling-laws.md --format json 2>/dev/null"
