@@ -64,8 +64,9 @@ echo "llm-wiki validate-engine.sh"
 echo "binary:   $($BINARY --version 2>/dev/null || echo unknown)"
 echo "test dir: $TEST_DIR"
 
-# Re-copy inbox fixtures so each run starts with a clean inbox
+# Re-copy inbox fixtures and clear logs so each run starts from a clean state
 \cp -f "$FIXTURES"/inbox/* "$RESEARCH_ROOT/wiki/inbox/"
+rm -f "$TEST_DIR/logs"/*.log 2>/dev/null || true
 
 CLI="$BINARY --config $CONFIG_FILE"
 

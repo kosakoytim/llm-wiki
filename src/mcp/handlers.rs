@@ -333,8 +333,7 @@ pub fn handle_graph(server: &McpServer, args: &Map<String, Value>) -> ToolHandle
     )
     .map_err(|e| format!("{e}"))?;
 
-    let s = serde_json::to_string_pretty(&result.report).map_err(|e| format!("{e}"))?;
-    ok_text(s)
+    ok_text(result.rendered)
 }
 
 // ── History ───────────────────────────────────────────────────────────────────
