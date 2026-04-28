@@ -7,3 +7,6 @@ docs/prompts/
 
 # docs archive — gitignored
 projects/llm-wiki/docs/archive
+
+.remember
+.claude
