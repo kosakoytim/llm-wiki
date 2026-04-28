@@ -1,15 +1,9 @@
 #!/usr/bin/env bash
-# clean-test-env.sh — remove the persistent test environment and unset env vars
+# clean-test-env.sh — remove the test environment and unset env vars
 #
-# Source this script to also unset env vars in the current shell:
-#
-#   source ./docs/testing/scripts/clean-test-env.sh [--dir <path>] [--yes]
-#
-# Or run directly (env vars won't be unset in parent shell):
-#
-#   ./docs/testing/scripts/clean-test-env.sh [--dir <path>] [--yes]
+# Usage: source ./docs/testing/scripts/clean-test-env.sh [--dir <path>] [--yes]
 
-# Detect if sourced or executed
+# Detect if sourced
 _SOURCED=0
 if [ -n "${BASH_SOURCE[0]:-}" ] && [ "${BASH_SOURCE[0]}" != "$0" ]; then
     _SOURCED=1
@@ -42,20 +36,12 @@ else
             *) echo "Aborted."; return 0 2>/dev/null || exit 0 ;;
         esac
     fi
-
     rm -rf "$TEST_DIR"
     green "  ✓ Removed $TEST_DIR"
 fi
-
-# ── Unset env vars ────────────────────────────────────────────────────────────
 
 if [ "$_SOURCED" = "1" ]; then
     unset LLM_WIKI_TEST_DIR
     unset LLM_WIKI_CONFIG
     green "  ✓ Unset LLM_WIKI_TEST_DIR and LLM_WIKI_CONFIG"
-else
-    echo
-    echo "NOTE: env vars were NOT unset (script was executed, not sourced)."
-    echo "To unset them, run:"
-    echo "  source ./docs/testing/scripts/clean-test-env.sh"
 fi
