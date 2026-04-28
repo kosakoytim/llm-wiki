@@ -18,7 +18,7 @@ last_updated: "2026-04-28"
 | Tools       | `wiki_stats`, `wiki_suggest`, `wiki_watch`, `wiki_history`    |
 | Internals   | Native string sort, page body templates, 372 tests            |
 
-## v0.2.0 — In progress
+## v0.2.0 — Released 2026-04-28
 
 | Area        | What                                                                          |
 | ----------- | ----------------------------------------------------------------------------- |
@@ -29,7 +29,8 @@ last_updated: "2026-04-28"
 | Redaction   | `redact:` flag on `wiki_ingest`; built-in and custom patterns                 |
 | Graph       | Louvain community detection; `wiki://` cross-wiki edges; `--cross-wiki` flag  |
 | Export      | `wiki_export` + `llms` format on list, search, and graph                      |
-| Skills      | Crystallize two-step; ingest analysis pass; review skill                      |
+| Links       | CommonMark `[text](slug)` body links indexed alongside `[[wikilinks]]`        |
+| Skills      | Crystallize two-step; ingest analysis pass; review skill; `v0.4.0`            |
 
 ## v0.3.0 - Designing
 
