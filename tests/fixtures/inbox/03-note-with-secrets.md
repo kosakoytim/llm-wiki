@@ -6,7 +6,7 @@ Attendees: team
 ## API keys used during session
 
 We tested the eval pipeline using:
-- Anthropic key: sk-ant-api03-FAKEKEYFORTESTING1234567890abcdefghijklmnopqrstuvwxyz1234567890ab-AAAAAAA
+- Anthropic key: sk-ant-api03-FAKEKEYFORTESTING1234567890abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz-AAAAAAAAAA
 - OpenAI key: sk-proj-FAKEOPENAIKEY1234567890abcdefghijklmnopqrstuvwxyz1234567890AAAAAAAAAAAAA
 - Internal token: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.FAKE.FAKE
 
