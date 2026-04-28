@@ -28,6 +28,19 @@ run() {
     fi
 }
 
+run_nocheck() {
+    # like run but does not fail on non-zero exit (use when command exits 1 by design)
+    local desc="$1" pattern="$2"; shift 2
+    local out
+    out=$("$@" 2>&1) || true
+    if [ -z "$pattern" ] || echo "$out" | grep -q "$pattern"; then
+        pass "$desc"
+    else
+        fail "$desc" "output did not match: $pattern"
+        echo "    output: $(echo "$out" | head -3)"
+    fi
+}
+
 run_json() {
     local desc="$1" filter="$2" expected="$3"; shift 3
     local out actual
@@ -41,5 +54,18 @@ run_json() {
     else
         fail "$desc" "command failed"
         echo "    output: $(echo "$out" | head -3)"
+    fi
+}
+
+run_json_nocheck() {
+    # like run_json but does not fail on non-zero exit
+    local desc="$1" filter="$2" expected="$3"; shift 3
+    local out actual
+    out=$("$@" 2>&1) || true
+    actual=$(echo "$out" | jq -r "$filter" 2>/dev/null || echo "jq-error")
+    if [ "$actual" = "$expected" ]; then
+        pass "$desc"
+    else
+        fail "$desc" "expected '$expected', got '$actual'"
     fi
 }

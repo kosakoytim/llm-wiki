@@ -99,9 +99,6 @@ What `setup-test-env.sh` creates at `~/llm-wiki-testing/` (or `--dir` path):
 ```
 ~/llm-wiki-testing/          ← LLM_WIKI_TEST_DIR
   config.toml                ← LLM_WIKI_CONFIG — isolated engine config (space registry)
-  indexes/
-    research/                ← tantivy index for research wiki
-    notes/                   ← tantivy index for notes wiki
   wikis/
     research/                ← copy of tests/fixtures/wikis/research
       wiki.toml

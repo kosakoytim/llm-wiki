@@ -3,13 +3,13 @@
 #
 # Usage: source ./docs/testing/scripts/clean-test-env.sh [--dir <path>] [--yes]
 
-# Detect if sourced
+# Detect if sourced or executed (works in bash and zsh)
 _SOURCED=0
-if [ -n "${BASH_SOURCE[0]:-}" ] && [ "${BASH_SOURCE[0]}" != "$0" ]; then
-    _SOURCED=1
+if [ -n "${ZSH_VERSION:-}" ]; then
+    case "$ZSH_EVAL_CONTEXT" in *:file*) _SOURCED=1 ;; esac
+elif [ -n "${BASH_VERSION:-}" ]; then
+    [[ "${BASH_SOURCE[0]}" != "$0" ]] && _SOURCED=1
 fi
-
-set -euo pipefail
 
 TEST_DIR="${LLM_WIKI_TEST_DIR:-$HOME/llm-wiki-testing}"
 CONFIRMED=0

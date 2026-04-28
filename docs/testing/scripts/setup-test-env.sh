@@ -12,13 +12,13 @@
 # Creates a stable testing layout at $HOME/llm-wiki-testing (or --dir path).
 # Run from the repo root. Requires: llm-wiki binary on PATH (or LLM_WIKI_BIN), git.
 
-# Detect if sourced or executed
+# Detect if sourced or executed (works in bash and zsh)
 _SOURCED=0
-if [ -n "${BASH_SOURCE[0]:-}" ] && [ "${BASH_SOURCE[0]}" != "$0" ]; then
-    _SOURCED=1
+if [ -n "${ZSH_VERSION:-}" ]; then
+    case "$ZSH_EVAL_CONTEXT" in *:file*) _SOURCED=1 ;; esac
+elif [ -n "${BASH_VERSION:-}" ]; then
+    [[ "${BASH_SOURCE[0]}" != "$0" ]] && _SOURCED=1
 fi
-
-set -euo pipefail
 
 # ── Resolve script location regardless of sourcing ───────────────────────────
 
@@ -89,7 +89,7 @@ fi
 
 # inbox documents
 echo "  copying inbox fixtures → $RESEARCH_ROOT/wiki/inbox/"
-cp "$FIXTURES"/inbox/* "$RESEARCH_ROOT/wiki/inbox/"
+\cp -f "$FIXTURES"/inbox/* "$RESEARCH_ROOT/wiki/inbox/"
 green "  ✓ inbox documents copied"
 
 # register wikis
@@ -98,10 +98,10 @@ green "  ✓ inbox documents copied"
 "$BINARY" --config "$CONFIG_FILE" spaces set-default research                    2>/dev/null || true
 green "  ✓ wikis registered in $CONFIG_FILE"
 
-# build indexes
-"$BINARY" --config "$CONFIG_FILE" index rebuild --wiki research > /dev/null 2>&1
-"$BINARY" --config "$CONFIG_FILE" index rebuild --wiki notes    > /dev/null 2>&1
-green "  ✓ indexes built"
+# Always patch log_path to keep logs inside the test dir
+sed -i.bak "s|log_path = \".*\"|log_path = \"$TEST_DIR/logs\"|" "$CONFIG_FILE" && rm -f "$CONFIG_FILE.bak"
+green "  ✓ log_path set to $TEST_DIR/logs"
+
 
 # ── Export env vars ───────────────────────────────────────────────────────────
 
