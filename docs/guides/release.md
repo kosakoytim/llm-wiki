@@ -51,6 +51,7 @@ active `release/` branch if one is open.
 - [ ] Formatted: `cargo fmt -- --check`
 - [ ] No lint issues: `cargo clippy --all-targets -- -D warnings`
 - [ ] No vulnerabilities: `cargo audit`
+- [ ] Integration tests green: trigger **Integration Tests** workflow (`suite: both`) on the release branch
 
 ### Documentation pass
 - [ ] All improvement spec files have `status: implemented` and tasks checked
