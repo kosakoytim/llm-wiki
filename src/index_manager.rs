@@ -214,7 +214,7 @@ impl SpaceIndexManager {
         if let Some(ref r) = inner.index_reader {
             r.reload()?;
         }
-        inner.generation.fetch_add(1, Ordering::Release);
+        inner.generation.fetch_add(1, Ordering::AcqRel);
         Ok(())
     }
 
