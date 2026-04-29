@@ -110,6 +110,51 @@ fn graph_cache_miss_on_filtered_request() {
 }
 
 #[test]
+fn graph_cache_hit_is_faster_than_miss() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = setup_wiki(dir.path(), "test");
+
+    let manager = WikiEngine::build(&config_path).unwrap();
+    let engine = manager.state.read().unwrap();
+    let space = engine.spaces.get("test").unwrap();
+
+    let searcher = space.index_manager.searcher().unwrap();
+    let filter = GraphFilter::default();
+
+    // Cold call — cache miss, builds graph
+    let t0 = std::time::Instant::now();
+    let _ = get_or_build_graph(
+        &space.index_schema,
+        &space.type_registry,
+        &space.index_manager,
+        &space.graph_cache,
+        &searcher,
+        &filter,
+    )
+    .unwrap();
+    let cold_ns = t0.elapsed().as_nanos();
+
+    // Warm call — cache hit, returns Arc clone
+    let t1 = std::time::Instant::now();
+    let _ = get_or_build_graph(
+        &space.index_schema,
+        &space.type_registry,
+        &space.index_manager,
+        &space.graph_cache,
+        &searcher,
+        &filter,
+    )
+    .unwrap();
+    let warm_ns = t1.elapsed().as_nanos();
+
+    // Cache hit must be strictly faster than cache miss
+    assert!(
+        warm_ns < cold_ns,
+        "cache hit ({warm_ns}ns) not faster than miss ({cold_ns}ns)"
+    );
+}
+
+#[test]
 fn get_cached_community_map_returns_none_for_small_graph() {
     let dir = tempfile::tempdir().unwrap();
     let config_path = setup_wiki(dir.path(), "test");
