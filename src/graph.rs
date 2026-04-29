@@ -1,5 +1,6 @@
 use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::sync::Arc;
 
 use anyhow::Result;
 use chrono::Utc;
@@ -41,6 +42,16 @@ pub struct LabeledEdge {
 /// Directed graph type used for the wiki concept graph.
 pub type WikiGraph = DiGraph<PageNode, LabeledEdge>;
 
+/// Cached result of a full (unfiltered) graph build, keyed by index generation.
+pub struct CachedGraph {
+    /// The full unfiltered wiki graph.
+    pub graph: Arc<WikiGraph>,
+    /// Precomputed community map (slug → community_id), None if graph is too small.
+    pub community_map: Option<Arc<HashMap<String, usize>>>,
+    /// Generation value from SpaceIndexManager at cache time.
+    pub index_gen: u64,
+}
+
 /// Filtering parameters for graph construction and subgraph extraction.
 #[derive(Debug, Clone, Default)]
 pub struct GraphFilter {
@@ -52,6 +63,14 @@ pub struct GraphFilter {
     pub types: Vec<String>,
     /// Edge relation label to filter on (None = all relations).
     pub relation: Option<String>,
+}
+
+impl GraphFilter {
+    /// Returns `true` when the filter represents an unfiltered full-graph request.
+    /// Note: `depth` is intentionally excluded — a depth-limited full graph still uses the full cache.
+    pub fn is_default(&self) -> bool {
+        self.root.is_none() && self.types.is_empty() && self.relation.is_none()
+    }
 }
 
 /// Summary of a completed graph build or render operation.

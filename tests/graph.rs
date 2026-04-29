@@ -854,3 +854,29 @@ fn index_manager_generation_starts_at_zero() {
     let mgr = SpaceIndexManager::new("test", dir.path().join("idx"));
     assert_eq!(mgr.generation(), 0);
 }
+
+// ── GraphFilter::is_default ───────────────────────────────────────────────────
+
+#[test]
+fn graphfilter_default_is_default() {
+    let f = llm_wiki::graph::GraphFilter::default();
+    assert!(f.is_default());
+}
+
+#[test]
+fn graphfilter_with_types_not_default() {
+    let f = llm_wiki::graph::GraphFilter {
+        types: vec!["concept".to_string()],
+        ..Default::default()
+    };
+    assert!(!f.is_default());
+}
+
+#[test]
+fn graphfilter_with_root_not_default() {
+    let f = llm_wiki::graph::GraphFilter {
+        root: Some("concepts/foo".to_string()),
+        ..Default::default()
+    };
+    assert!(!f.is_default());
+}
