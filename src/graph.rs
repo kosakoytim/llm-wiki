@@ -984,10 +984,8 @@ pub fn get_or_build_graph(
     // Check cache hit
     {
         let cache = graph_cache.read().unwrap();
-        if let Some(cached) = cache.as_ref() {
-            if cached.index_gen == current_gen {
-                return Ok(Arc::clone(&cached.graph));
-            }
+        if let Some(cached) = cache.as_ref() && cached.index_gen == current_gen {
+            return Ok(Arc::clone(&cached.graph));
         }
     }
 
@@ -1019,15 +1017,13 @@ pub fn get_cached_community_map(
     // Check cache hit
     {
         let cache = graph_cache.read().unwrap();
-        if let Some(cached) = cache.as_ref() {
-            if cached.index_gen == current_gen {
-                if min_nodes <= 30 {
-                    return Ok(cached.community_map.clone());
-                }
-                // Caller wants higher threshold — recompute without caching variant
-                let map = node_community_map(&cached.graph, min_nodes).map(Arc::new);
-                return Ok(map);
+        if let Some(cached) = cache.as_ref() && cached.index_gen == current_gen {
+            if min_nodes <= 30 {
+                return Ok(cached.community_map.clone());
             }
+            // Caller wants higher threshold — recompute without caching variant
+            let map = node_community_map(&cached.graph, min_nodes).map(Arc::new);
+            return Ok(map);
         }
     }
 
@@ -1044,14 +1040,12 @@ pub fn get_cached_community_map(
     // Re-read
     {
         let cache = graph_cache.read().unwrap();
-        if let Some(cached) = cache.as_ref() {
-            if cached.index_gen == current_gen {
-                if min_nodes <= 30 {
-                    return Ok(cached.community_map.clone());
-                }
-                let map = node_community_map(&cached.graph, min_nodes).map(Arc::new);
-                return Ok(map);
+        if let Some(cached) = cache.as_ref() && cached.index_gen == current_gen {
+            if min_nodes <= 30 {
+                return Ok(cached.community_map.clone());
             }
+            let map = node_community_map(&cached.graph, min_nodes).map(Arc::new);
+            return Ok(map);
         }
     }
 
