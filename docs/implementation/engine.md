@@ -43,8 +43,13 @@ pub struct SpaceContext {
     pub type_registry: SpaceTypeRegistry,
     pub index_schema: IndexSchema,
     pub index_manager: SpaceIndexManager,
+    pub graph_cache: RwLock<Option<CachedGraph>>,  // v0.3.0
 }
 ```
+
+`graph_cache` holds the last full unfiltered graph build. Invalidated
+automatically when `index_manager.generation()` changes. See
+[graph-cache.md](graph-cache.md).
 
 ## Startup
 
@@ -62,7 +67,8 @@ pub struct SpaceContext {
       - TypesChanged → partial rebuild (affected types only)
       - FullRebuildNeeded → full rebuild
    e. Open tantivy index (with auto-recovery on corruption)
-   f. Return SpaceContext
+   f. Initialize graph_cache: RwLock::new(None)
+   g. Return SpaceContext
 3. Per-wiki errors: warn and skip (don't fail the engine)
 4. Assemble EngineState, wrap in Arc<RwLock>
 ```
