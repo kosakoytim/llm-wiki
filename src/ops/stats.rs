@@ -4,7 +4,9 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::engine::EngineState;
-use crate::graph::{self, CommunityStats, GraphFilter, get_or_build_graph};
+use crate::graph::{
+    self, CommunityStats, GraphFilter, get_cached_community_stats, get_or_build_graph,
+};
 use crate::search;
 use tantivy::schema::Value;
 
@@ -88,8 +90,14 @@ pub fn stats(engine: &EngineState, wiki_name: &str) -> Result<WikiStats> {
     )?;
     let metrics = graph::compute_metrics(&wiki_graph);
     let resolved = space.resolved_config(&engine.config);
-    let communities =
-        graph::compute_communities(&wiki_graph, resolved.graph.min_nodes_for_communities);
+    let communities = get_cached_community_stats(
+        &space.index_schema,
+        &space.type_registry,
+        &space.index_manager,
+        &space.graph_cache,
+        &searcher,
+        resolved.graph.min_nodes_for_communities,
+    )?;
 
     // Staleness buckets from last_updated field
     let staleness = compute_staleness(&searcher, &space.index_schema)?;
