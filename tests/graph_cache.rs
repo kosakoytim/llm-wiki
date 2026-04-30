@@ -2,9 +2,11 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 
+use petgraph::visit::EdgeRef;
+
 use llm_wiki::engine::WikiEngine;
 use llm_wiki::git;
-use llm_wiki::graph::{GraphFilter, get_cached_community_map, get_cached_community_stats, get_or_build_graph};
+use llm_wiki::graph::{GraphFilter, get_cached_community_map, get_cached_community_stats, get_or_build_graph, merge_cached_graphs};
 
 fn setup_wiki(dir: &Path, name: &str) -> std::path::PathBuf {
     let config_path = dir.join("state").join("config.toml");
@@ -199,4 +201,157 @@ fn get_cached_community_stats_returns_none_for_small_graph() {
     )
     .unwrap();
     assert!(stats.is_none());
+}
+
+/// Helper: create a wiki space at `dir/name` with given pages, sharing `config_path`.
+fn setup_space(dir: &Path, name: &str, config_path: &Path, pages: &[(&str, &str)]) {
+    let wiki_path = dir.join(name);
+    llm_wiki::spaces::create(&wiki_path, name, None, false, true, config_path).unwrap();
+    let wiki_root = wiki_path.join("wiki");
+    fs::create_dir_all(wiki_root.join("concepts")).unwrap();
+    for (filename, content) in pages {
+        let file_path = wiki_root.join(filename);
+        if let Some(parent) = file_path.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+        fs::write(&file_path, content).unwrap();
+    }
+    git::commit(&wiki_path, "add pages").unwrap();
+}
+
+#[test]
+fn cross_wiki_merge_cached_graphs_matches_build_graph_cross_wiki() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = dir.path().join("state").join("config.toml");
+
+    // Wiki A: has a page that links cross-wiki to wiki B
+    setup_space(
+        dir.path(),
+        "alpha",
+        &config_path,
+        &[
+            (
+                "concepts/foo.md",
+                "---\ntitle: \"Foo\"\ntype: concept\nstatus: active\n---\n\nSee [[wiki://beta/concepts/bar]].\n",
+            ),
+            (
+                "concepts/baz.md",
+                "---\ntitle: \"Baz\"\ntype: concept\nstatus: active\n---\n\nLocal link to [[concepts/foo]].\n",
+            ),
+        ],
+    );
+
+    // Wiki B: has a page targeted by wiki A
+    setup_space(
+        dir.path(),
+        "beta",
+        &config_path,
+        &[(
+            "concepts/bar.md",
+            "---\ntitle: \"Bar\"\ntype: concept\nstatus: active\n---\n\nBar content.\n",
+        )],
+    );
+
+    let manager = WikiEngine::build(&config_path).unwrap();
+    let engine = manager.state.read().unwrap();
+    let filter = GraphFilter::default();
+
+    // Build via merge_cached_graphs (the new path)
+    let mut per_space: Vec<(&str, Arc<llm_wiki::graph::WikiGraph>)> = Vec::new();
+    for (name, sp) in engine.spaces.iter() {
+        let searcher = sp.index_manager.searcher().unwrap();
+        let g = get_or_build_graph(
+            &sp.index_schema,
+            &sp.type_registry,
+            &sp.index_manager,
+            &sp.graph_cache,
+            &searcher,
+            &filter,
+        )
+        .unwrap();
+        per_space.push((name.as_str(), g));
+    }
+    // Sort for determinism
+    per_space.sort_by_key(|(name, _)| name.to_string());
+    let merged = merge_cached_graphs(&per_space, &filter).unwrap();
+
+    // Verify: 3 local nodes (alpha/foo, alpha/baz, beta/bar)
+    let local_nodes: Vec<_> = merged
+        .node_indices()
+        .filter(|&idx| !merged[idx].external)
+        .collect();
+    assert_eq!(local_nodes.len(), 3, "expected 3 local nodes in merged graph");
+
+    // Verify: cross-wiki edge alpha/foo -> beta/bar is resolved (not external)
+    let foo_idx = merged
+        .node_indices()
+        .find(|&idx| merged[idx].slug == "alpha/concepts/foo")
+        .expect("alpha/concepts/foo node must exist");
+    let bar_idx = merged
+        .node_indices()
+        .find(|&idx| merged[idx].slug == "beta/concepts/bar")
+        .expect("beta/concepts/bar node must exist");
+
+    let has_cross_edge = merged.edges(foo_idx).any(|e| e.target() == bar_idx);
+    assert!(
+        has_cross_edge,
+        "cross-wiki edge from alpha/concepts/foo to beta/concepts/bar must be resolved"
+    );
+
+    // Verify: no external placeholders (both wikis mounted)
+    let external_count = merged
+        .node_indices()
+        .filter(|&idx| merged[idx].external)
+        .count();
+    assert_eq!(
+        external_count, 0,
+        "no external nodes when both wikis are mounted"
+    );
+}
+
+#[test]
+fn cross_wiki_merge_keeps_external_when_target_wiki_missing() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = dir.path().join("state").join("config.toml");
+
+    // Only wiki A — references wiki "gamma" which is not mounted
+    setup_space(
+        dir.path(),
+        "alpha",
+        &config_path,
+        &[(
+            "concepts/foo.md",
+            "---\ntitle: \"Foo\"\ntype: concept\nstatus: active\n---\n\nSee [[wiki://gamma/concepts/missing]].\n",
+        )],
+    );
+
+    let manager = WikiEngine::build(&config_path).unwrap();
+    let engine = manager.state.read().unwrap();
+    let filter = GraphFilter::default();
+
+    let sp = engine.spaces.get("alpha").unwrap();
+    let searcher = sp.index_manager.searcher().unwrap();
+    let g = get_or_build_graph(
+        &sp.index_schema,
+        &sp.type_registry,
+        &sp.index_manager,
+        &sp.graph_cache,
+        &searcher,
+        &filter,
+    )
+    .unwrap();
+
+    let per_space = vec![("alpha", g)];
+    let merged = merge_cached_graphs(&per_space, &filter).unwrap();
+
+    // The cross-wiki target should remain as an external placeholder
+    let external_nodes: Vec<_> = merged
+        .node_indices()
+        .filter(|&idx| merged[idx].external)
+        .collect();
+    assert_eq!(
+        external_nodes.len(),
+        1,
+        "unmounted target wiki should produce external placeholder"
+    );
 }

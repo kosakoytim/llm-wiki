@@ -657,6 +657,104 @@ pub fn build_graph_cross_wiki(
     Ok(merged)
 }
 
+// ── merge_cached_graphs ──────────────────────────────────────────────────────
+
+/// Merge pre-built per-space graphs into a single cross-wiki graph.
+/// Accepts `Arc<WikiGraph>` inputs (from cache) instead of building from index.
+/// Matches the slug-prefixing and external-node resolution of `build_graph_cross_wiki`.
+pub fn merge_cached_graphs(
+    wikis: &[(&str, Arc<WikiGraph>)],
+    filter: &GraphFilter,
+) -> Result<WikiGraph> {
+    let mut merged = WikiGraph::new();
+    let mut global_idx: HashMap<String, NodeIndex> = HashMap::new();
+
+    // First pass: add all local (non-external) nodes with "wikiname/slug" keys
+    for (wiki_name, graph) in wikis {
+        for idx in graph.node_indices() {
+            let node = &graph[idx];
+            if node.external {
+                continue;
+            }
+            // Type filter already applied during per-space build, but re-check for safety
+            if !filter.types.is_empty() && !filter.types.contains(&node.r#type) {
+                continue;
+            }
+            let key = format!("{wiki_name}/{}", node.slug);
+            let new_idx = merged.add_node(PageNode {
+                slug: key.clone(),
+                title: node.title.clone(),
+                r#type: node.r#type.clone(),
+                external: false,
+            });
+            global_idx.insert(key, new_idx);
+        }
+    }
+
+    // Second pass: add edges, re-resolving cross-wiki external nodes
+    for (wiki_name, graph) in wikis {
+        for edge_idx in graph.edge_indices() {
+            let (from, to) = graph.edge_endpoints(edge_idx).unwrap();
+            let from_node = &graph[from];
+            let to_node = &graph[to];
+
+            if from_node.external {
+                continue;
+            }
+
+            // Apply relation filter
+            let relation = graph[edge_idx].relation.clone();
+            if let Some(ref rel_filter) = filter.relation {
+                if &relation != rel_filter {
+                    continue;
+                }
+            }
+
+            let from_key = format!("{wiki_name}/{}", from_node.slug);
+            let from_merged = match global_idx.get(&from_key) {
+                Some(&i) => i,
+                None => continue,
+            };
+
+            // Resolve destination: external nodes have title = "wiki://otherwiki/slug"
+            let to_key = if to_node.external {
+                if let ParsedLink::CrossWiki { wiki, slug } = ParsedLink::parse(&to_node.title) {
+                    format!("{wiki}/{slug}")
+                } else {
+                    continue;
+                }
+            } else {
+                format!("{wiki_name}/{}", to_node.slug)
+            };
+
+            let to_merged = match global_idx.get(&to_key) {
+                Some(&i) => i,
+                None => {
+                    // Target wiki not mounted — keep as external placeholder
+                    *global_idx.entry(to_key.clone()).or_insert_with(|| {
+                        merged.add_node(PageNode {
+                            slug: to_key.clone(),
+                            title: to_node.title.clone(),
+                            r#type: "external".to_string(),
+                            external: true,
+                        })
+                    })
+                }
+            };
+
+            if from_merged != to_merged {
+                merged.add_edge(
+                    from_merged,
+                    to_merged,
+                    LabeledEdge { relation },
+                );
+            }
+        }
+    }
+
+    Ok(merged)
+}
+
 // ── render_llms ───────────────────────────────────────────────────────────────
 
 /// Natural language description of graph structure for direct LLM consumption.
