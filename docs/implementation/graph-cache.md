@@ -125,17 +125,14 @@ by `ops/stats.rs` to skip Louvain on cache hit.
 
 ## Cache population
 
-On every cache miss, `get_or_build_graph` runs:
+On cache miss, calls `build_community_data(graph)` — a private helper that
+runs Louvain exactly once and returns both `CommunityStats` and
+`HashMap<String, usize>` (community map). Both fields are stored in
+`CachedGraph` atomically.
 
-```
-build_graph(...)              → Arc<WikiGraph>
-node_community_map(&graph, 30)  → Option<HashMap<String, usize>>
-compute_communities(&graph, 30) → Option<CommunityStats>
-```
-
-Both community computations use threshold `30` (the default config value).
-Callers requesting a higher threshold get a fresh recompute without overwriting
-the cache. This keeps the cache a single stable entry per space.
+The community threshold used is `30` (the default config value). Callers
+requesting a higher threshold get a fresh recompute without overwriting the
+cache. This keeps the cache a single stable entry per space.
 
 ## `GraphFilter::is_default()`
 
