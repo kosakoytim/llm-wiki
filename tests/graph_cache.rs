@@ -7,8 +7,8 @@ use petgraph::visit::EdgeRef;
 use llm_wiki::engine::WikiEngine;
 use llm_wiki::git;
 use llm_wiki::graph::{
-    GraphFilter, get_cached_community_map, get_cached_community_stats, get_or_build_graph,
-    merge_cached_graphs,
+    GraphFilter, compute_communities, get_cached_community_map, get_cached_community_stats,
+    get_or_build_graph, merge_cached_graphs, node_community_map,
 };
 
 fn setup_wiki(dir: &Path, name: &str) -> std::path::PathBuf {
@@ -361,6 +361,45 @@ fn cross_wiki_merge_keeps_external_when_target_wiki_missing() {
         1,
         "unmounted target wiki should produce external placeholder"
     );
+}
+
+#[test]
+fn community_stats_and_map_are_consistent() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = setup_wiki(dir.path(), "test");
+    let manager = WikiEngine::build(&config_path).unwrap();
+    let engine = manager.state.read().unwrap();
+    let space = engine.spaces.get("test").unwrap();
+    let searcher = space.index_manager.searcher().unwrap();
+
+    let graph = get_or_build_graph(
+        &space.index_schema,
+        &space.type_registry,
+        &space.index_manager,
+        &space.graph_cache,
+        &searcher,
+        &GraphFilter::default(),
+    )
+    .unwrap();
+
+    // threshold=1: both wiki's 2 nodes should be >= 1
+    let stats = compute_communities(&graph, 1);
+    let map = node_community_map(&graph, 1);
+
+    assert!(stats.is_some(), "expected Some(CommunityStats)");
+    assert!(map.is_some(), "expected Some(community_map)");
+
+    let stats = stats.unwrap();
+    let map = map.unwrap();
+
+    // every community id in map must be < stats.count
+    for &c in map.values() {
+        assert!(
+            c < stats.count,
+            "community id {c} out of range (count={})",
+            stats.count
+        );
+    }
 }
 
 #[test]

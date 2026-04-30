@@ -258,131 +258,12 @@ fn louvain_phase1(
 /// External placeholder nodes are excluded. Processing order is sorted by slug for determinism.
 /// The internal phase-1 loop is capped at `n × 10` passes to guard against oscillation.
 pub fn compute_communities(graph: &WikiGraph, min_nodes: usize) -> Option<CommunityStats> {
-    // Only count non-external nodes
-    let local_nodes: Vec<NodeIndex> = {
-        let mut v: Vec<NodeIndex> = graph
-            .node_indices()
-            .filter(|&idx| !graph[idx].external)
-            .collect();
-        v.sort_by_key(|&idx| graph[idx].slug.clone());
-        v
-    };
-
-    if local_nodes.len() < min_nodes {
-        return None;
-    }
-
-    let adj = build_adjacency(graph);
-
-    // Degree per node (undirected, local only)
-    let degrees: HashMap<NodeIndex, usize> =
-        local_nodes.iter().map(|&n| (n, adj[&n].len())).collect();
-
-    let m: usize = adj.values().map(|s| s.len()).sum::<usize>() / 2;
-
-    // Initial assignment: each node in its own community
-    let mut community: HashMap<NodeIndex, usize> = local_nodes
-        .iter()
-        .enumerate()
-        .map(|(i, &n)| (n, i))
-        .collect();
-
-    louvain_phase1(&adj, &mut community, &degrees, m);
-
-    // Normalize community ids to contiguous 0..k
-    let mut id_remap: HashMap<usize, usize> = HashMap::new();
-    let mut next_id = 0usize;
-    for &n in &local_nodes {
-        let c = *community.get(&n).unwrap();
-        id_remap.entry(c).or_insert_with(|| {
-            let id = next_id;
-            next_id += 1;
-            id
-        });
-    }
-    for val in community.values_mut() {
-        *val = *id_remap.get(val).unwrap();
-    }
-
-    let count = next_id;
-
-    // Compute sizes
-    let mut sizes: HashMap<usize, usize> = HashMap::new();
-    for &c in community.values() {
-        *sizes.entry(c).or_default() += 1;
-    }
-
-    let largest = sizes.values().copied().max().unwrap_or(0);
-    let smallest = sizes.values().copied().min().unwrap_or(0);
-
-    // Isolated: slugs in communities of size <= 2, sorted
-    let mut isolated: Vec<String> = local_nodes
-        .iter()
-        .filter(|&&n| {
-            let c = *community.get(&n).unwrap();
-            *sizes.get(&c).unwrap_or(&0) <= 2
-        })
-        .map(|&n| graph[n].slug.clone())
-        .collect();
-    isolated.sort();
-
-    Some(CommunityStats {
-        count,
-        largest,
-        smallest,
-        isolated,
-    })
+    build_community_data(graph, min_nodes).0
 }
 
 /// Returns slug → community id map, or `None` when below threshold. Used by `suggest.rs` strategy 4.
 pub fn node_community_map(graph: &WikiGraph, min_nodes: usize) -> Option<HashMap<String, usize>> {
-    let local_nodes: Vec<NodeIndex> = {
-        let mut v: Vec<NodeIndex> = graph
-            .node_indices()
-            .filter(|&idx| !graph[idx].external)
-            .collect();
-        v.sort_by_key(|&idx| graph[idx].slug.clone());
-        v
-    };
-
-    if local_nodes.len() < min_nodes {
-        return None;
-    }
-
-    let adj = build_adjacency(graph);
-    let degrees: HashMap<NodeIndex, usize> =
-        local_nodes.iter().map(|&n| (n, adj[&n].len())).collect();
-    let m: usize = adj.values().map(|s| s.len()).sum::<usize>() / 2;
-
-    let mut community: HashMap<NodeIndex, usize> = local_nodes
-        .iter()
-        .enumerate()
-        .map(|(i, &n)| (n, i))
-        .collect();
-
-    louvain_phase1(&adj, &mut community, &degrees, m);
-
-    // Normalize
-    let mut id_remap: HashMap<usize, usize> = HashMap::new();
-    let mut next_id = 0usize;
-    for &n in &local_nodes {
-        let c = *community.get(&n).unwrap();
-        id_remap.entry(c).or_insert_with(|| {
-            let id = next_id;
-            next_id += 1;
-            id
-        });
-    }
-
-    Some(
-        local_nodes
-            .iter()
-            .map(|&n| {
-                let c = *id_remap.get(community.get(&n).unwrap()).unwrap();
-                (graph[n].slug.clone(), c)
-            })
-            .collect(),
-    )
+    build_community_data(graph, min_nodes).1
 }
 
 // ── build_graph ───────────────────────────────────────────────────────────────
@@ -1077,6 +958,7 @@ pub fn subgraph(graph: &WikiGraph, root_slug: &str, depth: usize) -> WikiGraph {
 /// Returns `(None, None)` when graph is below `min_nodes` threshold.
 fn build_community_data(
     graph: &WikiGraph,
+    min_nodes: usize,
 ) -> (Option<CommunityStats>, Option<HashMap<String, usize>>) {
     let local_nodes: Vec<NodeIndex> = {
         let mut v: Vec<NodeIndex> = graph
@@ -1087,7 +969,7 @@ fn build_community_data(
         v
     };
 
-    if local_nodes.len() < 30 {
+    if local_nodes.len() < min_nodes {
         return (None, None);
     }
 
@@ -1184,7 +1066,7 @@ pub fn get_or_build_graph(
 
     // Cache miss — build
     let graph = Arc::new(build_graph(searcher, index_schema, filter, type_registry)?);
-    let (community_stats, community_map_raw) = build_community_data(&graph);
+    let (community_stats, community_map_raw) = build_community_data(&graph, 30);
     let community_map = community_map_raw.map(Arc::new);
 
     *graph_cache.write().unwrap() = Some(CachedGraph {
@@ -1209,7 +1091,7 @@ pub fn get_cached_community_map(
 ) -> Result<Option<Arc<HashMap<String, usize>>>> {
     debug_assert!(
         min_nodes <= 30,
-        "min_nodes > 30 bypasses cache and runs a fresh Louvain pass"
+        "min_nodes > 30 bypasses cached threshold and recomputes"
     );
 
     let current_gen = index_manager.generation();
@@ -1224,8 +1106,8 @@ pub fn get_cached_community_map(
                 return Ok(cached.community_map.clone());
             }
             // Caller wants higher threshold — recompute without caching variant
-            let map = node_community_map(&cached.graph, min_nodes).map(Arc::new);
-            return Ok(map);
+            let (_, map) = build_community_data(&cached.graph, min_nodes);
+            return Ok(map.map(Arc::new));
         }
     }
 
@@ -1246,8 +1128,8 @@ pub fn get_cached_community_map(
             if min_nodes <= 30 {
                 return Ok(cached.community_map.clone());
             }
-            let map = node_community_map(&cached.graph, min_nodes).map(Arc::new);
-            return Ok(map);
+            let (_, map) = build_community_data(&cached.graph, min_nodes);
+            return Ok(map.map(Arc::new));
         }
     }
 
@@ -1266,7 +1148,7 @@ pub fn get_cached_community_stats(
 ) -> Result<Option<CommunityStats>> {
     debug_assert!(
         min_nodes <= 30,
-        "min_nodes > 30 runs separate Louvain passes for stats vs map — IDs may diverge"
+        "min_nodes > 30 bypasses cached threshold and recomputes"
     );
 
     let current_gen = index_manager.generation();
@@ -1281,10 +1163,7 @@ pub fn get_cached_community_stats(
                 return Ok(cached.community_stats.clone());
             }
             // Caller wants higher threshold — recompute without overwriting cache
-            // NOTE: when min_nodes > 30, this calls compute_communities separately from
-            // get_cached_community_map's node_community_map call — community IDs may diverge.
-            // Current callers always use min_nodes=30 (the cached threshold) so this is safe.
-            let stats = compute_communities(&cached.graph, min_nodes);
+            let (stats, _) = build_community_data(&cached.graph, min_nodes);
             return Ok(stats);
         }
     }
@@ -1306,10 +1185,7 @@ pub fn get_cached_community_stats(
             if min_nodes <= 30 {
                 return Ok(cached.community_stats.clone());
             }
-            // NOTE: when min_nodes > 30, this calls compute_communities separately from
-            // get_cached_community_map's node_community_map call — community IDs may diverge.
-            // Current callers always use min_nodes=30 (the cached threshold) so this is safe.
-            let stats = compute_communities(&cached.graph, min_nodes);
+            let (stats, _) = build_community_data(&cached.graph, min_nodes);
             return Ok(stats);
         }
     }
