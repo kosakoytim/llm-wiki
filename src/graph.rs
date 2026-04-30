@@ -255,13 +255,13 @@ fn louvain_phase1(
 }
 
 /// Run Louvain community detection on `graph`. Returns `None` when local node count < `min_nodes`.
-/// External placeholder nodes are excluded. Processing order is sorted by slug for determinism.
-/// The internal phase-1 loop is capped at `n × 10` passes to guard against oscillation.
+/// Delegates to `build_community_data` — see its doc for algorithm details.
 pub fn compute_communities(graph: &WikiGraph, min_nodes: usize) -> Option<CommunityStats> {
     build_community_data(graph, min_nodes).0
 }
 
-/// Returns slug → community id map, or `None` when below threshold. Used by `suggest.rs` strategy 4.
+/// Returns slug → community id map, or `None` when below threshold.
+/// Delegates to `build_community_data` — shares the same Louvain run as `compute_communities`.
 pub fn node_community_map(graph: &WikiGraph, min_nodes: usize) -> Option<HashMap<String, usize>> {
     build_community_data(graph, min_nodes).1
 }
