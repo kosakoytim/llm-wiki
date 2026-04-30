@@ -666,7 +666,13 @@ pub fn build_graph_cross_wiki(
 /// # Precondition
 /// Each `Arc<WikiGraph>` in `wikis` should have been built with the same `filter`.
 /// The relation and type filters are re-applied here as a safety gate, but if the
-/// cached graph was built without a filter, this function is the only filter gate.
+/// cached graph was built without a filter, this function is the only gate.
+///
+/// `filter.root` and `filter.depth` are NOT re-applied — `get_or_build_graph` only
+/// caches the full unfiltered graph (it bypasses cache for non-default filters), so
+/// subgraph traversal from a root must be done by the caller after merging.
+/// In `ops/graph.rs`, the cross-wiki path always calls `get_or_build_graph` with
+/// `is_default()` filter, so this precondition holds in practice.
 pub fn merge_cached_graphs(
     wikis: &[(&str, Arc<WikiGraph>)],
     filter: &GraphFilter,
