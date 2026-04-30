@@ -1102,10 +1102,13 @@ pub fn get_cached_community_map(
         if let Some(cached) = cache.as_ref()
             && cached.index_gen == current_gen
         {
-            if min_nodes <= 30 {
+            // Return pre-built map only when it covers the requested threshold.
+            // cached.community_map was built at threshold=30; if min_nodes < 30 the
+            // cached map may be None for graphs with 5–29 nodes even though the caller
+            // would expect Some — so fall through to recompute at actual min_nodes.
+            if min_nodes <= 30 && cached.community_map.is_some() {
                 return Ok(cached.community_map.clone());
             }
-            // Caller wants higher threshold — recompute without caching variant
             let (_, map) = build_community_data(&cached.graph, min_nodes);
             return Ok(map.map(Arc::new));
         }
@@ -1125,7 +1128,7 @@ pub fn get_cached_community_map(
     {
         let cache = graph_cache.read().unwrap();
         if let Some(cached) = cache.as_ref() {
-            if min_nodes <= 30 {
+            if min_nodes <= 30 && cached.community_map.is_some() {
                 return Ok(cached.community_map.clone());
             }
             let (_, map) = build_community_data(&cached.graph, min_nodes);
@@ -1159,10 +1162,13 @@ pub fn get_cached_community_stats(
         if let Some(cached) = cache.as_ref()
             && cached.index_gen == current_gen
         {
-            if min_nodes <= 30 {
+            // Return pre-built stats only when it covers the requested threshold.
+            // cached.community_stats was built at threshold=30; if min_nodes < 30 the
+            // cached stats may be None for graphs with 5–29 nodes even though the caller
+            // would expect Some — so fall through to recompute at actual min_nodes.
+            if min_nodes <= 30 && cached.community_stats.is_some() {
                 return Ok(cached.community_stats.clone());
             }
-            // Caller wants higher threshold — recompute without overwriting cache
             let (stats, _) = build_community_data(&cached.graph, min_nodes);
             return Ok(stats);
         }
@@ -1182,7 +1188,7 @@ pub fn get_cached_community_stats(
     {
         let cache = graph_cache.read().unwrap();
         if let Some(cached) = cache.as_ref() {
-            if min_nodes <= 30 {
+            if min_nodes <= 30 && cached.community_stats.is_some() {
                 return Ok(cached.community_stats.clone());
             }
             let (stats, _) = build_community_data(&cached.graph, min_nodes);

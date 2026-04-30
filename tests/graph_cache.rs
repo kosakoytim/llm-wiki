@@ -459,3 +459,78 @@ fn graph_cache_invalidated_after_rebuild() {
         "cache must be invalidated after rebuild"
     );
 }
+
+/// Regression: get_cached_community_stats must return Some for a graph with
+/// N nodes where min_nodes <= N < 30. Previously returned None because the
+/// cache stored community_stats built at threshold=30 (None for small graphs)
+/// and the cached accessor returned that None without recomputing.
+#[test]
+fn get_cached_community_stats_returns_some_for_graph_above_min_nodes_threshold() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = dir.path().join("state").join("config.toml");
+
+    // Build a wiki with 6 nodes (> 5, < 30)
+    setup_space(
+        dir.path(),
+        "test",
+        &config_path,
+        &[
+            (
+                "concepts/a.md",
+                "---\ntitle: \"A\"\ntype: concept\nstatus: active\n---\nSee [[concepts/b]].\n",
+            ),
+            (
+                "concepts/b.md",
+                "---\ntitle: \"B\"\ntype: concept\nstatus: active\n---\nSee [[concepts/c]].\n",
+            ),
+            (
+                "concepts/c.md",
+                "---\ntitle: \"C\"\ntype: concept\nstatus: active\n---\nSee [[concepts/d]].\n",
+            ),
+            (
+                "concepts/d.md",
+                "---\ntitle: \"D\"\ntype: concept\nstatus: active\n---\nSee [[concepts/e]].\n",
+            ),
+            (
+                "concepts/e.md",
+                "---\ntitle: \"E\"\ntype: concept\nstatus: active\n---\nSee [[concepts/f]].\n",
+            ),
+            (
+                "concepts/f.md",
+                "---\ntitle: \"F\"\ntype: concept\nstatus: active\n---\nLeaf node.\n",
+            ),
+        ],
+    );
+
+    let manager = WikiEngine::build(&config_path).unwrap();
+    let engine = manager.state.read().unwrap();
+    let space = engine.spaces.get("test").unwrap();
+    let searcher = space.index_manager.searcher().unwrap();
+
+    // threshold=5: 6 nodes >= 5, should return Some
+    let stats = get_cached_community_stats(
+        &space.index_schema,
+        &space.type_registry,
+        &space.index_manager,
+        &space.graph_cache,
+        &searcher,
+        5,
+    )
+    .unwrap();
+    assert!(
+        stats.is_some(),
+        "expected Some(CommunityStats) for 6-node graph with min_nodes=5, got None"
+    );
+
+    // Second call — cache hit path must also return Some
+    let stats2 = get_cached_community_stats(
+        &space.index_schema,
+        &space.type_registry,
+        &space.index_manager,
+        &space.graph_cache,
+        &searcher,
+        5,
+    )
+    .unwrap();
+    assert!(stats2.is_some(), "cache-hit path must also return Some");
+}
