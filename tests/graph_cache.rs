@@ -6,7 +6,10 @@ use petgraph::visit::EdgeRef;
 
 use llm_wiki::engine::WikiEngine;
 use llm_wiki::git;
-use llm_wiki::graph::{GraphFilter, get_cached_community_map, get_cached_community_stats, get_or_build_graph, merge_cached_graphs};
+use llm_wiki::graph::{
+    GraphFilter, get_cached_community_map, get_cached_community_stats, get_or_build_graph,
+    merge_cached_graphs,
+};
 
 fn setup_wiki(dir: &Path, name: &str) -> std::path::PathBuf {
     let config_path = dir.join("state").join("config.toml");
@@ -280,7 +283,11 @@ fn cross_wiki_merge_cached_graphs_matches_build_graph_cross_wiki() {
         .node_indices()
         .filter(|&idx| !merged[idx].external)
         .collect();
-    assert_eq!(local_nodes.len(), 3, "expected 3 local nodes in merged graph");
+    assert_eq!(
+        local_nodes.len(),
+        3,
+        "expected 3 local nodes in merged graph"
+    );
 
     // Verify: cross-wiki edge alpha/foo -> beta/bar is resolved (not external)
     let foo_idx = merged
