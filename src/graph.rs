@@ -662,6 +662,11 @@ pub fn build_graph_cross_wiki(
 /// Merge pre-built per-space graphs into a single cross-wiki graph.
 /// Accepts `Arc<WikiGraph>` inputs (from cache) instead of building from index.
 /// Matches the slug-prefixing and external-node resolution of `build_graph_cross_wiki`.
+///
+/// # Precondition
+/// Each `Arc<WikiGraph>` in `wikis` should have been built with the same `filter`.
+/// The relation and type filters are re-applied here as a safety gate, but if the
+/// cached graph was built without a filter, this function is the only filter gate.
 pub fn merge_cached_graphs(
     wikis: &[(&str, Arc<WikiGraph>)],
     filter: &GraphFilter,
@@ -676,7 +681,8 @@ pub fn merge_cached_graphs(
             if node.external {
                 continue;
             }
-            // Type filter already applied during per-space build, but re-check for safety
+            // Type filter re-applied here — matches build_graph_cross_wiki's first-pass filter.
+            // Precondition: input graphs should have been built with matching filter.
             if !filter.types.is_empty() && !filter.types.contains(&node.r#type) {
                 continue;
             }
@@ -702,7 +708,8 @@ pub fn merge_cached_graphs(
                 continue;
             }
 
-            // Apply relation filter
+            // Relation filter re-applied here. If graphs were built without this filter,
+            // this is the only gate — see precondition in doc comment.
             let relation = graph[edge_idx].relation.clone();
             if let Some(ref rel_filter) = filter.relation {
                 if &relation != rel_filter {
