@@ -717,10 +717,10 @@ pub fn merge_cached_graphs(
             // Relation filter re-applied here. If graphs were built without this filter,
             // this is the only gate — see precondition in doc comment.
             let relation = graph[edge_idx].relation.clone();
-            if let Some(ref rel_filter) = filter.relation {
-                if &relation != rel_filter {
-                    continue;
-                }
+            if let Some(ref rel_filter) = filter.relation
+                && &relation != rel_filter
+            {
+                continue;
             }
 
             let from_key = format!("{wiki_name}/{}", from_node.slug);
@@ -756,11 +756,7 @@ pub fn merge_cached_graphs(
             };
 
             if from_merged != to_merged {
-                merged.add_edge(
-                    from_merged,
-                    to_merged,
-                    LabeledEdge { relation },
-                );
+                merged.add_edge(from_merged, to_merged, LabeledEdge { relation });
             }
         }
     }
@@ -1147,7 +1143,12 @@ fn build_community_data(
         .collect();
     isolated.sort();
 
-    let stats = CommunityStats { count, largest, smallest, isolated };
+    let stats = CommunityStats {
+        count,
+        largest,
+        smallest,
+        isolated,
+    };
 
     (Some(stats), Some(community_map))
 }
@@ -1206,7 +1207,10 @@ pub fn get_cached_community_map(
     searcher: &Searcher,
     min_nodes: usize,
 ) -> Result<Option<Arc<HashMap<String, usize>>>> {
-    debug_assert!(min_nodes <= 30, "min_nodes > 30 bypasses cache and runs a fresh Louvain pass");
+    debug_assert!(
+        min_nodes <= 30,
+        "min_nodes > 30 bypasses cache and runs a fresh Louvain pass"
+    );
 
     let current_gen = index_manager.generation();
 
@@ -1260,7 +1264,10 @@ pub fn get_cached_community_stats(
     searcher: &Searcher,
     min_nodes: usize,
 ) -> Result<Option<CommunityStats>> {
-    debug_assert!(min_nodes <= 30, "min_nodes > 30 runs separate Louvain passes for stats vs map — IDs may diverge");
+    debug_assert!(
+        min_nodes <= 30,
+        "min_nodes > 30 runs separate Louvain passes for stats vs map — IDs may diverge"
+    );
 
     let current_gen = index_manager.generation();
 
