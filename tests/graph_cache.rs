@@ -355,3 +355,61 @@ fn cross_wiki_merge_keeps_external_when_target_wiki_missing() {
         "unmounted target wiki should produce external placeholder"
     );
 }
+
+#[test]
+fn graph_cache_invalidated_after_rebuild() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = setup_wiki(dir.path(), "test");
+
+    let manager = WikiEngine::build(&config_path).unwrap();
+
+    let arc1 = {
+        let engine = manager.state.read().unwrap();
+        let space = engine.spaces.get("test").unwrap();
+        let searcher = space.index_manager.searcher().unwrap();
+        get_or_build_graph(
+            &space.index_schema,
+            &space.type_registry,
+            &space.index_manager,
+            &space.graph_cache,
+            &searcher,
+            &GraphFilter::default(),
+        )
+        .unwrap()
+    }; // drop engine read lock
+
+    // Trigger rebuild — bumps generation
+    {
+        let engine = manager.state.read().unwrap();
+        let space = engine.spaces.get("test").unwrap();
+        space
+            .index_manager
+            .rebuild(
+                &space.wiki_root,
+                &space.repo_root,
+                &space.index_schema,
+                &space.type_registry,
+            )
+            .unwrap();
+    }
+
+    let arc2 = {
+        let engine = manager.state.read().unwrap();
+        let space = engine.spaces.get("test").unwrap();
+        let searcher = space.index_manager.searcher().unwrap();
+        get_or_build_graph(
+            &space.index_schema,
+            &space.type_registry,
+            &space.index_manager,
+            &space.graph_cache,
+            &searcher,
+            &GraphFilter::default(),
+        )
+        .unwrap()
+    };
+
+    assert!(
+        !Arc::ptr_eq(&arc1, &arc2),
+        "cache must be invalidated after rebuild"
+    );
+}
