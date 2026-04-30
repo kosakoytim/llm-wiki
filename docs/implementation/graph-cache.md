@@ -2,7 +2,7 @@
 title: "Graph Cache Implementation"
 summary: "In-memory graph cache keyed on index generation — eliminates redundant build_graph and Louvain calls in serve mode."
 status: ready
-last_updated: "2026-04-30"
+last_updated: "2026-05-01"
 depends_on:
   - engine.md
   - index-manager.md
@@ -107,9 +107,8 @@ pub fn get_cached_community_map(
 ) -> Result<Option<Arc<HashMap<String, usize>>>>
 ```
 
-Returns cached `community_map`. If `min_nodes > 30` (the cache threshold),
-recomputes without overwriting cache. Triggers graph build as side effect on
-miss.
+Returns cached `community_map` if local node count ≥ `min_nodes`, otherwise
+`None`. Triggers graph build as side effect on miss.
 
 ### `get_cached_community_stats`
 
@@ -121,22 +120,21 @@ pub fn get_cached_community_stats(
 ```
 
 Same pattern as `get_cached_community_map` but returns `CommunityStats`. Used
-by `ops/stats.rs` to skip Louvain on cache hit.
+by `ops/stats.rs` to skip Louvain on cache hit. Returns `None` when local node
+count < `min_nodes`.
 
 ## Cache population
 
-On cache miss, calls `build_community_data(graph, 30)` — a private helper that
+On cache miss, calls `build_community_data(graph, 0)` — a private helper that
 runs Louvain exactly once and returns both `CommunityStats` and
 `HashMap<String, usize>` (community map). Both fields are stored in
-`CachedGraph` atomically.
+`CachedGraph` atomically. Passing `0` ensures Louvain always runs regardless
+of graph size; the caller-supplied `min_nodes` gate is applied at read time,
+not at build time.
 
 `compute_communities` and `node_community_map` are thin wrappers over
 `build_community_data` — they extract `.0` and `.1` respectively. This ensures
 all three entry points share identical Louvain logic with no duplication.
-
-The community threshold used is `30` (the default config value). Callers
-requesting a higher threshold get a fresh recompute without overwriting the
-cache. This keeps the cache a single stable entry per space.
 
 ## `GraphFilter::is_default()`
 
@@ -182,8 +180,8 @@ accepts pre-built graphs rather than raw index handles.
 - Cache lives only for process lifetime. Cold start always rebuilds.
   See [imp-graph-snapshot.md](../improvements/imp-graph-snapshot.md) for
   the planned persistent snapshot feature.
-- Community data is cached at `min_nodes = 30`. Wikis configured with a
-  different threshold recompute communities on every call (but reuse the
-  cached graph structure).
+- Community data is always computed (Louvain runs at threshold 0). The
+  caller-supplied `min_nodes` is applied at read time — no recompute needed
+  for different thresholds, cached graph and community data are always reused.
 - Only unfiltered full graphs are cached. Each distinct filter combination
   builds fresh.

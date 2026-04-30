@@ -47,9 +47,9 @@ pub type WikiGraph = DiGraph<PageNode, LabeledEdge>;
 pub struct CachedGraph {
     /// The full unfiltered wiki graph.
     pub graph: Arc<WikiGraph>,
-    /// Precomputed community map (slug → community_id), None if graph is too small.
+    /// Precomputed community map (slug → community_id). Some for any non-empty graph.
     pub community_map: Option<Arc<HashMap<String, usize>>>,
-    /// Precomputed community stats, None if graph is too small.
+    /// Precomputed community stats. Some for any non-empty graph.
     pub community_stats: Option<CommunityStats>,
     /// Generation value from SpaceIndexManager at cache time.
     pub index_gen: u64,
@@ -955,7 +955,7 @@ pub fn subgraph(graph: &WikiGraph, root_slug: &str, depth: usize) -> WikiGraph {
 // ── build_community_data ─────────────────────────────────────────────────────
 
 /// Run Louvain once and return both community outputs.
-/// Returns `(None, None)` when graph is below `min_nodes` threshold.
+/// Returns `(None, None)` when local node count < `min_nodes` (pass 0 to always run).
 fn build_community_data(
     graph: &WikiGraph,
     min_nodes: usize,
@@ -1066,7 +1066,7 @@ pub fn get_or_build_graph(
 
     // Cache miss — build
     let graph = Arc::new(build_graph(searcher, index_schema, filter, type_registry)?);
-    let (community_stats, community_map_raw) = build_community_data(&graph, 30);
+    let (community_stats, community_map_raw) = build_community_data(&graph, 0);
     let community_map = community_map_raw.map(Arc::new);
 
     *graph_cache.write().unwrap() = Some(CachedGraph {
@@ -1089,11 +1089,6 @@ pub fn get_cached_community_map(
     searcher: &Searcher,
     min_nodes: usize,
 ) -> Result<Option<Arc<HashMap<String, usize>>>> {
-    debug_assert!(
-        min_nodes <= 30,
-        "min_nodes > 30 bypasses cached threshold and recomputes"
-    );
-
     let current_gen = index_manager.generation();
 
     // Check cache hit
@@ -1102,19 +1097,19 @@ pub fn get_cached_community_map(
         if let Some(cached) = cache.as_ref()
             && cached.index_gen == current_gen
         {
-            // Return pre-built map only when it covers the requested threshold.
-            // cached.community_map was built at threshold=30; if min_nodes < 30 the
-            // cached map may be None for graphs with 5–29 nodes even though the caller
-            // would expect Some — so fall through to recompute at actual min_nodes.
-            if min_nodes <= 30 && cached.community_map.is_some() {
-                return Ok(cached.community_map.clone());
+            let local_count = cached
+                .graph
+                .node_indices()
+                .filter(|&i| !cached.graph[i].external)
+                .count();
+            if local_count < min_nodes {
+                return Ok(None);
             }
-            let (_, map) = build_community_data(&cached.graph, min_nodes);
-            return Ok(map.map(Arc::new));
+            return Ok(cached.community_map.clone());
         }
     }
 
-    // Cache miss — build graph (caches community_map at threshold=30)
+    // Cache miss — build graph and community data
     get_or_build_graph(
         index_schema,
         type_registry,
@@ -1128,11 +1123,15 @@ pub fn get_cached_community_map(
     {
         let cache = graph_cache.read().unwrap();
         if let Some(cached) = cache.as_ref() {
-            if min_nodes <= 30 && cached.community_map.is_some() {
-                return Ok(cached.community_map.clone());
+            let local_count = cached
+                .graph
+                .node_indices()
+                .filter(|&i| !cached.graph[i].external)
+                .count();
+            if local_count < min_nodes {
+                return Ok(None);
             }
-            let (_, map) = build_community_data(&cached.graph, min_nodes);
-            return Ok(map.map(Arc::new));
+            return Ok(cached.community_map.clone());
         }
     }
 
@@ -1149,11 +1148,6 @@ pub fn get_cached_community_stats(
     searcher: &Searcher,
     min_nodes: usize,
 ) -> Result<Option<CommunityStats>> {
-    debug_assert!(
-        min_nodes <= 30,
-        "min_nodes > 30 bypasses cached threshold and recomputes"
-    );
-
     let current_gen = index_manager.generation();
 
     // Check cache hit
@@ -1162,19 +1156,19 @@ pub fn get_cached_community_stats(
         if let Some(cached) = cache.as_ref()
             && cached.index_gen == current_gen
         {
-            // Return pre-built stats only when it covers the requested threshold.
-            // cached.community_stats was built at threshold=30; if min_nodes < 30 the
-            // cached stats may be None for graphs with 5–29 nodes even though the caller
-            // would expect Some — so fall through to recompute at actual min_nodes.
-            if min_nodes <= 30 && cached.community_stats.is_some() {
-                return Ok(cached.community_stats.clone());
+            let local_count = cached
+                .graph
+                .node_indices()
+                .filter(|&i| !cached.graph[i].external)
+                .count();
+            if local_count < min_nodes {
+                return Ok(None);
             }
-            let (stats, _) = build_community_data(&cached.graph, min_nodes);
-            return Ok(stats);
+            return Ok(cached.community_stats.clone());
         }
     }
 
-    // Cache miss — build graph (populates community_stats at threshold=30)
+    // Cache miss — build graph and community data
     get_or_build_graph(
         index_schema,
         type_registry,
@@ -1184,15 +1178,19 @@ pub fn get_cached_community_stats(
         &GraphFilter::default(),
     )?;
 
-    // Re-read after population (no gen check — cache is valid at whatever generation get_or_build_graph wrote)
+    // Re-read (no gen check — cache is valid at whatever generation get_or_build_graph wrote)
     {
         let cache = graph_cache.read().unwrap();
         if let Some(cached) = cache.as_ref() {
-            if min_nodes <= 30 && cached.community_stats.is_some() {
-                return Ok(cached.community_stats.clone());
+            let local_count = cached
+                .graph
+                .node_indices()
+                .filter(|&i| !cached.graph[i].external)
+                .count();
+            if local_count < min_nodes {
+                return Ok(None);
             }
-            let (stats, _) = build_community_data(&cached.graph, min_nodes);
-            return Ok(stats);
+            return Ok(cached.community_stats.clone());
         }
     }
 

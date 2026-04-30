@@ -460,10 +460,8 @@ fn graph_cache_invalidated_after_rebuild() {
     );
 }
 
-/// Regression: get_cached_community_stats must return Some for a graph with
-/// N nodes where min_nodes <= N < 30. Previously returned None because the
-/// cache stored community_stats built at threshold=30 (None for small graphs)
-/// and the cached accessor returned that None without recomputing.
+/// Cache always runs Louvain at threshold=0, so accessors only check local node count vs min_nodes.
+/// Regression: previously the cache was built at threshold=30, causing None for graphs with 5–29 nodes.
 #[test]
 fn get_cached_community_stats_returns_some_for_graph_above_min_nodes_threshold() {
     let dir = tempfile::tempdir().unwrap();
