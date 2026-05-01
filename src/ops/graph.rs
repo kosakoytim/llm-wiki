@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 
 use crate::engine::EngineState;
@@ -50,35 +52,32 @@ pub fn graph_build(
         types,
         relation: params.relation.clone(),
     };
-    let g = if params.cross_wiki {
-        // Collect (name, searcher) pairs; Arc keeps schema/registry alive
-        let space_data: Vec<(String, tantivy::Searcher)> = engine
-            .spaces
-            .iter()
-            .filter_map(|(name, sp)| sp.index_manager.searcher().ok().map(|s| (name.clone(), s)))
-            .collect();
-        let tuples: Vec<(
-            &str,
-            &tantivy::Searcher,
-            &crate::index_schema::IndexSchema,
-            &crate::type_registry::SpaceTypeRegistry,
-        )> = space_data
-            .iter()
-            .filter_map(|(name, searcher)| {
-                engine
-                    .spaces
-                    .get(name)
-                    .map(|sp| (name.as_str(), searcher, &sp.index_schema, &sp.type_registry))
-            })
-            .collect();
-        graph::build_graph_cross_wiki(&tuples, &filter)?
+    let g: Arc<graph::WikiGraph> = if params.cross_wiki {
+        // Build each space graph through its cache, then merge
+        let mut per_space: Vec<(&str, Arc<graph::WikiGraph>)> = Vec::new();
+        for (name, sp) in engine.spaces.iter() {
+            if let Ok(searcher) = sp.index_manager.searcher() {
+                let g = graph::get_or_build_graph(
+                    &sp.index_schema,
+                    &sp.type_registry,
+                    &sp.index_manager,
+                    &sp.graph_cache,
+                    &searcher,
+                    &filter,
+                )?;
+                per_space.push((name.as_str(), g));
+            }
+        }
+        Arc::new(graph::merge_cached_graphs(&per_space, &filter)?)
     } else {
         let searcher = space.index_manager.searcher()?;
-        graph::build_graph(
-            &searcher,
+        graph::get_or_build_graph(
             &space.index_schema,
-            &filter,
             &space.type_registry,
+            &space.index_manager,
+            &space.graph_cache,
+            &searcher,
+            &filter,
         )?
     };
 

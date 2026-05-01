@@ -95,7 +95,7 @@ pub fn content_read(
     list_assets: bool,
 ) -> Result<ContentReadResult> {
     let (entry, slug) = WikiUri::resolve(uri, wiki_flag, &engine.config)?;
-    let wiki_root = PathBuf::from(&entry.path).join("wiki");
+    let wiki_root = engine.space(&entry.name)?.wiki_root.clone();
 
     if list_assets {
         let assets = markdown::list_assets(&slug, &wiki_root)?;
@@ -137,7 +137,7 @@ pub fn content_write(
     content: &str,
 ) -> Result<WriteResult> {
     let (_entry, slug) = WikiUri::resolve(uri, wiki_flag, &engine.config)?;
-    let wiki_root = PathBuf::from(&_entry.path).join("wiki");
+    let wiki_root = engine.space(&_entry.name)?.wiki_root.clone();
     let path = markdown::write_page(slug.as_str(), content, &wiki_root)?;
     Ok(WriteResult {
         bytes_written: content.len(),
@@ -171,7 +171,7 @@ pub fn content_new(
 ) -> Result<ContentNewResult> {
     let (entry, slug) = WikiUri::resolve(uri, wiki_flag, &engine.config)?;
     let repo_root = PathBuf::from(&entry.path);
-    let wiki_root = repo_root.join("wiki");
+    let wiki_root = engine.space(&entry.name)?.wiki_root.clone();
 
     let type_name = if section {
         "section"

@@ -53,6 +53,20 @@ pub fn tool_list() -> Vec<Tool> {
                     "description": opt_str("Optional one-line description"),
                     "force": opt_bool("Update space entry if name already exists"),
                     "set_default": opt_bool("Set as default wiki"),
+                    "wiki_root": opt_str("Content directory relative to repo root (default: \"wiki\")"),
+                }),
+                &["path", "name"],
+            ),
+        ),
+        Tool::new(
+            "wiki_spaces_register",
+            "Register an existing wiki repository without creating files",
+            schema(
+                json!({
+                    "path": str_prop("Absolute path to the existing wiki repository"),
+                    "name": str_prop("Wiki name — used in wiki:// URIs"),
+                    "description": opt_str("Optional one-line description"),
+                    "wiki_root": opt_str("Content directory (overrides wiki.toml; must already exist)"),
                 }),
                 &["path", "name"],
             ),
@@ -335,6 +349,7 @@ pub fn call(server: &McpServer, name: &str, args: &Map<String, Value>) -> ToolRe
     let _span = tracing::info_span!("tool_call", tool = name).entered();
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| match name {
         "wiki_spaces_create" => handlers::handle_spaces_create(server, args),
+        "wiki_spaces_register" => handlers::handle_spaces_register(server, args),
         "wiki_spaces_list" => handlers::handle_spaces_list(server, args),
         "wiki_spaces_remove" => handlers::handle_spaces_remove(server, args),
         "wiki_spaces_set_default" => handlers::handle_spaces_set_default(server, args),
@@ -362,7 +377,10 @@ pub fn call(server: &McpServer, name: &str, args: &Map<String, Value>) -> ToolRe
         Ok(Ok((content, notify_uris))) => {
             let notify_resources_changed = matches!(
                 name,
-                "wiki_spaces_create" | "wiki_spaces_remove" | "wiki_spaces_set_default"
+                "wiki_spaces_create"
+                    | "wiki_spaces_register"
+                    | "wiki_spaces_remove"
+                    | "wiki_spaces_set_default"
             );
             tracing::debug!(tool = name, "tool call ok");
             ToolResult {

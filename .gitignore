@@ -1,12 +1,13 @@
 /target
-README-draft.md
-docs/prompts/
+docs/brainstorm/
+docs/superpowers
 
 # tantivy search index — gitignored, rebuilt on demand via `wiki search --rebuild-index`
 .wiki/search-index/
 
-# docs archive — gitignored
-projects/llm-wiki/docs/archive
 
-.remember
 .claude
+# Added by code-review-graph
+.code-review-graph/
+.mcp.json
+CLAUDE.md

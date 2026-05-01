@@ -252,6 +252,23 @@ pub enum SpacesAction {
         /// Set as default wiki
         #[arg(long)]
         set_default: bool,
+        /// Content directory relative to repo root (default: "wiki")
+        #[arg(long)]
+        wiki_root: Option<String>,
+    },
+    /// Register an existing wiki repository without creating files
+    Register {
+        /// Absolute path to the existing wiki repository
+        path: String,
+        /// Wiki name — used in wiki:// URIs
+        #[arg(long)]
+        name: String,
+        /// Optional one-line description
+        #[arg(long)]
+        description: Option<String>,
+        /// Content directory relative to repo root (overrides wiki.toml)
+        #[arg(long)]
+        wiki_root: Option<String>,
     },
     /// List all registered wikis
     List {

@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use rmcp::model::Content;
 use serde_json::{Map, Value};
 
@@ -18,6 +16,7 @@ pub fn handle_spaces_create(server: &McpServer, args: &Map<String, Value>) -> To
     let description = arg_str(args, "description");
     let force = arg_bool(args, "force");
     let set_default = arg_bool(args, "set_default");
+    let wiki_root = arg_str(args, "wiki_root");
 
     let config_path = {
         let engine = server.engine();
@@ -31,6 +30,7 @@ pub fn handle_spaces_create(server: &McpServer, args: &Map<String, Value>) -> To
         set_default,
         &config_path,
         Some(&server.manager),
+        wiki_root.as_deref(),
     )
     .map_err(|e| format!("{e}"))?;
 
@@ -40,6 +40,36 @@ pub fn handle_spaces_create(server: &McpServer, args: &Map<String, Value>) -> To
         "created": report.created,
         "registered": report.registered,
         "committed": report.committed,
+    }))
+    .map_err(|e| format!("{e}"))?;
+    ok_text(json)
+}
+
+/// Handle `wiki_spaces_register` — register an existing wiki repository without creating files.
+pub fn handle_spaces_register(server: &McpServer, args: &Map<String, Value>) -> ToolHandlerResult {
+    let path = arg_str_req(args, "path")?;
+    let name = arg_str_req(args, "name")?;
+    let description = arg_str(args, "description");
+    let wiki_root = arg_str(args, "wiki_root");
+
+    let config_path = {
+        let engine = server.engine();
+        engine.config_path.clone()
+    };
+    let report = ops::spaces_register(
+        &std::path::PathBuf::from(&path),
+        &name,
+        description.as_deref(),
+        wiki_root.as_deref(),
+        &config_path,
+        Some(&server.manager),
+    )
+    .map_err(|e| format!("{e}"))?;
+
+    let json = serde_json::to_string_pretty(&serde_json::json!({
+        "path": report.path,
+        "name": report.name,
+        "registered": report.registered,
     }))
     .map_err(|e| format!("{e}"))?;
     ok_text(json)
@@ -213,7 +243,10 @@ pub fn handle_resolve(server: &McpServer, args: &Map<String, Value>) -> ToolHand
 
     let (entry, slug) =
         WikiUri::resolve(&uri, wiki_flag.as_deref(), &engine.config).map_err(|e| format!("{e}"))?;
-    let wiki_root = PathBuf::from(&entry.path).join("wiki");
+    let wiki_root = engine
+        .space(&entry.name)
+        .map(|s| s.wiki_root.clone())
+        .unwrap_or_else(|_| std::path::PathBuf::from(&entry.path).join("wiki"));
 
     let (path, exists, bundle) = match resolve_read_target(slug.as_str(), &wiki_root) {
         Ok(ReadTarget::Page(p)) => {

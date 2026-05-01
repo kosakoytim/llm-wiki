@@ -19,6 +19,7 @@ not ground truth. For design contracts see [specifications/](../specifications/R
 | [schema-change-detection.md](schema-change-detection.md) | Schema hash, staleness, per-wiki registry           |
 | [index-manager.md](index-manager.md)                     | SpaceIndexManager, rebuild, staleness, recovery     |
 | [tantivy.md](tantivy.md)                                 | Dynamic schema, TopDocs, index writer, tokenizer    |
+| [graph-cache.md](graph-cache.md)                         | In-memory graph cache, generation counter, accessors |
 
 ## MCP
 

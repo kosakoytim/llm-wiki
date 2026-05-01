@@ -158,6 +158,14 @@ with `status: generated`.
 The graph is built from the tantivy index — no file reads. Construction
 is O(pages + edges). Rendering is O(filtered nodes + filtered edges).
 
+In serve mode (`llm-wiki serve`), the full unfiltered graph is cached
+in memory per wiki space and reused across `wiki_graph`, `wiki_stats`,
+and `wiki_suggest` calls. The cache is keyed on an index generation
+counter incremented after every write (`reload_reader`). Filtered
+graph requests (type, relation, root) bypass the cache and build on
+demand. See [graph-cache.md](../implementation/graph-cache.md) for the
+implementation.
+
 ## Community detection
 
 Louvain clustering runs on a symmetrized view of the directed graph (each directed
@@ -191,7 +199,7 @@ fewer passes; the cap only applies to adversarial small graphs.
 
 ## Future Improvements
 
-- Persistent graph index alongside tantivy to avoid rebuilding petgraph
-  on every call
+- Persistent graph snapshot alongside tantivy index — survives process
+  restart; see [imp-graph-snapshot.md](../improvements/imp-graph-snapshot.md)
 - Graph queries beyond rendering: shortest path, connected components,
   orphan detection

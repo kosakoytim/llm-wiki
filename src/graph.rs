@@ -1,5 +1,6 @@
 use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
 use chrono::Utc;
@@ -11,6 +12,7 @@ use tantivy::collector::TopDocs;
 use tantivy::query::AllQuery;
 use tantivy::schema::Value;
 
+use crate::index_manager::SpaceIndexManager;
 use crate::index_schema::IndexSchema;
 use crate::links::ParsedLink;
 use crate::type_registry::SpaceTypeRegistry;
@@ -41,6 +43,18 @@ pub struct LabeledEdge {
 /// Directed graph type used for the wiki concept graph.
 pub type WikiGraph = DiGraph<PageNode, LabeledEdge>;
 
+/// Cached result of a full (unfiltered) graph build, keyed by index generation.
+pub struct CachedGraph {
+    /// The full unfiltered wiki graph.
+    pub graph: Arc<WikiGraph>,
+    /// Precomputed community map (slug → community_id). Some for any non-empty graph.
+    pub community_map: Option<Arc<HashMap<String, usize>>>,
+    /// Precomputed community stats. Some for any non-empty graph.
+    pub community_stats: Option<CommunityStats>,
+    /// Generation value from SpaceIndexManager at cache time.
+    pub index_gen: u64,
+}
+
 /// Filtering parameters for graph construction and subgraph extraction.
 #[derive(Debug, Clone, Default)]
 pub struct GraphFilter {
@@ -52,6 +66,14 @@ pub struct GraphFilter {
     pub types: Vec<String>,
     /// Edge relation label to filter on (None = all relations).
     pub relation: Option<String>,
+}
+
+impl GraphFilter {
+    /// Returns `true` when the filter represents an unfiltered full-graph request.
+    /// Note: `depth` is intentionally excluded — a depth-limited full graph still uses the full cache.
+    pub fn is_default(&self) -> bool {
+        self.root.is_none() && self.types.is_empty() && self.relation.is_none()
+    }
 }
 
 /// Summary of a completed graph build or render operation.
@@ -233,134 +255,15 @@ fn louvain_phase1(
 }
 
 /// Run Louvain community detection on `graph`. Returns `None` when local node count < `min_nodes`.
-/// External placeholder nodes are excluded. Processing order is sorted by slug for determinism.
-/// The internal phase-1 loop is capped at `n × 10` passes to guard against oscillation.
+/// Delegates to `build_community_data` — see its doc for algorithm details.
 pub fn compute_communities(graph: &WikiGraph, min_nodes: usize) -> Option<CommunityStats> {
-    // Only count non-external nodes
-    let local_nodes: Vec<NodeIndex> = {
-        let mut v: Vec<NodeIndex> = graph
-            .node_indices()
-            .filter(|&idx| !graph[idx].external)
-            .collect();
-        v.sort_by_key(|&idx| graph[idx].slug.clone());
-        v
-    };
-
-    if local_nodes.len() < min_nodes {
-        return None;
-    }
-
-    let adj = build_adjacency(graph);
-
-    // Degree per node (undirected, local only)
-    let degrees: HashMap<NodeIndex, usize> =
-        local_nodes.iter().map(|&n| (n, adj[&n].len())).collect();
-
-    let m: usize = adj.values().map(|s| s.len()).sum::<usize>() / 2;
-
-    // Initial assignment: each node in its own community
-    let mut community: HashMap<NodeIndex, usize> = local_nodes
-        .iter()
-        .enumerate()
-        .map(|(i, &n)| (n, i))
-        .collect();
-
-    louvain_phase1(&adj, &mut community, &degrees, m);
-
-    // Normalize community ids to contiguous 0..k
-    let mut id_remap: HashMap<usize, usize> = HashMap::new();
-    let mut next_id = 0usize;
-    for &n in &local_nodes {
-        let c = *community.get(&n).unwrap();
-        id_remap.entry(c).or_insert_with(|| {
-            let id = next_id;
-            next_id += 1;
-            id
-        });
-    }
-    for val in community.values_mut() {
-        *val = *id_remap.get(val).unwrap();
-    }
-
-    let count = next_id;
-
-    // Compute sizes
-    let mut sizes: HashMap<usize, usize> = HashMap::new();
-    for &c in community.values() {
-        *sizes.entry(c).or_default() += 1;
-    }
-
-    let largest = sizes.values().copied().max().unwrap_or(0);
-    let smallest = sizes.values().copied().min().unwrap_or(0);
-
-    // Isolated: slugs in communities of size <= 2, sorted
-    let mut isolated: Vec<String> = local_nodes
-        .iter()
-        .filter(|&&n| {
-            let c = *community.get(&n).unwrap();
-            *sizes.get(&c).unwrap_or(&0) <= 2
-        })
-        .map(|&n| graph[n].slug.clone())
-        .collect();
-    isolated.sort();
-
-    Some(CommunityStats {
-        count,
-        largest,
-        smallest,
-        isolated,
-    })
+    build_community_data(graph, min_nodes).0
 }
 
-/// Returns slug → community id map, or `None` when below threshold. Used by `suggest.rs` strategy 4.
+/// Returns slug → community id map, or `None` when below threshold.
+/// Delegates to `build_community_data` — shares the same Louvain run as `compute_communities`.
 pub fn node_community_map(graph: &WikiGraph, min_nodes: usize) -> Option<HashMap<String, usize>> {
-    let local_nodes: Vec<NodeIndex> = {
-        let mut v: Vec<NodeIndex> = graph
-            .node_indices()
-            .filter(|&idx| !graph[idx].external)
-            .collect();
-        v.sort_by_key(|&idx| graph[idx].slug.clone());
-        v
-    };
-
-    if local_nodes.len() < min_nodes {
-        return None;
-    }
-
-    let adj = build_adjacency(graph);
-    let degrees: HashMap<NodeIndex, usize> =
-        local_nodes.iter().map(|&n| (n, adj[&n].len())).collect();
-    let m: usize = adj.values().map(|s| s.len()).sum::<usize>() / 2;
-
-    let mut community: HashMap<NodeIndex, usize> = local_nodes
-        .iter()
-        .enumerate()
-        .map(|(i, &n)| (n, i))
-        .collect();
-
-    louvain_phase1(&adj, &mut community, &degrees, m);
-
-    // Normalize
-    let mut id_remap: HashMap<usize, usize> = HashMap::new();
-    let mut next_id = 0usize;
-    for &n in &local_nodes {
-        let c = *community.get(&n).unwrap();
-        id_remap.entry(c).or_insert_with(|| {
-            let id = next_id;
-            next_id += 1;
-            id
-        });
-    }
-
-    Some(
-        local_nodes
-            .iter()
-            .map(|&n| {
-                let c = *id_remap.get(community.get(&n).unwrap()).unwrap();
-                (graph[n].slug.clone(), c)
-            })
-            .collect(),
-    )
+    build_community_data(graph, min_nodes).1
 }
 
 // ── build_graph ───────────────────────────────────────────────────────────────
@@ -628,6 +531,113 @@ pub fn build_graph_cross_wiki(
                         relation: g[edge_idx].relation.clone(),
                     },
                 );
+            }
+        }
+    }
+
+    Ok(merged)
+}
+
+// ── merge_cached_graphs ──────────────────────────────────────────────────────
+
+/// Merge pre-built per-space graphs into a single cross-wiki graph.
+/// Accepts `Arc<WikiGraph>` inputs (from cache) instead of building from index.
+/// Matches the slug-prefixing and external-node resolution of `build_graph_cross_wiki`.
+///
+/// # Precondition
+/// Each `Arc<WikiGraph>` in `wikis` should have been built with the same `filter`.
+/// The relation and type filters are re-applied here as a safety gate, but if the
+/// cached graph was built without a filter, this function is the only gate.
+///
+/// `filter.root` and `filter.depth` are NOT re-applied — `get_or_build_graph` only
+/// caches the full unfiltered graph (it bypasses cache for non-default filters), so
+/// subgraph traversal from a root must be done by the caller after merging.
+/// In `ops/graph.rs`, the cross-wiki path always calls `get_or_build_graph` with
+/// `is_default()` filter, so this precondition holds in practice.
+pub fn merge_cached_graphs(
+    wikis: &[(&str, Arc<WikiGraph>)],
+    filter: &GraphFilter,
+) -> Result<WikiGraph> {
+    let mut merged = WikiGraph::new();
+    let mut global_idx: HashMap<String, NodeIndex> = HashMap::new();
+
+    // First pass: add all local (non-external) nodes with "wikiname/slug" keys
+    for (wiki_name, graph) in wikis {
+        for idx in graph.node_indices() {
+            let node = &graph[idx];
+            if node.external {
+                continue;
+            }
+            // Type filter re-applied here — matches build_graph_cross_wiki's first-pass filter.
+            // Precondition: input graphs should have been built with matching filter.
+            if !filter.types.is_empty() && !filter.types.contains(&node.r#type) {
+                continue;
+            }
+            let key = format!("{wiki_name}/{}", node.slug);
+            let new_idx = merged.add_node(PageNode {
+                slug: key.clone(),
+                title: node.title.clone(),
+                r#type: node.r#type.clone(),
+                external: false,
+            });
+            global_idx.insert(key, new_idx);
+        }
+    }
+
+    // Second pass: add edges, re-resolving cross-wiki external nodes
+    for (wiki_name, graph) in wikis {
+        for edge_idx in graph.edge_indices() {
+            let (from, to) = graph.edge_endpoints(edge_idx).unwrap();
+            let from_node = &graph[from];
+            let to_node = &graph[to];
+
+            if from_node.external {
+                continue;
+            }
+
+            // Relation filter re-applied here. If graphs were built without this filter,
+            // this is the only gate — see precondition in doc comment.
+            let relation = graph[edge_idx].relation.clone();
+            if let Some(ref rel_filter) = filter.relation
+                && &relation != rel_filter
+            {
+                continue;
+            }
+
+            let from_key = format!("{wiki_name}/{}", from_node.slug);
+            let from_merged = match global_idx.get(&from_key) {
+                Some(&i) => i,
+                None => continue,
+            };
+
+            // Resolve destination: external nodes have title = "wiki://otherwiki/slug"
+            let to_key = if to_node.external {
+                if let ParsedLink::CrossWiki { wiki, slug } = ParsedLink::parse(&to_node.title) {
+                    format!("{wiki}/{slug}")
+                } else {
+                    continue;
+                }
+            } else {
+                format!("{wiki_name}/{}", to_node.slug)
+            };
+
+            let to_merged = match global_idx.get(&to_key) {
+                Some(&i) => i,
+                None => {
+                    // Target wiki not mounted — keep as external placeholder
+                    *global_idx.entry(to_key.clone()).or_insert_with(|| {
+                        merged.add_node(PageNode {
+                            slug: to_key.clone(),
+                            title: to_node.title.clone(),
+                            r#type: "external".to_string(),
+                            external: true,
+                        })
+                    })
+                }
+            };
+
+            if from_merged != to_merged {
+                merged.add_edge(from_merged, to_merged, LabeledEdge { relation });
             }
         }
     }
@@ -940,4 +950,249 @@ pub fn subgraph(graph: &WikiGraph, root_slug: &str, depth: usize) -> WikiGraph {
     }
 
     new_graph
+}
+
+// ── build_community_data ─────────────────────────────────────────────────────
+
+/// Run Louvain once and return both community outputs.
+/// Returns `(None, None)` when local node count < `min_nodes` (pass 0 to always run).
+fn build_community_data(
+    graph: &WikiGraph,
+    min_nodes: usize,
+) -> (Option<CommunityStats>, Option<HashMap<String, usize>>) {
+    let local_nodes: Vec<NodeIndex> = {
+        let mut v: Vec<NodeIndex> = graph
+            .node_indices()
+            .filter(|&idx| !graph[idx].external)
+            .collect();
+        v.sort_by(|&a, &b| graph[a].slug.cmp(&graph[b].slug));
+        v
+    };
+
+    if local_nodes.len() < min_nodes {
+        return (None, None);
+    }
+
+    let adj = build_adjacency(graph);
+    let degrees: HashMap<NodeIndex, usize> =
+        local_nodes.iter().map(|&n| (n, adj[&n].len())).collect();
+    let m: usize = adj.values().map(|s| s.len()).sum::<usize>() / 2;
+
+    let mut community: HashMap<NodeIndex, usize> = local_nodes
+        .iter()
+        .enumerate()
+        .map(|(i, &n)| (n, i))
+        .collect();
+
+    louvain_phase1(&adj, &mut community, &degrees, m);
+
+    // Normalize community ids to contiguous 0..k
+    let mut id_remap: HashMap<usize, usize> = HashMap::new();
+    let mut next_id = 0usize;
+    for &n in &local_nodes {
+        let c = *community.get(&n).unwrap();
+        id_remap.entry(c).or_insert_with(|| {
+            let id = next_id;
+            next_id += 1;
+            id
+        });
+    }
+    for val in community.values_mut() {
+        *val = *id_remap.get(val).unwrap();
+    }
+
+    // Build community_map
+    let community_map: HashMap<String, usize> = local_nodes
+        .iter()
+        .map(|&n| (graph[n].slug.clone(), community[&n]))
+        .collect();
+
+    // Build community_stats (mirrors compute_communities logic)
+    let count = next_id;
+    let mut sizes: HashMap<usize, usize> = HashMap::new();
+    for &c in community.values() {
+        *sizes.entry(c).or_default() += 1;
+    }
+    let largest = sizes.values().copied().max().unwrap_or(0);
+    let smallest = sizes.values().copied().min().unwrap_or(0);
+    let mut isolated: Vec<String> = local_nodes
+        .iter()
+        .filter(|&&n| {
+            let c = *community.get(&n).unwrap();
+            *sizes.get(&c).unwrap_or(&0) <= 2
+        })
+        .map(|&n| graph[n].slug.clone())
+        .collect();
+    isolated.sort();
+
+    let stats = CommunityStats {
+        count,
+        largest,
+        smallest,
+        isolated,
+    };
+
+    (Some(stats), Some(community_map))
+}
+
+// ── Cached graph accessors ───────────────────────────────────────────────────
+
+/// Return cached full graph, or build and cache on miss.
+/// Filtered (non-default) requests bypass cache entirely.
+pub fn get_or_build_graph(
+    index_schema: &IndexSchema,
+    type_registry: &SpaceTypeRegistry,
+    index_manager: &SpaceIndexManager,
+    graph_cache: &RwLock<Option<CachedGraph>>,
+    searcher: &Searcher,
+    filter: &GraphFilter,
+) -> Result<Arc<WikiGraph>> {
+    if !filter.is_default() {
+        let g = build_graph(searcher, index_schema, filter, type_registry)?;
+        return Ok(Arc::new(g));
+    }
+
+    let current_gen = index_manager.generation();
+
+    // Check cache hit
+    {
+        let cache = graph_cache.read().unwrap();
+        if let Some(cached) = cache.as_ref()
+            && cached.index_gen == current_gen
+        {
+            return Ok(Arc::clone(&cached.graph));
+        }
+    }
+
+    // Cache miss — build
+    let graph = Arc::new(build_graph(searcher, index_schema, filter, type_registry)?);
+    let (community_stats, community_map_raw) = build_community_data(&graph, 0);
+    let community_map = community_map_raw.map(Arc::new);
+
+    *graph_cache.write().unwrap() = Some(CachedGraph {
+        graph: Arc::clone(&graph),
+        community_map,
+        community_stats,
+        index_gen: current_gen,
+    });
+
+    Ok(graph)
+}
+
+/// Return cached community map, or None if graph is below `min_nodes` threshold.
+/// Builds and caches the full graph as a side effect if not already cached.
+pub fn get_cached_community_map(
+    index_schema: &IndexSchema,
+    type_registry: &SpaceTypeRegistry,
+    index_manager: &SpaceIndexManager,
+    graph_cache: &RwLock<Option<CachedGraph>>,
+    searcher: &Searcher,
+    min_nodes: usize,
+) -> Result<Option<Arc<HashMap<String, usize>>>> {
+    let current_gen = index_manager.generation();
+
+    // Check cache hit
+    {
+        let cache = graph_cache.read().unwrap();
+        if let Some(cached) = cache.as_ref()
+            && cached.index_gen == current_gen
+        {
+            let local_count = cached
+                .graph
+                .node_indices()
+                .filter(|&i| !cached.graph[i].external)
+                .count();
+            if local_count < min_nodes {
+                return Ok(None);
+            }
+            return Ok(cached.community_map.clone());
+        }
+    }
+
+    // Cache miss — build graph and community data
+    get_or_build_graph(
+        index_schema,
+        type_registry,
+        index_manager,
+        graph_cache,
+        searcher,
+        &GraphFilter::default(),
+    )?;
+
+    // Re-read (no gen check — cache is valid at whatever generation get_or_build_graph wrote)
+    {
+        let cache = graph_cache.read().unwrap();
+        if let Some(cached) = cache.as_ref() {
+            let local_count = cached
+                .graph
+                .node_indices()
+                .filter(|&i| !cached.graph[i].external)
+                .count();
+            if local_count < min_nodes {
+                return Ok(None);
+            }
+            return Ok(cached.community_map.clone());
+        }
+    }
+
+    Ok(None)
+}
+
+/// Return cached `CommunityStats` for `space`, or `None` if graph is below threshold.
+/// Builds and caches the full graph as a side effect if not already cached.
+pub fn get_cached_community_stats(
+    index_schema: &IndexSchema,
+    type_registry: &SpaceTypeRegistry,
+    index_manager: &SpaceIndexManager,
+    graph_cache: &RwLock<Option<CachedGraph>>,
+    searcher: &Searcher,
+    min_nodes: usize,
+) -> Result<Option<CommunityStats>> {
+    let current_gen = index_manager.generation();
+
+    // Check cache hit
+    {
+        let cache = graph_cache.read().unwrap();
+        if let Some(cached) = cache.as_ref()
+            && cached.index_gen == current_gen
+        {
+            let local_count = cached
+                .graph
+                .node_indices()
+                .filter(|&i| !cached.graph[i].external)
+                .count();
+            if local_count < min_nodes {
+                return Ok(None);
+            }
+            return Ok(cached.community_stats.clone());
+        }
+    }
+
+    // Cache miss — build graph and community data
+    get_or_build_graph(
+        index_schema,
+        type_registry,
+        index_manager,
+        graph_cache,
+        searcher,
+        &GraphFilter::default(),
+    )?;
+
+    // Re-read (no gen check — cache is valid at whatever generation get_or_build_graph wrote)
+    {
+        let cache = graph_cache.read().unwrap();
+        if let Some(cached) = cache.as_ref() {
+            let local_count = cached
+                .graph
+                .node_indices()
+                .filter(|&i| !cached.graph[i].external)
+                .count();
+            if local_count < min_nodes {
+                return Ok(None);
+            }
+            return Ok(cached.community_stats.clone());
+        }
+    }
+
+    Ok(None)
 }

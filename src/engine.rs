@@ -5,6 +5,7 @@ use std::sync::{Arc, RwLock};
 use anyhow::Result;
 
 use crate::config::{self, GlobalConfig, ResolvedConfig, WikiEntry};
+use crate::graph::CachedGraph;
 use crate::index_manager::{IndexReport, SpaceIndexManager, StalenessKind, UpdateReport};
 use crate::index_schema::IndexSchema;
 use crate::space_builder;
@@ -26,6 +27,8 @@ pub struct SpaceContext {
     pub index_schema: IndexSchema,
     /// Lifecycle manager for the Tantivy search index.
     pub index_manager: SpaceIndexManager,
+    /// In-memory graph cache. Invalidated when `index_manager.generation()` changes.
+    pub graph_cache: RwLock<Option<CachedGraph>>,
 }
 
 impl SpaceContext {
@@ -266,7 +269,8 @@ impl WikiEngine {
 
 fn mount_space(entry: &WikiEntry, state_dir: &Path, config: &GlobalConfig) -> Result<SpaceContext> {
     let repo_root = PathBuf::from(&entry.path);
-    let wiki_root = repo_root.join("wiki");
+    let wiki_cfg = config::load_wiki(&repo_root).unwrap_or_default();
+    let wiki_root = repo_root.join(&wiki_cfg.wiki_root);
     let index_path = state_dir.join("indexes").join(&entry.name);
 
     let (type_registry, index_schema) =
@@ -366,5 +370,6 @@ fn mount_space(entry: &WikiEntry, state_dir: &Path, config: &GlobalConfig) -> Re
         type_registry,
         index_schema,
         index_manager,
+        graph_cache: RwLock::new(None),
     })
 }

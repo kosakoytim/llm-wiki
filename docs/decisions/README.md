@@ -4,6 +4,30 @@ Architectural decisions and their rationale, grouped by release.
 
 ---
 
+## v0.3.0 — 2026-05-01
+
+Decisions made during ACP workflow expansion and transport stabilization.
+
+### Transport & Protocol
+
+| Decision | Summary |
+| -------- | ------- |
+| [acp-workflows](0.3.0/acp-workflows.md) | Six ACP workflows, cooperative cancellation, session cap, watcher push, `--http` flag requirement |
+
+### Graph
+
+| Decision | Summary |
+| -------- | ------- |
+| [graph-cache](0.3.0/graph-cache.md) | In-memory WikiGraph cache keyed on index generation; community map co-located; filtered requests bypass cache |
+
+### Space Management
+
+| Decision | Summary |
+| -------- | ------- |
+| [configurable-wiki-root](0.3.0/configurable-wiki-root.md) | `wiki_root` in `wiki.toml`; `spaces register` command; eliminates all hardcoded `.join("wiki")` |
+
+---
+
 ## v0.2.0 — 2026-04-27
 
 Decisions made during improvement design phase.
