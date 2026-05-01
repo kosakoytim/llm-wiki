@@ -485,6 +485,9 @@ pub struct WikiConfig {
     /// Per-wiki override for `[redact]`.
     #[serde(default)]
     pub redact: Option<RedactConfig>,
+    /// Content directory relative to repo root. Default: `"wiki"`.
+    #[serde(default = "default_wiki_root")]
+    pub wiki_root: String,
 }
 
 /// Fully merged config for a specific wiki — global settings overlaid with per-wiki overrides.
@@ -600,6 +603,9 @@ fn default_stale_days() -> u32 {
 }
 fn default_stale_confidence_threshold() -> f32 {
     0.4
+}
+fn default_wiki_root() -> String {
+    "wiki".to_string()
 }
 // ── Functions ─────────────────────────────────────────────────────────────────
 
