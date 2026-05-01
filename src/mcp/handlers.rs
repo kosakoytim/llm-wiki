@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use rmcp::model::Content;
 use serde_json::{Map, Value};
 

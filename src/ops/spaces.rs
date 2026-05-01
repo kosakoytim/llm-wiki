@@ -7,6 +7,7 @@ use crate::engine::WikiEngine;
 use crate::spaces;
 
 /// Create a wiki space and hot-reload it into the running engine.
+#[allow(clippy::too_many_arguments)]
 pub fn spaces_create(
     path: &Path,
     name: &str,
