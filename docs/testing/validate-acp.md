@@ -42,3 +42,31 @@ Connect Zed to `llm-wiki serve --acp`. One session per block.
 |--------|----------|
 | `llm-wiki:help` | workflow listing |
 | `llm-wiki:bogus` | "Unknown workflow" + workflow listing |
+
+## Cancellation (Phase 2)
+
+Start a workflow on a wiki with many pages, then cancel mid-run from the IDE.
+
+| Scenario | Steps | Expected |
+|----------|-------|----------|
+| Cancel lint mid-run | Send `llm-wiki:lint`, immediately cancel | `"Cancelled."` message, no further findings |
+| Cancel research mid-run | Send `llm-wiki:research <query>`, cancel after search | `"Cancelled."` after search tool result |
+| New prompt after cancel | Cancel then send a new prompt | New prompt executes normally (flag reset) |
+
+## Session cap (Phase 2)
+
+| Scenario | Steps | Expected |
+|----------|-------|----------|
+| Exceed `acp_max_sessions` | Open 21 sessions with default config | 21st `NewSession` returns `InvalidParams` error with "Session limit reached (max: 20)" |
+
+Config: `llm-wiki config set serve.acp_max_sessions 2 --global`, then open 3 sessions to test with a lower cap.
+
+## Watcher push (Phase 2)
+
+Requires `llm-wiki serve --acp --watch`.
+
+| Scenario | Steps | Expected |
+|----------|-------|----------|
+| File drop triggers push | Open session targeting wiki; drop `.md` file in `wiki/`; wait for debounce | Session receives `"Wiki "<name>" updated: 1 page(s) changed."` |
+| Active session not pushed | Open session with active run; drop file | No push during active run |
+| Session on different wiki not pushed | Two sessions on different wikis; drop file in wiki A | Only wiki A session receives push |

@@ -57,6 +57,51 @@ Sessions are transient conversation threads stored in memory for the
 process lifetime. A session targets a specific wiki from the spaces
 config (default wiki if not specified).
 
+### Session fields
+
+| Field        | Type               | Description                                                  |
+| ------------ | ------------------ | ------------------------------------------------------------ |
+| `id`         | `String`           | Unique ID assigned at `NewSession` (millisecond timestamp)   |
+| `label`      | `Option<String>`   | Human-readable name; shown in IDE session list               |
+| `wiki`       | `Option<String>`   | Wiki name from `NewSession` metadata; falls back to default  |
+| `created_at` | `u64`              | Unix timestamp (seconds) when the session was created        |
+| `active_run` | `Option<String>`   | ID of the currently executing tool run, or `None`            |
+| `cancelled`  | `Arc<AtomicBool>`  | Cooperative cancellation flag (see below)                    |
+
+### Cancel semantics
+
+When a client sends a `cancel` notification, the server sets
+`cancelled = true` (atomic, Relaxed ordering). Each workflow polls this
+flag at safe points between steps:
+
+- `research` — after search, before read
+- `lint` — between each finding streamed
+- `graph` — before dispatch
+- `ingest` — before dispatch
+
+On cancellation, the workflow sends `"Cancelled."` to the session and
+exits cleanly. The flag is reset to `false` at the start of each new
+`Prompt`.
+
+### Session cap
+
+`serve.acp_max_sessions` (default: 20) limits concurrent sessions.
+`NewSession` returns an `InvalidParams` error when the cap is reached.
+
+### Watcher push
+
+When `llm-wiki serve --acp --watch` is running, the filesystem watcher
+pushes a notification to all idle sessions (no active run) targeting the
+changed wiki:
+
+```
+Wiki "<name>" updated: <N> page(s) changed.
+```
+
+The notification is sent via a `tokio::sync::mpsc` channel from the
+watcher task to the ACP server. Sessions with an active run are skipped
+to avoid interleaving messages.
+
 
 ## Zed Configuration
 
