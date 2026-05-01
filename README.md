@@ -1,6 +1,6 @@
 # llm-wiki
 
-A headless wiki engine for agents. 22 MCP tools. One Rust binary. No LLM inside.
+A headless wiki engine for agents. 23 MCP tools. One Rust binary. No LLM inside.
 
 **Build knowledge that compounds — not answers that evaporate.**
 
@@ -110,9 +110,35 @@ llm-wiki serve
 ```
 
 Connect your agent or editor — VS Code, Cursor, Windsurf, Zed, Claude Code —
-via the MCP config. The 22 tools are immediately available.
+via the MCP config. The 23 tools are immediately available.
 
 → [Getting started guide](docs/guides/getting-started.md) · [IDE integration](docs/guides/ide-integration.md)
+
+---
+
+## IDE integration via ACP
+
+In addition to MCP, llm-wiki speaks **ACP** (Agent Client Protocol) — a
+session-oriented streaming protocol over stdio. Connect from Zed or any
+ACP-compatible editor and trigger built-in workflows directly from the IDE
+panel:
+
+| Prompt | What runs |
+| ------ | --------- |
+| `llm-wiki:research <query>` | Search + read top results, stream summaries |
+| `llm-wiki:lint [rules]` | Run structural lint rules, stream findings |
+| `llm-wiki:graph [root]` | Build and stream the concept graph |
+| `llm-wiki:ingest [path]` | Ingest a path, stream the report |
+| `llm-wiki:use <slug>` | Stream a page body directly into the IDE |
+| `llm-wiki:help` | List all available workflows |
+
+Start with `--acp` alongside `--http` to give ACP exclusive stdio:
+
+```bash
+llm-wiki serve --acp --http :18765
+```
+
+→ [IDE integration guide](docs/guides/ide-integration.md) · [ACP configuration](docs/guides/configuration.md)
 
 ---
 
@@ -134,7 +160,7 @@ via the MCP config. The 22 tools are immediately available.
 | `wiki_export` | Write full wiki to `llms.txt` at wiki root — for ecosystem publishing or audit |
 | `wiki_history` | Git commit history for a page, with rename following |
 | `wiki_schema` | Show, validate, or template a type schema |
-| `wiki_spaces_*` | Create, list, mount, unmount wiki spaces |
+| `wiki_spaces_*` | Create, register, list, remove wiki spaces; supports custom `wiki_root` |
 
 Full tool reference: [`docs/specifications/tools/`](docs/specifications/tools/)
 
@@ -217,6 +243,21 @@ Single Rust binary. No runtime, no database, no Docker.
 | [asdf-llm-wiki](https://github.com/geronimo-iia/asdf-llm-wiki) | Plugin updates per release |
 
 ---
+
+## Why I built this
+
+Like many of you, I've been exploring agents, LLMs, and all that comes with it.
+This project started after Andrej Karpathy's post — he put into words something
+I was already practicing: plain Markdown files with structured frontmatter as a
+practical knowledge base, for work and for the messier explorations.
+
+The technical direction reflects years of SRE-minded practice: minimize
+dependencies, use proven tools, keep the binary dumb. Written in Rust with
+Claude as a pair programmer — a language I enjoy exploring more and more.
+
+I have "a few" years of experience, but if you spot bad practices, call them
+out — I'm doing this to learn together too. And if you're using it, personally
+or at work, I'd love to hear about it :)
 
 ## Acknowledgments
 
