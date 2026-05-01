@@ -148,6 +148,13 @@ pub async fn serve_acp(manager: Arc<WikiEngine>) -> Result<()> {
 
                     let wiki_name = resolve_wiki_name(&mgr, &sessions, &req.session_id);
 
+                    // Reset cancellation flag for new prompt
+                    if let Ok(mut s) = sessions.lock()
+                        && let Some(sess) = s.get_mut(&session_id_str)
+                    {
+                        sess.cancelled.store(false, Ordering::Relaxed);
+                    }
+
                     // Mark active run
                     if let Ok(mut s) = sessions.lock()
                         && let Some(sess) = s.get_mut(&session_id_str)
@@ -218,7 +225,13 @@ pub async fn serve_acp(manager: Arc<WikiEngine>) -> Result<()> {
             {
                 let sessions = sessions.clone();
                 async move |notif: CancelNotification, _cx| {
-                    clear_active_run(&sessions, &notif.session_id.to_string());
+                    let id = notif.session_id.to_string();
+                    if let Ok(sessions) = sessions.lock() {
+                        if let Some(sess) = sessions.get(&id) {
+                            sess.cancelled.store(true, Ordering::Relaxed);
+                        }
+                    }
+                    clear_active_run(&sessions, &id);
                     Ok(())
                 }
             },
