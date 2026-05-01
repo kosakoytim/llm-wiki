@@ -135,7 +135,14 @@ pub async fn serve_acp(
                                         SessionId::new(sess.id.clone()),
                                         cwd.clone(),
                                     )
-                                    .title(sess.label.clone())
+                                    .title(if sess.active_run.is_some() {
+                                        Some(format!(
+                                            "[active] {}",
+                                            sess.label.clone().unwrap_or_default()
+                                        ))
+                                    } else {
+                                        sess.label.clone()
+                                    })
                                 })
                                 .collect()
                         })
