@@ -1,3 +1,4 @@
+mod graph;
 mod helpers;
 mod lint;
 mod research;
