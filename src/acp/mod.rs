@@ -1,4 +1,5 @@
 mod helpers;
+mod lint;
 mod research;
 mod server;
 
