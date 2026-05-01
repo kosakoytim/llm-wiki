@@ -181,3 +181,42 @@ fn engine_mounts_wiki_with_custom_wiki_root() {
     let expected_wiki_root = wiki_path.canonicalize().unwrap().join("skills");
     assert_eq!(space.wiki_root, expected_wiki_root);
 }
+
+#[test]
+fn content_read_works_with_custom_wiki_root() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = dir.path().join("state").join("config.toml");
+    let wiki_path = dir.path().join("skills-wiki");
+
+    llm_wiki::spaces::create(
+        &wiki_path,
+        "skills",
+        None,
+        false,
+        true,
+        &config_path,
+        Some("skills"),
+    )
+    .unwrap();
+
+    let wiki_root = wiki_path.join("skills");
+    fs::create_dir_all(&wiki_root).unwrap();
+    fs::write(
+        wiki_root.join("bootstrap.md"),
+        "---\ntitle: \"Bootstrap\"\ntype: page\nstatus: active\n---\n\nContent.\n",
+    )
+    .unwrap();
+    llm_wiki::git::commit(&wiki_path, "add page").unwrap();
+
+    let manager = WikiEngine::build(&config_path).unwrap();
+    let engine = manager.state.read().unwrap();
+
+    let result = llm_wiki::ops::content_read(&engine, "wiki://skills/bootstrap", None, false, false)
+        .unwrap();
+    match result {
+        llm_wiki::ops::ContentReadResult::Page(text) => {
+            assert!(text.contains("Bootstrap"));
+        }
+        _ => panic!("expected Page result"),
+    }
+}
