@@ -348,3 +348,83 @@ fn create_does_not_overwrite_existing_schemas() {
     let content = std::fs::read_to_string(&custom).unwrap();
     assert!(content.contains("custom"));
 }
+
+// ── validate_wiki_root ────────────────────────────────────────────────────────
+
+#[test]
+fn validate_wiki_root_accepts_simple_name() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("skills");
+    std::fs::create_dir_all(&root).unwrap();
+    assert!(llm_wiki::spaces::validate_wiki_root(dir.path(), "skills").is_ok());
+}
+
+#[test]
+fn validate_wiki_root_accepts_multi_component() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("src").join("wiki");
+    std::fs::create_dir_all(&root).unwrap();
+    assert!(llm_wiki::spaces::validate_wiki_root(dir.path(), "src/wiki").is_ok());
+}
+
+#[test]
+fn validate_wiki_root_rejects_absolute() {
+    let dir = tempfile::tempdir().unwrap();
+    let err = llm_wiki::spaces::validate_wiki_root(dir.path(), "/absolute").unwrap_err();
+    assert!(err.to_string().contains("must be a relative path"));
+}
+
+#[test]
+fn validate_wiki_root_rejects_dotdot() {
+    let dir = tempfile::tempdir().unwrap();
+    let err = llm_wiki::spaces::validate_wiki_root(dir.path(), "../outside").unwrap_err();
+    assert!(err.to_string().contains("must not contain"));
+}
+
+#[test]
+fn validate_wiki_root_rejects_empty() {
+    let dir = tempfile::tempdir().unwrap();
+    let err = llm_wiki::spaces::validate_wiki_root(dir.path(), "").unwrap_err();
+    assert!(err.to_string().contains("must not be empty"));
+}
+
+#[test]
+fn validate_wiki_root_rejects_dot() {
+    let dir = tempfile::tempdir().unwrap();
+    let err = llm_wiki::spaces::validate_wiki_root(dir.path(), ".").unwrap_err();
+    assert!(err.to_string().contains("must not be empty"));
+}
+
+#[test]
+fn validate_wiki_root_rejects_reserved_dirs() {
+    let dir = tempfile::tempdir().unwrap();
+    for reserved in &["inbox", "raw", "schemas"] {
+        let err = llm_wiki::spaces::validate_wiki_root(dir.path(), reserved).unwrap_err();
+        assert!(
+            err.to_string().contains("reserved"),
+            "expected reserved error for {reserved}, got: {err}"
+        );
+    }
+}
+
+#[test]
+fn validate_wiki_root_rejects_missing_directory() {
+    let dir = tempfile::tempdir().unwrap();
+    // "content" dir does NOT exist
+    let err = llm_wiki::spaces::validate_wiki_root(dir.path(), "content").unwrap_err();
+    assert!(err.to_string().contains("does not exist"));
+}
+
+#[test]
+fn validate_wiki_root_rejects_traversal_via_symlink() {
+    let outer = tempfile::tempdir().unwrap();
+    let inner = tempfile::tempdir().unwrap();
+    let link = outer.path().join("escape");
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(inner.path(), &link).unwrap();
+    #[cfg(unix)]
+    {
+        let err = llm_wiki::spaces::validate_wiki_root(outer.path(), "escape").unwrap_err();
+        assert!(err.to_string().contains("must be inside"));
+    }
+}

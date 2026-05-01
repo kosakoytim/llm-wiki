@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 
 use crate::config::{GlobalConfig, WikiEntry, load_global, save_global};
@@ -164,6 +164,60 @@ fn generate_wiki_toml(name: &str, description: Option<&str>) -> String {
         s.push_str(&format!("description = \"{desc}\"\n"));
     }
     s
+}
+
+/// Validate `wiki_root` before using it at registration time.
+///
+/// Checks: non-empty, relative, no `..`, not a reserved dir, directory exists,
+/// and resolves to a path strictly inside `repo_path`.
+pub fn validate_wiki_root(repo_path: &Path, wiki_root: &str) -> Result<()> {
+    if wiki_root.is_empty() || wiki_root == "." {
+        bail!("wiki_root must not be empty or \".\"");
+    }
+    if std::path::Path::new(wiki_root).is_absolute() {
+        bail!("wiki_root must be a relative path (no leading \"/\")");
+    }
+    use std::path::Component;
+    for component in std::path::Path::new(wiki_root).components() {
+        if matches!(component, Component::ParentDir) {
+            bail!("wiki_root must not contain \"..\" components");
+        }
+    }
+    let top = std::path::Path::new(wiki_root)
+        .components()
+        .next()
+        .and_then(|c| {
+            if let Component::Normal(s) = c {
+                Some(s.to_string_lossy().into_owned())
+            } else {
+                None
+            }
+        })
+        .unwrap_or_default();
+    for reserved in &["inbox", "raw", "schemas"] {
+        if top == *reserved {
+            bail!("wiki_root \"{wiki_root}\" uses reserved directory \"{reserved}\"");
+        }
+    }
+    let candidate = repo_path.join(wiki_root);
+    if !candidate.exists() {
+        bail!(
+            "wiki_root directory \"{}\" does not exist",
+            candidate.display()
+        );
+    }
+    let repo_abs = std::fs::canonicalize(repo_path)
+        .with_context(|| format!("cannot canonicalize repo path {}", repo_path.display()))?;
+    let root_abs = std::fs::canonicalize(&candidate)
+        .with_context(|| format!("cannot canonicalize wiki_root {}", candidate.display()))?;
+    if !root_abs.starts_with(&repo_abs) {
+        bail!(
+            "wiki_root must be inside the repository (resolved to {}, repo is {})",
+            root_abs.display(),
+            repo_abs.display()
+        );
+    }
+    Ok(())
 }
 
 // ── Space management ──────────────────────────────────────────────────────────
