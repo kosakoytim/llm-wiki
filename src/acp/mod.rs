@@ -54,6 +54,9 @@ fn extract_prompt_text(req: &PromptRequest) -> String {
         .join(" ")
 }
 
+/// Convenience alias for ACP step return values.
+pub type StepResult<T = ()> = std::result::Result<T, agent_client_protocol::schema::Error>;
+
 /// Generate a unique tool-run ID from workflow name, step name, and current timestamp.
 pub fn make_tool_id(workflow: &str, step: &str) -> String {
     format!(
