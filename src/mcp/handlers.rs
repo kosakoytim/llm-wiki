@@ -47,6 +47,36 @@ pub fn handle_spaces_create(server: &McpServer, args: &Map<String, Value>) -> To
     ok_text(json)
 }
 
+/// Handle `wiki_spaces_register` — register an existing wiki repository without creating files.
+pub fn handle_spaces_register(server: &McpServer, args: &Map<String, Value>) -> ToolHandlerResult {
+    let path = arg_str_req(args, "path")?;
+    let name = arg_str_req(args, "name")?;
+    let description = arg_str(args, "description");
+    let wiki_root = arg_str(args, "wiki_root");
+
+    let config_path = {
+        let engine = server.engine();
+        engine.config_path.clone()
+    };
+    let report = ops::spaces_register(
+        &std::path::PathBuf::from(&path),
+        &name,
+        description.as_deref(),
+        wiki_root.as_deref(),
+        &config_path,
+        Some(&server.manager),
+    )
+    .map_err(|e| format!("{e}"))?;
+
+    let json = serde_json::to_string_pretty(&serde_json::json!({
+        "path": report.path,
+        "name": report.name,
+        "registered": report.registered,
+    }))
+    .map_err(|e| format!("{e}"))?;
+    ok_text(json)
+}
+
 /// Handle `wiki_spaces_list` — list registered wiki spaces.
 pub fn handle_spaces_list(server: &McpServer, args: &Map<String, Value>) -> ToolHandlerResult {
     let engine = server.engine();
