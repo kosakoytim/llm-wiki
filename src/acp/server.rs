@@ -25,8 +25,11 @@ use super::research::run_research;
 use super::{AcpSession, Sessions, dispatch_workflow, extract_prompt_text};
 
 /// Start the ACP (Agent Client Protocol) server on stdio.
-pub async fn serve_acp(manager: Arc<WikiEngine>) -> Result<()> {
-    let sessions: Sessions = Arc::new(std::sync::Mutex::new(HashMap::new()));
+pub async fn serve_acp(
+    manager: Arc<WikiEngine>,
+    config: crate::config::ServeConfig,
+    sessions: Sessions,
+) -> Result<()> {
 
     Agent
         .builder()
@@ -56,7 +59,19 @@ pub async fn serve_acp(manager: Arc<WikiEngine>) -> Result<()> {
         .on_receive_request(
             {
                 let sessions = sessions.clone();
+                let config = config.clone();
                 async move |req: NewSessionRequest, responder, _cx| {
+                    {
+                        let sessions = sessions.lock().unwrap();
+                        if sessions.len() >= config.acp_max_sessions {
+                            return responder.respond_with_error(
+                                agent_client_protocol::schema::Error::new(
+                                    i32::from(agent_client_protocol::schema::ErrorCode::InvalidParams),
+                                    format!("Session limit reached (max: {})", config.acp_max_sessions),
+                                ),
+                            );
+                        }
+                    }
                     let id = format!("session-{}", chrono::Utc::now().timestamp_millis());
                     let _span =
                         tracing::info_span!("acp_new_session", session = %id).entered();

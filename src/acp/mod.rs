@@ -31,7 +31,7 @@ pub struct AcpSession {
     pub cancelled: Arc<AtomicBool>,
 }
 
-type Sessions = Arc<Mutex<HashMap<String, AcpSession>>>;
+pub type Sessions = Arc<Mutex<HashMap<String, AcpSession>>>;
 
 // ── Dispatch ──────────────────────────────────────────────────────────────────
 

@@ -1,5 +1,6 @@
+use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 use rmcp::ServiceExt;
@@ -185,10 +186,13 @@ pub async fn serve(
     if acp {
         let acp_manager = manager.clone();
         let cancel_acp = cancel.clone();
+        let acp_sessions: crate::acp::Sessions =
+            Arc::new(Mutex::new(HashMap::new()));
+        let acp_serve_cfg = serve_cfg.clone();
 
         let acp_handle = tokio::spawn(async move {
             tokio::select! {
-                result = crate::acp::serve_acp(acp_manager) => {
+                result = crate::acp::serve_acp(acp_manager, acp_serve_cfg, acp_sessions) => {
                     if let Err(e) = result {
                         tracing::error!(transport = "acp", error = %e, "ACP transport error");
                     }
