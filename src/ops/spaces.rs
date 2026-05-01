@@ -7,6 +7,7 @@ use crate::engine::WikiEngine;
 use crate::spaces;
 
 /// Create a wiki space and hot-reload it into the running engine.
+#[allow(clippy::too_many_arguments)]
 pub fn spaces_create(
     path: &Path,
     name: &str,
@@ -15,10 +16,45 @@ pub fn spaces_create(
     set_default: bool,
     config_path: &Path,
     engine: Option<&WikiEngine>,
+    wiki_root: Option<&str>,
 ) -> Result<spaces::CreateReport> {
-    let report = spaces::create(path, name, description, force, set_default, config_path)?;
+    let report = spaces::create(
+        path,
+        name,
+        description,
+        force,
+        set_default,
+        config_path,
+        wiki_root,
+    )?;
 
     // Hot reload: mount the new wiki in the running engine
+    if report.registered
+        && let Some(engine) = engine
+    {
+        let entry = WikiEntry {
+            name: name.to_string(),
+            path: report.path.clone(),
+            description: description.map(|s| s.to_string()),
+            remote: None,
+        };
+        engine.mount_wiki(&entry)?;
+    }
+
+    Ok(report)
+}
+
+/// Register an existing wiki space and hot-reload it into the running engine.
+pub fn spaces_register(
+    path: &Path,
+    name: &str,
+    description: Option<&str>,
+    wiki_root: Option<&str>,
+    config_path: &Path,
+    engine: Option<&WikiEngine>,
+) -> Result<spaces::RegisterReport> {
+    let report = spaces::register_existing(path, name, description, wiki_root, config_path)?;
+
     if report.registered
         && let Some(engine) = engine
     {

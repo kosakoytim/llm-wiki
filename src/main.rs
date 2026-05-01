@@ -37,6 +37,7 @@ fn main() -> Result<()> {
                 description,
                 force,
                 set_default,
+                wiki_root,
             } => {
                 let report = ops::spaces_create(
                     &PathBuf::from(&path),
@@ -46,6 +47,7 @@ fn main() -> Result<()> {
                     set_default,
                     &config_path,
                     None,
+                    wiki_root.as_deref(),
                 )?;
                 if report.created {
                     println!("Created wiki \"{}\" at {}", report.name, report.path);
@@ -57,6 +59,27 @@ fn main() -> Result<()> {
                 }
                 if report.committed {
                     println!("Initial commit: create: {}", report.name);
+                }
+            }
+            SpacesAction::Register {
+                path,
+                name,
+                description,
+                wiki_root,
+            } => {
+                let report = ops::spaces_register(
+                    &PathBuf::from(&path),
+                    &name,
+                    description.as_deref(),
+                    wiki_root.as_deref(),
+                    &config_path,
+                    None,
+                )?;
+                if report.registered {
+                    println!("Registered wiki \"{}\" at {}", report.name, report.path);
+                    println!("Registered in {}", config_path.display());
+                } else {
+                    println!("Wiki \"{}\" already registered", report.name);
                 }
             }
             SpacesAction::List { name, format } => {

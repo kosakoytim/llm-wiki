@@ -20,6 +20,12 @@ Decisions made during ACP workflow expansion and transport stabilization.
 | -------- | ------- |
 | [graph-cache](0.3.0/graph-cache.md) | In-memory WikiGraph cache keyed on index generation; community map co-located; filtered requests bypass cache |
 
+### Space Management
+
+| Decision | Summary |
+| -------- | ------- |
+| [configurable-wiki-root](0.3.0/configurable-wiki-root.md) | `wiki_root` in `wiki.toml`; `spaces register` command; eliminates all hardcoded `.join("wiki")` |
+
 ---
 
 ## v0.2.0 — 2026-04-27

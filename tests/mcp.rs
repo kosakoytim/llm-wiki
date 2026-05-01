@@ -1,9 +1,9 @@
 use llm_wiki::mcp::tools;
 
 #[test]
-fn tool_list_returns_22_tools() {
+fn tool_list_returns_23_tools() {
     let tools = tools::tool_list();
-    assert_eq!(tools.len(), 22);
+    assert_eq!(tools.len(), 23);
 }
 
 #[test]
@@ -12,6 +12,7 @@ fn tool_list_contains_expected_names() {
     let names: Vec<&str> = tools.iter().map(|t| t.name.as_ref()).collect();
     let expected = [
         "wiki_spaces_create",
+        "wiki_spaces_register",
         "wiki_spaces_list",
         "wiki_spaces_remove",
         "wiki_spaces_set_default",

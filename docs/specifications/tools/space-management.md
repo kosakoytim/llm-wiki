@@ -14,12 +14,13 @@ All space operations live under `llm-wiki spaces`. When called from a
 running server, create, remove, and set-default take effect immediately
 — no restart needed. See [server.md](../engine/server.md#hot-reload).
 
-| Subcommand           | MCP tool                  | Description                       |
-| -------------------- | ------------------------- | --------------------------------- |
-| `spaces create`      | `wiki_spaces_create`      | Create a new wiki repo + register |
-| `spaces list`        | `wiki_spaces_list`        | List all registered wikis         |
-| `spaces remove`      | `wiki_spaces_remove`      | Remove a wiki from the registry   |
-| `spaces set-default` | `wiki_spaces_set_default` | Set the default wiki              |
+| Subcommand           | MCP tool                  | Description                                  |
+| -------------------- | ------------------------- | -------------------------------------------- |
+| `spaces create`      | `wiki_spaces_create`      | Create a new wiki repo + register            |
+| `spaces register`    | `wiki_spaces_register`    | Register an existing repo without creating files |
+| `spaces list`        | `wiki_spaces_list`        | List all registered wikis                    |
+| `spaces remove`      | `wiki_spaces_remove`      | Remove a wiki from the registry              |
+| `spaces set-default` | `wiki_spaces_set_default` | Set the default wiki                         |
 
 For configuration (`wiki_config`), see
 [config-management.md](config-management.md).
@@ -34,6 +35,7 @@ llm-wiki spaces create <path>
           [--description <text>]
           [--force]                  # update space entry if name differs
           [--set-default]            # set as default_wiki
+          [--wiki-root <dir>]        # content dir name (default: wiki)
 ```
 
 Creates the following structure (see
@@ -52,7 +54,7 @@ Creates the following structure (see
 │   └── section.json
 ├── inbox/
 ├── raw/
-└── wiki/
+└── wiki/              ← or the value of --wiki-root
 ```
 
 Initial git commit: `create: <name>`.
@@ -71,6 +73,37 @@ immediately — searchable and indexable without restart.
 | Path exists, not registered             | Register in config.toml         |
 | Path exists, registered, same name      | Skip silently                   |
 | Path exists, registered, different name | Error (use `--force` to rename) |
+
+## spaces register
+
+MCP tool: `wiki_spaces_register`
+
+```
+llm-wiki spaces register <path>
+          --name <name>              # required
+          [--description <text>]
+          [--wiki-root <dir>]        # override wiki_root (errors if conflicts with wiki.toml)
+```
+
+Registers an existing git repository without creating any files or
+making any git commits. Use this to adopt a repo that already has
+content (e.g. a `docs/` repo, a Hugo site, or any repo where pages
+already exist in a subdirectory other than `wiki/`).
+
+The command reads `wiki.toml` from `<path>` to determine the effective
+`wiki_root`. If `--wiki-root` is given and `wiki.toml` already declares
+a different value, the command errors — edit `wiki.toml` manually instead.
+
+If the directory named by `wiki_root` does not exist, the command errors.
+
+| Condition                                     | Behavior                                       |
+| --------------------------------------------- | ---------------------------------------------- |
+| `<path>` does not exist                       | Error                                          |
+| `wiki.toml` absent, no `--wiki-root`          | `wiki_root` defaults to `"wiki"`               |
+| `wiki.toml` has `wiki_root`, no flag          | Uses value from `wiki.toml`                    |
+| `--wiki-root` matches `wiki.toml`             | OK                                             |
+| `--wiki-root` conflicts with `wiki.toml`      | Error — edit `wiki.toml` first                 |
+| Already registered under same name            | Skip silently                                  |
 
 ## spaces list
 

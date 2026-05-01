@@ -30,8 +30,10 @@ my-wiki/                    ← git root (repository root)
 │   └── section.md          ← body template (optional)
 ├── inbox/                  ← drop zone (human puts files here)
 ├── raw/                    ← immutable archive (originals preserved)
-└── wiki/                   ← compiled knowledge (authors write here)
+└── wiki/                   ← compiled knowledge (default; configurable via wiki_root)
 ```
+
+The content directory name defaults to `wiki/` but can be changed via `wiki_root` in `wiki.toml` (e.g. `wiki_root = "content"` for repos where pages already live in `content/`). The `inbox/`, `raw/`, and `schemas/` directories are always named exactly as shown.
 
 No hidden directories in the repo. No `schema.md` — `wiki.toml` is the
 single source of truth for wiki identity, engine configuration, and the
@@ -54,15 +56,15 @@ Optional `.md` files alongside schemas provide body templates for
 
 **`raw/`** — immutable archive. Originals preserved, never indexed.
 
-**`wiki/`** — compiled knowledge. Authors (human or LLM) write directly
-here. Everything inside is a page or asset. The engine indexes it,
-searches it, and builds the concept graph from it.
+**`wiki/`** (or the value of `wiki_root`) — compiled knowledge. Authors
+(human or LLM) write directly here. Everything inside is a page or asset.
+The engine indexes it, searches it, and builds the concept graph from it.
 
 
-## Folder Structure Inside wiki/
+## Folder Structure Inside the Wiki Root
 
 The owner's choice. The engine enforces nothing about categories — only
-the `inbox/` → `raw/` → `wiki/` flow matters. Epistemic distinctions
+the `inbox/` → `raw/` → `<wiki_root>/` flow matters. Epistemic distinctions
 are carried by the `type` field, not by folders. See
 [epistemic-model.md](epistemic-model.md).
 
@@ -70,7 +72,8 @@ are carried by the `type` field, not by folders. See
 ## Roots
 
 **Repository root** — the git repository directory. Contains
-`wiki.toml`, `schemas/`, `inbox/`, `raw/`, and `wiki/`. Created by
-`llm-wiki spaces create`.
+`wiki.toml`, `schemas/`, `inbox/`, `raw/`, and the wiki content directory.
+Created by `llm-wiki spaces create`.
 
-**Wiki root** — `<repo>/wiki/`. All page slugs are relative to it.
+**Wiki root** — `<repo>/<wiki_root>/` (default: `<repo>/wiki/`). All page
+slugs are relative to it. Set via `wiki_root` in `wiki.toml`.
