@@ -28,6 +28,14 @@ Decisions made during ACP workflow expansion and transport stabilization.
 
 ---
 
+## Backlog — deferred decisions
+
+| Decision | Summary |
+| -------- | ------- |
+| [config-crate](backlog/config-crate.md) | Reject `config` crate — current TOML loading sufficient; revisit if env-var overrides needed at scale |
+
+---
+
 ## v0.2.0 — 2026-04-27
 
 Decisions made during improvement design phase.

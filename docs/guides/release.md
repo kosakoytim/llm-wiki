@@ -17,7 +17,7 @@
 | [homebrew-tap](https://github.com/geronimo-iia/homebrew-tap)   | Homebrew formula   |
 | [asdf-llm-wiki](https://github.com/geronimo-iia/asdf-llm-wiki) | asdf plugin        |
 
-## Branch strategy
+## Branch Strategy
 
 `main` is always releasable — tagged commits only. Feature work lands on a
 `release/vX.Y.Z` integration branch, not directly on `main`.
@@ -47,51 +47,56 @@ active `release/` branch if one is open.
 ## Pre-Release Checklist
 
 ### Code quality
+
 - [ ] All tests pass: `cargo test`
-- [ ] Formatted: `cargo fmt -- --check`
+- [ ] Doc tests pass: `cargo test --doc`
+- [ ] Formatted: `cargo fmt --check`
 - [ ] No lint issues: `cargo clippy --all-targets -- -D warnings`
-- [ ] No vulnerabilities: `cargo audit`
+- [ ] Release build clean: `cargo build --release --locked`
 - [ ] Integration tests green: trigger **Integration Tests** workflow (`suite: both`) on the release branch
 
-### Documentation pass
+### Documentation
+
 - [ ] All improvement spec files have `status: implemented` and tasks checked
 - [ ] `docs/specifications/` reflects any changed tool signatures or config shapes
 - [ ] `docs/guides/` covers every user-facing feature added in this release
-- [ ] Public Rust types and functions have `///` rustdoc comments
+- [ ] Public Rust types and functions have `///` rustdoc comments; `cargo doc --no-deps` zero warnings
 - [ ] `CHANGELOG.md` section dated and complete
 
 ### Version
+
 - [ ] Version bumped in `Cargo.toml`
+- [ ] `Cargo.lock` updated: `cargo update -p llm-wiki-engine`
 
 ## Release
 
 ```bash
-# 1. Bump version in Cargo.toml, update CHANGELOG date
+# 1. Bump version in Cargo.toml, run cargo update -p llm-wiki-engine, update CHANGELOG date
 
-# 2. Commit on release branch
+# 2. Commit on release branch, push, open PR
 git commit -am "chore: release vx.y.z"
+git push origin release/vx.y.z
+gh pr create --title "chore: release vx.y.z" --base main
 
-# 3. Merge release branch to main, then tag
+# 3. Wait for PR CI to pass, then merge to main
 git checkout main
 git merge --no-ff release/vx.y.z
+
+# 4. Tag the merge commit and push — GitHub Actions handles the rest
 git tag -a vx.y.z -m "Release vx.y.z"
 git push origin main
 git push origin vx.y.z
+# GitHub Actions: builds 5 targets, creates GitHub release, publishes to crates.io
 ```
 
-Tagging triggers `.github/workflows/release.yml`:
-1. Builds binaries for 5 targets (linux x86_64/aarch64, macOS x86_64/aarch64, windows x86_64)
-2. Creates GitHub release with tarballs
-3. Publishes to crates.io
-
-Tags containing `-rc` (e.g. `v0.2.0-rc1`) follow the same build path but:
-- The GitHub release is marked as **pre-release** (not shown as latest)
-- The `publish` job is **skipped** — nothing is sent to crates.io
+Tags containing `-rc` (e.g. `v0.3.0-rc1`) follow the same steps but:
+- GitHub release is marked **pre-release** (not shown as latest)
+- `publish` job is **skipped** — nothing sent to crates.io
 
 Install an RC binary directly:
 
 ```bash
-cargo binstall llm-wiki@0.2.0-rc1   # reads GitHub releases
+cargo binstall llm-wiki@0.3.0-rc1   # reads GitHub releases
 ```
 
 Or download the tarball manually from the GitHub releases page and put
@@ -117,9 +122,28 @@ binary naming changes.
 
 ```bash
 git checkout -b hotfix/vx.y.z+1 vx.y.z
-# Apply fix, bump patch version
+# Apply fix, bump patch version in Cargo.toml
 git commit -am "fix: description"
 git tag -a vx.y.z+1 -m "Hotfix vx.y.z+1"
 git push origin hotfix/vx.y.z+1 vx.y.z+1
 # Merge back to main
+git checkout main
+git merge --no-ff hotfix/vx.y.z+1
+git push origin main
+```
+
+## CHANGELOG Format
+
+Move `[Unreleased]` entries to a versioned section:
+
+```markdown
+## [0.3.0] — 2026-MM-DD
+
+### Added
+- …
+
+### Fixed
+- …
+
+## [Unreleased]
 ```
