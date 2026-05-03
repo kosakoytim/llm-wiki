@@ -1,7 +1,7 @@
 ---
 title: "petgraph-live Phase 3 — Algorithm suite"
 summary: "Expose petgraph-live structural algorithms via wiki_lint (3 new rules) and wiki_stats (3 new fields). No new MCP tool."
-status: proposed
+status: implemented
 target_version: "0.4.0"
 branch: feat/petgraph-live-algorithms
 pr_target: dev/v0.4.0
@@ -99,13 +99,13 @@ cargo test --doc
 
 ## Definition of done
 
-- [ ] `ops/health.rs` with `wiki_health` function
-- [ ] `wiki_health` MCP tool registered and returns correct JSON
-- [ ] `wiki_stats` accepts `include_health` and populates structural fields when true
-- [ ] `graph.max_nodes_for_diameter` config key wired up
-- [ ] `note` field populated correctly when O(n²) skipped
-- [ ] All tests pass, clippy clean, fmt clean, doc tests pass
-- [ ] `CHANGELOG.md` `[Unreleased]` updated
+- [x] 3 new `wiki_lint` rules (`articulation-point`, `bridge`, `periphery`) in `ops/lint.rs`
+- [x] `wiki_stats` gains `diameter`, `radius`, `center`, `structural_note` fields
+- [x] `graph.structural_algorithms` config key wired up (gates stats only)
+- [x] `graph.max_nodes_for_diameter` config key wired up
+- [x] `structural_note` field populated correctly when O(n²) skipped
+- [x] All tests pass, clippy clean, fmt clean, doc tests pass
+- [x] `CHANGELOG.md` `[Unreleased]` updated
 
 ## See also
 

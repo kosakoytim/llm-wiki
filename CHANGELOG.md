@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `wiki_lint` rules: `articulation-point`, `bridge`, `periphery` — structural graph health
+- `wiki_stats` fields: `diameter`, `radius`, `center`, `structural_note` — aggregate topology metrics
+- `graph.structural_algorithms` config key (default `true`) — enable/disable structural fields in `wiki_stats`
+- `graph.max_nodes_for_diameter` config key (default 2000) — guards O(n²) algorithms
+
 ### Changed
 
 - **petgraph-live 0.3.1** — bumped dependency; snapshot directory creation now handled by the library (removed manual `create_dir_all` workaround in `mount_space`)
