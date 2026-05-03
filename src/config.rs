@@ -135,6 +135,14 @@ pub struct GraphConfig {
     /// Snapshot format: "bincode+lz4" | "bincode" | "bincode+zstd" (default: "bincode+lz4").
     #[serde(default = "default_snapshot_format")]
     pub snapshot_format: String,
+    /// Enable structural topology algorithms in wiki_stats (diameter, radius, center).
+    /// Lint rules articulation-point, bridge, periphery are always available via --rules.
+    /// Default: true. Set false to skip structural computation in stats entirely.
+    #[serde(default = "default_true")]
+    pub structural_algorithms: bool,
+    /// Maximum local node count before O(n²) diameter/radius/center/periphery algorithms are skipped (default: 2000).
+    #[serde(default = "default_max_nodes_for_diameter")]
+    pub max_nodes_for_diameter: usize,
 }
 
 impl Default for GraphConfig {
@@ -149,6 +157,8 @@ impl Default for GraphConfig {
             snapshot: true,
             snapshot_keep: 3,
             snapshot_format: "bincode+lz4".into(),
+            structural_algorithms: true,
+            max_nodes_for_diameter: default_max_nodes_for_diameter(),
         }
     }
 }
@@ -167,6 +177,9 @@ fn default_snapshot_keep() -> u32 {
 
 fn default_snapshot_format() -> String {
     "bincode+lz4".into()
+}
+fn default_max_nodes_for_diameter() -> usize {
+    2000
 }
 
 fn default_acp_max_sessions() -> usize {
@@ -742,6 +755,8 @@ pub fn set_global_config_value(global: &mut GlobalConfig, key: &str, value: &str
         "graph.snapshot" => global.graph.snapshot = value.parse()?,
         "graph.snapshot_keep" => global.graph.snapshot_keep = value.parse()?,
         "graph.snapshot_format" => global.graph.snapshot_format = value.into(),
+        "graph.structural_algorithms" => global.graph.structural_algorithms = value.parse()?,
+        "graph.max_nodes_for_diameter" => global.graph.max_nodes_for_diameter = value.parse()?,
         "serve.http" => global.serve.http = value.parse()?,
         "serve.http_port" => global.serve.http_port = value.parse()?,
         "serve.http_allowed_hosts" => {
@@ -791,6 +806,8 @@ pub fn get_config_value(resolved: &ResolvedConfig, global: &GlobalConfig, key: &
         "graph.snapshot" => resolved.graph.snapshot.to_string(),
         "graph.snapshot_keep" => resolved.graph.snapshot_keep.to_string(),
         "graph.snapshot_format" => resolved.graph.snapshot_format.clone(),
+        "graph.structural_algorithms" => resolved.graph.structural_algorithms.to_string(),
+        "graph.max_nodes_for_diameter" => resolved.graph.max_nodes_for_diameter.to_string(),
         "serve.http" => resolved.serve.http.to_string(),
         "serve.http_port" => resolved.serve.http_port.to_string(),
         "serve.http_allowed_hosts" => resolved.serve.http_allowed_hosts.join(","),
@@ -936,6 +953,18 @@ pub fn set_wiki_config_value(wiki_cfg: &mut WikiConfig, key: &str, value: &str) 
                 .graph
                 .get_or_insert_with(GraphConfig::default)
                 .snapshot_format = value.into();
+        }
+        "graph.structural_algorithms" => {
+            wiki_cfg
+                .graph
+                .get_or_insert_with(GraphConfig::default)
+                .structural_algorithms = value.parse()?;
+        }
+        "graph.max_nodes_for_diameter" => {
+            wiki_cfg
+                .graph
+                .get_or_insert_with(GraphConfig::default)
+                .max_nodes_for_diameter = value.parse()?;
         }
         "global.default_wiki"
         | "index.auto_rebuild"

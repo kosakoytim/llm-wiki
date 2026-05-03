@@ -77,10 +77,10 @@ See [graph-cache.md](graph-cache.md) and [petgraph-live.md](petgraph-live.md).
       - TypesChanged → partial rebuild (affected types only)
       - FullRebuildNeeded → full rebuild
    e. Open tantivy index (with auto-recovery on corruption)
-   f. Create snapshot dir (state_dir/snapshots/<name>) if graph.snapshot = true
-   g. Initialize graph_cache: build_wiki_graph_cache() → WikiGraphCache enum
-   h. Initialize community_cache: GenerationCache::new()
-   g. Return SpaceContext
+   f. Initialize graph_cache: build_wiki_graph_cache() → WikiGraphCache enum
+      (petgraph-live ≥ 0.3.1 creates the snapshot directory automatically)
+   g. Initialize community_cache: GenerationCache::new()
+   h. Return SpaceContext
 3. Per-wiki errors: warn and skip (don't fail the engine)
 4. Assemble EngineState, wrap in Arc<RwLock>
 ```
