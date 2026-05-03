@@ -529,10 +529,10 @@ fn build_undirected(
         if graph[a].external || graph[b].external {
             continue;
         }
-        if let (Some(&ua), Some(&ub)) = (node_map.get(&a), node_map.get(&b)) {
-            if ug.find_edge(ua, ub).is_none() {
-                ug.add_edge(ua, ub, ());
-            }
+        if let (Some(&ua), Some(&ub)) = (node_map.get(&a), node_map.get(&b))
+            && ug.find_edge(ua, ub).is_none()
+        {
+            ug.add_edge(ua, ub, ());
         }
     }
     (ug, reverse_map)
