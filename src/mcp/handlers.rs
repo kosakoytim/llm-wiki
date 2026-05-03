@@ -393,8 +393,8 @@ pub fn handle_index_rebuild(server: &McpServer, args: &Map<String, Value>) -> To
     {
         let engine = server.engine();
         if let Ok(space) = engine.space(&wiki_name) {
+            let current_gen = space.index_manager.generation();
             if let Ok(searcher) = space.index_manager.searcher() {
-                let current_gen = space.index_manager.generation();
                 let _ = space.graph_cache.rebuild(current_gen, || {
                     crate::graph::build_graph(
                         &searcher,

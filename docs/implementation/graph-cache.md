@@ -183,7 +183,27 @@ accepts pre-built graphs rather than raw index handles.
 
 ## Limitations
 
-- Cache lives only for process lifetime. Cold start always rebuilds.
-  Phase 2 (`feat/petgraph-live-snapshot`) adds `GraphState` warm-start.
 - Only unfiltered full graphs are cached. Each distinct filter combination builds fresh.
 - Community data is always computed at threshold 0. `min_nodes` is applied at read time — no recompute for different thresholds.
+
+## Snapshot warm-start (v0.4.0 Phase 2)
+
+`SpaceContext.graph_cache` is now a `WikiGraphCache` enum:
+
+```rust
+pub enum WikiGraphCache {
+    NoSnapshot(GenerationCache<WikiGraph>),
+    WithSnapshot(GraphState<WikiGraph>),
+}
+```
+
+`WithSnapshot` is constructed when `graph.snapshot = true` (default). On process restart:
+- `GraphState::init()` compares the current generation key (from `index_manager.generation().to_string()`) against the snapshot filename.
+- Match → load from disk, skip cold build.
+- Miss → cold build, save snapshot, return graph.
+
+After `wiki_index_rebuild`, `WikiGraphCache::rebuild()` forces a new snapshot for the updated generation key.
+
+`graph.snapshot = false` constructs `NoSnapshot` — identical to Phase 1 behaviour. Use in CI and integration tests to avoid snapshot files in tempdir.
+
+Snapshots stored at: `state_dir/snapshots/<wiki-name>/wiki-graph-<key>.<ext>`

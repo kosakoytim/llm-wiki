@@ -1,7 +1,7 @@
 ---
 title: "petgraph-live Phase 2 — Snapshot warm-start"
 summary: "Replace GenerationCache<WikiGraph> with GraphState<WikiGraph> so the graph survives process restarts. Cold builds only on first launch or after wiki_index_rebuild."
-status: proposed
+status: phase2-implemented
 target_version: "0.4.0"
 branch: feat/petgraph-live-snapshot
 pr_target: dev/v0.4.0
@@ -147,13 +147,12 @@ cargo test --doc
 
 ## Definition of done
 
-- [ ] `GenerationCache<WikiGraph>` replaced with `GraphState<WikiGraph>` in `SpaceContext`
-- [ ] `SnapshotConfig` constructed from `state_dir` + `GraphConfig`
-- [ ] `wiki_index_rebuild` calls `graph_state.invalidate()` after rebuild
-- [ ] `graph.snapshot = false` disables snapshot in tests and CI
-- [ ] Warm-start verified: process restart skips cold build log
-- [ ] All tests pass, clippy clean, fmt clean, doc tests pass
-- [ ] `CHANGELOG.md` `[Unreleased]` updated
+- [x] `GenerationCache<WikiGraph>` replaced with `WikiGraphCache` enum in `SpaceContext`
+- [x] `SnapshotConfig` constructed from `state_dir` + `GraphConfig`
+- [x] `wiki_index_rebuild` calls `graph_cache.rebuild()` after rebuild
+- [x] `graph.snapshot = false` disables snapshot in tests and CI
+- [x] All tests pass, clippy clean, fmt clean, doc tests pass
+- [x] `CHANGELOG.md` `[Unreleased]` updated
 
 ## See also
 

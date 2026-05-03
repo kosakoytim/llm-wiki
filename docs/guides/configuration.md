@@ -166,6 +166,23 @@ Default is Mermaid. Switch to DOT for Graphviz:
 llm-wiki config set graph.format dot --global
 ```
 
+### Disable graph snapshot warm-start
+
+By default the graph cache is persisted to `~/.llm-wiki/snapshots/<wiki>/` so
+process restarts load from disk instead of rebuilding. Disable in CI or when
+snapshot files are undesirable:
+
+```bash
+llm-wiki config set graph.snapshot false --wiki research
+```
+
+Control how many snapshots are kept per wiki (default 3) and the encoding format:
+
+```bash
+llm-wiki config set graph.snapshot_keep 5 --global
+llm-wiki config set graph.snapshot_format bincode --global
+```
+
 ### Disable rename tracking in history
 
 `wiki_history` follows renames by default. Disable per-wiki if it
