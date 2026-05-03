@@ -181,6 +181,8 @@ Control how many snapshots are kept per wiki (default 3) and the encoding format
 ```bash
 llm-wiki config set graph.snapshot_keep 5 --global
 llm-wiki config set graph.snapshot_format bincode --global
+# Use Zstd compression instead of LZ4 (smaller files, slower compression)
+llm-wiki config set graph.snapshot_format bincode+zstd --global
 ```
 
 ### Disable rename tracking in history

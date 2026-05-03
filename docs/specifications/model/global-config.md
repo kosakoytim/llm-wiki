@@ -156,7 +156,7 @@ These keys can appear in both `config.toml` (global) and `wiki.toml`
 | `graph.community_suggestions_limit` | `2` | Max extra results from community strategy in `wiki_suggest` |
 | `graph.snapshot`             | `true`    | Enable snapshot warm-start for the graph cache; `false` = in-memory only (Phase 1 behaviour) |
 | `graph.snapshot_keep`        | `3`       | Number of graph snapshots to retain per wiki space |
-| `graph.snapshot_format`      | `bincode+lz4` | Snapshot encoding: `bincode+lz4` or `bincode` |
+| `graph.snapshot_format`      | `bincode+lz4` | Snapshot encoding: `bincode+lz4`, `bincode+zstd`, or `bincode` |
 | `index.memory_budget_mb`     | `50`      | Tantivy writer memory budget in MB                |
 | `index.tokenizer`            | `en_stem` | Tantivy tokenizer for text fields                 |
 

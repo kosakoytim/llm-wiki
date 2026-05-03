@@ -171,17 +171,16 @@ state.get_fresh().map_err(|e| anyhow::anyhow!("{e}"))
 
 ```toml
 # Cargo.toml
-petgraph-live = { version = "0.3", features = ["snapshot-lz4"] }
+petgraph-live = { version = "0.3", features = ["snapshot-lz4", "snapshot-zstd"] }
 ```
 
-`snapshot-lz4` implies `snapshot`. Enables `Compression::Lz4`.
-
-`Compression::Zstd` requires `features = ["snapshot-zstd"]` and is NOT
-currently enabled. Do not add `Compression::Zstd` match arms.
+`snapshot-lz4` enables `Compression::Lz4`. `snapshot-zstd` enables `Compression::Zstd { level }`.
+Both features are enabled.
 
 Available `Compression` variants with current feature set:
 - `Compression::None`
 - `Compression::Lz4`
+- `Compression::Zstd { level }`
 
 ## `WikiGraph` serde requirement
 
@@ -202,7 +201,7 @@ Three `GraphConfig` fields control snapshot behaviour:
 |-------|---------|--------|
 | `snapshot` | `true` | `false` → `NoSnapshot` variant (in-memory only) |
 | `snapshot_keep` | `3` | Passed to `SnapshotConfig::keep` |
-| `snapshot_format` | `"bincode+lz4"` | Maps to `Compression::Lz4`; any other value → `Compression::None` |
+| `snapshot_format` | `"bincode+lz4"` | Maps: `"bincode+lz4"` → `Compression::Lz4`; `"bincode+zstd"` → `Compression::Zstd { level: 3 }`; any other → `Compression::None` |
 
 In integration tests, set `graph.snapshot = false` to prevent snapshot files
 from appearing in `tempfile::TempDir` directories.
