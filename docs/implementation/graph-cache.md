@@ -41,7 +41,7 @@ Both caches live in `SpaceContext`:
 
 ```rust
 // src/engine.rs
-pub graph_cache:     GenerationCache<WikiGraph>,
+pub graph_cache:     WikiGraphCache,
 pub community_cache: GenerationCache<CommunityData>,
 ```
 
@@ -89,7 +89,7 @@ pub fn get_or_build_graph(
     index_schema:  &IndexSchema,
     type_registry: &SpaceTypeRegistry,
     index_manager: &SpaceIndexManager,
-    graph_cache:   &GenerationCache<WikiGraph>,
+    graph_cache:   &WikiGraphCache,
     searcher:      &Searcher,
     filter:        &GraphFilter,
 ) -> Result<Arc<WikiGraph>>
@@ -104,7 +104,7 @@ pub fn get_or_build_graph(
 ```rust
 pub fn get_cached_community_map(
     ...,
-    graph_cache:     &GenerationCache<WikiGraph>,
+    graph_cache:     &WikiGraphCache,
     community_cache: &GenerationCache<CommunityData>,
     searcher:        &Searcher,
     min_nodes:       usize,
@@ -120,7 +120,7 @@ Returns `None` when `community.local_count < min_nodes`.
 ```rust
 pub fn get_cached_community_stats(
     ...,
-    graph_cache:     &GenerationCache<WikiGraph>,
+    graph_cache:     &WikiGraphCache,
     community_cache: &GenerationCache<CommunityData>,
     searcher:        &Searcher,
     min_nodes:       usize,
@@ -183,7 +183,27 @@ accepts pre-built graphs rather than raw index handles.
 
 ## Limitations
 
-- Cache lives only for process lifetime. Cold start always rebuilds.
-  Phase 2 (`feat/petgraph-live-snapshot`) adds `GraphState` warm-start.
 - Only unfiltered full graphs are cached. Each distinct filter combination builds fresh.
 - Community data is always computed at threshold 0. `min_nodes` is applied at read time — no recompute for different thresholds.
+
+## Snapshot warm-start (v0.4.0 Phase 2)
+
+`SpaceContext.graph_cache` is now a `WikiGraphCache` enum:
+
+```rust
+pub enum WikiGraphCache {
+    NoSnapshot(GenerationCache<WikiGraph>),
+    WithSnapshot(GraphState<WikiGraph>),
+}
+```
+
+`WithSnapshot` is constructed when `graph.snapshot = true` (default). On process restart:
+- `GraphState::init()` compares the current generation key (from `index_manager.generation().to_string()`) against the snapshot filename.
+- Match → load from disk, skip cold build.
+- Miss → cold build, save snapshot, return graph.
+
+After `wiki_index_rebuild`, `WikiGraphCache::rebuild()` forces a new snapshot for the updated generation key.
+
+`graph.snapshot = false` constructs `NoSnapshot` — identical to Phase 1 behaviour. Use in CI and integration tests to avoid snapshot files in tempdir.
+
+Snapshots stored at: `state_dir/snapshots/<wiki-name>/wiki-graph-<key>.<ext>`
