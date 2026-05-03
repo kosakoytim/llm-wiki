@@ -12,7 +12,7 @@ last_updated: "2026-05-03"
 | Area  | What |
 |-------|------|
 | Graph | petgraph-live Phase 1: replace bespoke `CachedGraph` with `GenerationCache` ✓ implemented |
-| Graph | petgraph-live Phase 2: snapshot warm-start via `GraphState` — see [docs/improvements/2026-05-03-petgraph-live-snapshot.md](improvements/2026-05-03-petgraph-live-snapshot.md) |
+| Graph | petgraph-live Phase 2: snapshot warm-start via `GraphState` ✓ implemented |
 | Graph | petgraph-live Phase 3: `wiki_health` MCP tool + structural algorithms — see [docs/improvements/2026-05-03-petgraph-live-algorithms.md](improvements/2026-05-03-petgraph-live-algorithms.md) |
 
 ## Future

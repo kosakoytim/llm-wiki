@@ -178,4 +178,4 @@ cargo test --doc
 ## See also
 
 - [Phase 1 — GenerationCache](2026-05-03-petgraph-live-cache.md) (required prerequisite)
-- [Phase 2 — Snapshot warm-start](2026-05-03-petgraph-live-snapshot.md) (independent)
+- Phase 2 — Snapshot warm-start ✓ implemented (v0.4.0)

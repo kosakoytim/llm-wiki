@@ -199,7 +199,5 @@ fewer passes; the cap only applies to adversarial small graphs.
 
 ## Future Improvements
 
-- Persistent graph snapshot alongside tantivy index — survives process
-  restart; see [imp-graph-snapshot.md](../improvements/imp-graph-snapshot.md)
 - Graph queries beyond rendering: shortest path, connected components,
   orphan detection
