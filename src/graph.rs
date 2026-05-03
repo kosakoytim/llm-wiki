@@ -1086,7 +1086,7 @@ pub fn get_or_build_graph(
     index_schema: &IndexSchema,
     type_registry: &SpaceTypeRegistry,
     index_manager: &SpaceIndexManager,
-    graph_cache: &petgraph_live::cache::GenerationCache<WikiGraph>,
+    graph_cache: &WikiGraphCache,
     searcher: &Searcher,
     filter: &GraphFilter,
 ) -> Result<Arc<WikiGraph>> {
@@ -1096,7 +1096,7 @@ pub fn get_or_build_graph(
     }
 
     let current_gen = index_manager.generation();
-    graph_cache.get_or_build(current_gen, || {
+    graph_cache.get_fresh(current_gen, || {
         build_graph(
             searcher,
             index_schema,
@@ -1114,7 +1114,7 @@ pub fn get_cached_community_map(
     index_schema: &IndexSchema,
     type_registry: &SpaceTypeRegistry,
     index_manager: &SpaceIndexManager,
-    graph_cache: &petgraph_live::cache::GenerationCache<WikiGraph>,
+    graph_cache: &WikiGraphCache,
     community_cache: &petgraph_live::cache::GenerationCache<CommunityData>,
     searcher: &Searcher,
     min_nodes: usize,
@@ -1122,7 +1122,7 @@ pub fn get_cached_community_map(
     let current_gen = index_manager.generation();
 
     let community = community_cache.get_or_build(current_gen, || -> Result<CommunityData> {
-        let graph = graph_cache.get_or_build(current_gen, || {
+        let graph = graph_cache.get_fresh(current_gen, || {
             build_graph(
                 searcher,
                 index_schema,
@@ -1159,7 +1159,7 @@ pub fn get_cached_community_stats(
     index_schema: &IndexSchema,
     type_registry: &SpaceTypeRegistry,
     index_manager: &SpaceIndexManager,
-    graph_cache: &petgraph_live::cache::GenerationCache<WikiGraph>,
+    graph_cache: &WikiGraphCache,
     community_cache: &petgraph_live::cache::GenerationCache<CommunityData>,
     searcher: &Searcher,
     min_nodes: usize,
@@ -1167,7 +1167,7 @@ pub fn get_cached_community_stats(
     let current_gen = index_manager.generation();
 
     let community = community_cache.get_or_build(current_gen, || -> Result<CommunityData> {
-        let graph = graph_cache.get_or_build(current_gen, || {
+        let graph = graph_cache.get_fresh(current_gen, || {
             build_graph(
                 searcher,
                 index_schema,

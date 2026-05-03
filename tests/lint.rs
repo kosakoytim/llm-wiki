@@ -54,8 +54,8 @@ fn build_engine(dir: &Path, wiki_root: &Path) -> EngineState {
         repo_root: dir.to_path_buf(),
         type_registry: registry(),
         index_schema: schema(),
-        index_manager: mgr,
-        graph_cache: petgraph_live::cache::GenerationCache::new(),
+        index_manager: Arc::new(mgr),
+        graph_cache: llm_wiki::graph::WikiGraphCache::NoSnapshot(petgraph_live::cache::GenerationCache::new()),
         community_cache: petgraph_live::cache::GenerationCache::new(),
     });
 
@@ -387,8 +387,8 @@ fn build_engine_with_name(dir: &Path, wiki_root: &Path, name: &str) -> EngineSta
         repo_root: dir.to_path_buf(),
         type_registry: registry(),
         index_schema: schema(),
-        index_manager: mgr,
-        graph_cache: petgraph_live::cache::GenerationCache::new(),
+        index_manager: Arc::new(mgr),
+        graph_cache: llm_wiki::graph::WikiGraphCache::NoSnapshot(petgraph_live::cache::GenerationCache::new()),
         community_cache: petgraph_live::cache::GenerationCache::new(),
     });
 
