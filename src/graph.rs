@@ -151,6 +151,16 @@ pub struct CommunityStats {
     pub isolated: Vec<String>,
 }
 
+/// Cached community detection results for a space.
+pub struct CommunityData {
+    /// Number of local (non-external) nodes in the graph at cache time.
+    pub local_count: usize,
+    /// Slug → community id map.
+    pub map: Arc<HashMap<String, usize>>,
+    /// Aggregated Louvain stats.
+    pub stats: CommunityStats,
+}
+
 /// Build undirected adjacency by symmetrizing the directed graph. External nodes excluded.
 fn build_adjacency(graph: &WikiGraph) -> HashMap<NodeIndex, HashSet<NodeIndex>> {
     let mut adj: HashMap<NodeIndex, HashSet<NodeIndex>> = HashMap::new();
@@ -1207,5 +1217,18 @@ mod tests {
         let json = serde_json::to_string(&e).unwrap();
         let back: LabeledEdge = serde_json::from_str(&json).unwrap();
         assert_eq!(back.relation, "links-to");
+    }
+
+    #[test]
+    fn community_data_constructs() {
+        use std::collections::HashMap;
+        let data = CommunityData {
+            local_count: 3,
+            map: std::sync::Arc::new(HashMap::from([("slug-a".to_string(), 0usize)])),
+            stats: CommunityStats { count: 1, largest: 1, smallest: 1, isolated: vec![] },
+        };
+        assert_eq!(data.local_count, 3);
+        assert_eq!(data.map.get("slug-a"), Some(&0));
+        assert_eq!(data.stats.count, 1);
     }
 }
