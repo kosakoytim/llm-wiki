@@ -41,7 +41,7 @@ Both caches live in `SpaceContext`:
 
 ```rust
 // src/engine.rs
-pub graph_cache:     GenerationCache<WikiGraph>,
+pub graph_cache:     WikiGraphCache,
 pub community_cache: GenerationCache<CommunityData>,
 ```
 
@@ -89,7 +89,7 @@ pub fn get_or_build_graph(
     index_schema:  &IndexSchema,
     type_registry: &SpaceTypeRegistry,
     index_manager: &SpaceIndexManager,
-    graph_cache:   &GenerationCache<WikiGraph>,
+    graph_cache:   &WikiGraphCache,
     searcher:      &Searcher,
     filter:        &GraphFilter,
 ) -> Result<Arc<WikiGraph>>
@@ -104,7 +104,7 @@ pub fn get_or_build_graph(
 ```rust
 pub fn get_cached_community_map(
     ...,
-    graph_cache:     &GenerationCache<WikiGraph>,
+    graph_cache:     &WikiGraphCache,
     community_cache: &GenerationCache<CommunityData>,
     searcher:        &Searcher,
     min_nodes:       usize,
@@ -120,7 +120,7 @@ Returns `None` when `community.local_count < min_nodes`.
 ```rust
 pub fn get_cached_community_stats(
     ...,
-    graph_cache:     &GenerationCache<WikiGraph>,
+    graph_cache:     &WikiGraphCache,
     community_cache: &GenerationCache<CommunityData>,
     searcher:        &Searcher,
     min_nodes:       usize,

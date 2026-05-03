@@ -40,13 +40,16 @@ pub struct SpaceContext {
     pub name: String,
     pub wiki_root: PathBuf,
     pub repo_root: PathBuf,
-    pub type_registry: SpaceTypeRegistry,
+    pub type_registry: Arc<SpaceTypeRegistry>,
     pub index_schema: IndexSchema,
     pub index_manager: Arc<SpaceIndexManager>,
     pub graph_cache:     WikiGraphCache,
     pub community_cache: GenerationCache<CommunityData>,
 }
 ```
+
+`type_registry` is `Arc<SpaceTypeRegistry>` — shared with the `'static` build closure
+inside `WikiGraphCache::WithSnapshot`. Arc clone at construction; deref is transparent.
 
 `index_manager` is `Arc<SpaceIndexManager>` — shared ownership needed for
 `'static` closures passed to `GraphState::builder`.
