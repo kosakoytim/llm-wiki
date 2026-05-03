@@ -595,7 +595,9 @@ fn rule_articulation_point(wiki_graph: &Arc<WikiGraph>, wiki_root: &Path) -> Vec
                 slug,
                 rule: "articulation-point",
                 severity: Severity::Warning,
-                message: "removing this page would disconnect the graph — add alternative link paths".to_string(),
+                message:
+                    "removing this page would disconnect the graph — add alternative link paths"
+                        .to_string(),
             }
         })
         .collect()
@@ -741,10 +743,7 @@ mod tests {
 
     #[test]
     fn no_articulation_points_in_cycle() {
-        let g = make_graph(
-            &["a", "b", "c"],
-            &[("a", "b"), ("b", "c"), ("c", "a")],
-        );
+        let g = make_graph(&["a", "b", "c"], &[("a", "b"), ("b", "c"), ("c", "a")]);
         let (ug, _) = build_undirected(&g);
         assert!(petgraph_live::connect::articulation_points(&ug).is_empty());
     }
