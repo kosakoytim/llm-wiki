@@ -787,7 +787,10 @@ mod tests {
 
     #[test]
     fn rule_articulation_point_empty_for_cycle() {
-        let g = Arc::new(make_graph(&["a", "b", "c"], &[("a", "b"), ("b", "c"), ("c", "a")]));
+        let g = Arc::new(make_graph(
+            &["a", "b", "c"],
+            &[("a", "b"), ("b", "c"), ("c", "a")],
+        ));
         assert!(rule_articulation_point(&g, Path::new("/wiki")).is_empty());
     }
 
@@ -800,7 +803,11 @@ mod tests {
         for f in &findings {
             assert_eq!(f.rule, "bridge");
             assert_eq!(f.severity, Severity::Warning);
-            assert!(f.message.contains("→"), "message must contain arrow, got: {}", f.message);
+            assert!(
+                f.message.contains("→"),
+                "message must contain arrow, got: {}",
+                f.message
+            );
             assert!(f.message.contains("is a bridge"));
         }
         let slugs: Vec<&str> = findings.iter().map(|f| f.slug.as_str()).collect();
@@ -809,14 +816,20 @@ mod tests {
 
     #[test]
     fn rule_bridge_empty_for_cycle() {
-        let g = Arc::new(make_graph(&["a", "b", "c"], &[("a", "b"), ("b", "c"), ("c", "a")]));
+        let g = Arc::new(make_graph(
+            &["a", "b", "c"],
+            &[("a", "b"), ("b", "c"), ("c", "a")],
+        ));
         assert!(rule_bridge(&g, Path::new("/wiki")).is_empty());
     }
 
     #[test]
     fn rule_periphery_produces_findings() {
         // a→b→c→a: directed cycle, all nodes have eccentricity 2 = diameter
-        let g = Arc::new(make_graph(&["a", "b", "c"], &[("a", "b"), ("b", "c"), ("c", "a")]));
+        let g = Arc::new(make_graph(
+            &["a", "b", "c"],
+            &[("a", "b"), ("b", "c"), ("c", "a")],
+        ));
         let findings = rule_periphery(&g, Path::new("/wiki"), 100);
         assert!(!findings.is_empty());
         for f in &findings {
@@ -829,7 +842,10 @@ mod tests {
     #[test]
     fn rule_periphery_skips_above_threshold() {
         // 3 nodes, threshold 2 → local_count(3) > max_nodes(2) → empty
-        let g = Arc::new(make_graph(&["a", "b", "c"], &[("a", "b"), ("b", "c"), ("c", "a")]));
+        let g = Arc::new(make_graph(
+            &["a", "b", "c"],
+            &[("a", "b"), ("b", "c"), ("c", "a")],
+        ));
         assert!(rule_periphery(&g, Path::new("/wiki"), 2).is_empty());
     }
 }

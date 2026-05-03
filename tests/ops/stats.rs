@@ -138,7 +138,10 @@ fn stats_structural_fields_null_when_disabled() {
     // structural_algorithms line rather than appending a duplicate section header.
     let config_str = std::fs::read_to_string(&config_path).unwrap();
     let patched = if config_str.contains("structural_algorithms") {
-        config_str.replace("structural_algorithms = true", "structural_algorithms = false")
+        config_str.replace(
+            "structural_algorithms = true",
+            "structural_algorithms = false",
+        )
     } else {
         // Insert the key inside the existing [graph] section
         config_str.replace("[graph]", "[graph]\nstructural_algorithms = false")

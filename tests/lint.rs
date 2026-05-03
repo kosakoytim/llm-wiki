@@ -507,7 +507,11 @@ fn articulation_point_rule_finds_connector_page() {
             f.message
         );
         assert!(!f.path.is_empty(), "path must be populated");
-        assert!(f.path.ends_with(".md"), "path must end with .md: {}", f.path);
+        assert!(
+            f.path.ends_with(".md"),
+            "path must end with .md: {}",
+            f.path
+        );
     }
 }
 
@@ -555,7 +559,11 @@ fn bridge_rule_finds_load_bearing_link() {
             f.message
         );
         assert!(!f.path.is_empty(), "path must be populated");
-        assert!(f.path.ends_with(".md"), "path must end with .md: {}", f.path);
+        assert!(
+            f.path.ends_with(".md"),
+            "path must end with .md: {}",
+            f.path
+        );
     }
 }
 
@@ -599,7 +607,11 @@ fn periphery_rule_finds_isolated_pages() {
             f.message
         );
         assert!(!f.path.is_empty(), "path must be populated");
-        assert!(f.path.ends_with(".md"), "path must end with .md: {}", f.path);
+        assert!(
+            f.path.ends_with(".md"),
+            "path must end with .md: {}",
+            f.path
+        );
     }
 }
 
