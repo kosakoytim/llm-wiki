@@ -133,26 +133,27 @@ This means:
 
 - No captures of `RwLock` guards (they hold borrows — E0521)
 - No captures of `&SpaceTypeRegistry` (not Clone — cannot be moved)
-- Use `Arc<T>` for shared ownership: `Arc<SpaceIndexManager>` clones cheaply
-- Use owned values (`PathBuf`, `String`) for config passed at construction time
+- Use `Arc<T>` for shared ownership: `Arc<SpaceIndexManager>` and `Arc<SpaceTypeRegistry>` clone cheaply
+- `IndexSchema` derives `Clone` — captured by value at construction time
 
-Pattern for `build_fn` in llm-wiki:
+Pattern for `build_fn` in llm-wiki (current — no disk re-derivation):
 
 ```rust
-let im = Arc::clone(&index_manager);    // Arc clone while guard held
-let repo_root = space.repo_root.clone(); // PathBuf clone
-let tokenizer = config.index.tokenizer.clone(); // String clone
+let im = Arc::clone(&index_manager);  // Arc<SpaceIndexManager>
+let is = index_schema.clone();         // IndexSchema: Clone
+let tr = Arc::clone(&type_registry);   // Arc<SpaceTypeRegistry>: Clone
 
 let build_fn = move || {
-    // re-derive SpaceTypeRegistry and IndexSchema from disk each cold build
-    let (tr, is) = space_builder::build_space(&repo_root, &tokenizer)
-        .unwrap_or_else(|_| space_builder::build_space_from_embedded(&tokenizer));
     let searcher = im.searcher()
         .map_err(|e| SnapshotError::Io(std::io::Error::other(e.to_string())))?;
-    build_graph(&searcher, &is, &GraphFilter::default(), &tr)
+    build_graph(&searcher, &is, &GraphFilter::default(), &*tr)
         .map_err(|e| SnapshotError::Io(std::io::Error::other(e.to_string())))
 };
 ```
+
+`IndexSchema` derives `Clone` — captured at `GraphState` construction.
+`SpaceTypeRegistry` is `Arc`-wrapped in `SpaceContext` — `Arc::clone` is free.
+No disk I/O on cold build beyond the graph construction itself.
 
 ## Error type mapping
 
