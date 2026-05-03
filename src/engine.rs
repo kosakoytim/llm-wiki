@@ -26,7 +26,7 @@ pub struct SpaceContext {
     /// Absolute path to the git repository root (parent of `wiki/`).
     pub repo_root: PathBuf,
     /// Type registry compiled from the wiki's schema files.
-    pub type_registry: SpaceTypeRegistry,
+    pub type_registry: Arc<SpaceTypeRegistry>,
     /// Tantivy index schema for this space.
     pub index_schema: IndexSchema,
     /// Lifecycle manager for the Tantivy search index.
@@ -409,7 +409,7 @@ fn mount_space(entry: &WikiEntry, state_dir: &Path, config: &GlobalConfig) -> Re
         name: entry.name.clone(),
         wiki_root,
         repo_root,
-        type_registry,
+        type_registry: Arc::new(type_registry),
         index_schema,
         index_manager,
         graph_cache,
