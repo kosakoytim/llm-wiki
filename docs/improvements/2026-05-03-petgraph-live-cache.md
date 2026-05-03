@@ -1,7 +1,7 @@
 ---
 title: "petgraph-live Phase 1 — GenerationCache"
 summary: "Replace bespoke CachedGraph + RwLock<Option<CachedGraph>> with petgraph_live::cache::GenerationCache<WikiGraph> and a separate GenerationCache<CommunityData>. Zero behaviour change."
-status: in-progress
+status: phase1-implemented
 target_version: "0.4.0"
 branch: feat/petgraph-live-cache
 pr_target: dev/v0.4.0
@@ -139,13 +139,13 @@ cargo test --doc
 
 ## Definition of done
 
-- [ ] `CachedGraph` struct deleted
-- [ ] `SpaceContext` has `graph_cache: GenerationCache<WikiGraph>` and `community_cache: GenerationCache<CommunityData>`, no `RwLock` wrapper
-- [ ] `get_or_build_graph` uses `GenerationCache::get_or_build`
-- [ ] Community accessors use nested closure pattern
-- [ ] `graph_cache_hit_returns_same_arc` test passes — `Arc::ptr_eq` on generation hit
-- [ ] All tests pass, clippy clean, fmt clean, doc tests pass
-- [ ] `CHANGELOG.md` `[Unreleased]` updated
+- [x] `CachedGraph` struct deleted
+- [x] `SpaceContext` has `graph_cache: GenerationCache<WikiGraph>` and `community_cache: GenerationCache<CommunityData>`, no `RwLock` wrapper
+- [x] `get_or_build_graph` uses `GenerationCache::get_or_build`
+- [x] Community accessors use nested closure pattern
+- [x] `graph_cache_hit_returns_same_arc` test passes — `Arc::ptr_eq` on generation hit
+- [x] All tests pass, clippy clean, fmt clean, doc tests pass
+- [x] `CHANGELOG.md` `[Unreleased]` updated
 
 ## See also
 
