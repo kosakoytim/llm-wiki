@@ -393,7 +393,7 @@ fn mount_space(entry: &WikiEntry, state_dir: &Path, config: &GlobalConfig) -> Re
                     &searcher,
                     &is,
                     &crate::graph::GraphFilter::default(),
-                    &*tr,
+                    &tr,
                 )
                 .map_err(|e| {
                     petgraph_live::snapshot::SnapshotError::Io(std::io::Error::other(e.to_string()))
@@ -429,9 +429,9 @@ fn build_wiki_graph_cache(
     }
 
     let compression = match graph_cfg.snapshot_format.as_str() {
-        "bincode+lz4"  => Compression::Lz4,
+        "bincode+lz4" => Compression::Lz4,
         "bincode+zstd" => Compression::Zstd { level: 3 },
-        _              => Compression::None,
+        _ => Compression::None,
     };
 
     let snap_cfg = SnapshotConfig {
