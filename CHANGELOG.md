@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **petgraph-live 0.3.1** — bumped dependency; snapshot directory creation now handled by the library (removed manual `create_dir_all` workaround in `mount_space`)
 - **Snapshot zstd format** — `bincode+zstd` now valid `graph.snapshot_format` value; requires `snapshot-zstd` feature (enabled)
 - **Graph cold-build cost reduced** — `build_fn` closure now captures `IndexSchema` (by clone) and `Arc<SpaceTypeRegistry>` directly; eliminates schema re-parse per cold build; `SpaceContext.type_registry` is now `Arc<SpaceTypeRegistry>`
 - **Graph warm-start** — `SpaceContext.graph_cache` replaced with `WikiGraphCache` enum; `WithSnapshot` variant uses `petgraph_live::live::GraphState` to persist the graph to disk and reload on process restart; cold builds only on first launch or after `wiki_index_rebuild`; `graph.snapshot = false` disables (preserves Phase 1 behaviour)
