@@ -42,15 +42,21 @@ pub struct SpaceContext {
     pub repo_root: PathBuf,
     pub type_registry: SpaceTypeRegistry,
     pub index_schema: IndexSchema,
-    pub index_manager: SpaceIndexManager,
-    pub graph_cache:     GenerationCache<WikiGraph>,
+    pub index_manager: Arc<SpaceIndexManager>,
+    pub graph_cache:     WikiGraphCache,
     pub community_cache: GenerationCache<CommunityData>,
 }
 ```
 
-`graph_cache` and `community_cache` are generation-keyed caches backed by
-`petgraph_live::cache::GenerationCache`. Both invalidate automatically when
-`index_manager.generation()` changes. See [graph-cache.md](graph-cache.md).
+`index_manager` is `Arc<SpaceIndexManager>` — shared ownership needed for
+`'static` closures passed to `GraphState::builder`.
+
+`graph_cache` is a `WikiGraphCache` enum: `NoSnapshot(GenerationCache<WikiGraph>)`
+or `WithSnapshot(GraphState<WikiGraph>)`. Controlled by `graph.snapshot` config.
+Both invalidate automatically when `index_manager.generation()` changes.
+See [graph-cache.md](graph-cache.md) and [petgraph-live.md](petgraph-live.md).
+
+`community_cache` is plain `GenerationCache<CommunityData>` — not snapshotted.
 
 ## Startup
 
@@ -68,7 +74,9 @@ pub struct SpaceContext {
       - TypesChanged → partial rebuild (affected types only)
       - FullRebuildNeeded → full rebuild
    e. Open tantivy index (with auto-recovery on corruption)
-   f. Initialize graph_cache: GenerationCache::new(), community_cache: GenerationCache::new()
+   f. Create snapshot dir (state_dir/snapshots/<name>) if graph.snapshot = true
+   g. Initialize graph_cache: build_wiki_graph_cache() → WikiGraphCache enum
+   h. Initialize community_cache: GenerationCache::new()
    g. Return SpaceContext
 3. Per-wiki errors: warn and skip (don't fail the engine)
 4. Assemble EngineState, wrap in Arc<RwLock>
