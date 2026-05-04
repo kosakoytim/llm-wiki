@@ -37,7 +37,7 @@ jobs:
     env:
       LLM_WIKI_CONFIG: ${{ runner.temp }}/llm-wiki.toml
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install llm-wiki
         run: cargo binstall llm-wiki --no-confirm
@@ -74,7 +74,7 @@ jobs:
     env:
       LLM_WIKI_CONFIG: ${{ runner.temp }}/llm-wiki.toml
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install llm-wiki
         run: cargo binstall llm-wiki --no-confirm
@@ -110,7 +110,7 @@ jobs:
     env:
       LLM_WIKI_CONFIG: ${{ runner.temp }}/llm-wiki.toml
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install llm-wiki
         run: cargo binstall llm-wiki --no-confirm
@@ -161,22 +161,44 @@ Generate a concept graph as a build artifact or commit it to the repo:
 
 ## Integration Test Workflow
 
-A manual workflow at `.github/workflows/integration.yml` runs the full
-end-to-end validation suite (CLI + MCP) against a real binary. Trigger it
-from the Actions tab → **Integration Tests** → **Run workflow**.
+The integration suite lives in `tests-integration/` — a pytest project managed
+by `uv`. Three suites cover all transports:
 
+| Suite | Transport | Target |
+|---|---|---|
+| `engine/` | CLI subprocess | `make validate-py-engine` |
+| `mcp/` | MCP stdio (official `mcp` SDK) | `make validate-py-mcp` |
+| `acp/` | ACP NDJSON stdio (`asyncio`) | `make validate-py-acp` |
+
+Run all suites locally:
+
+```bash
+make validate-py
 ```
-suite: both | engine | mcp   (default: both)
+
+Run a specific suite:
+
+```bash
+make validate-py-engine
+make validate-py-mcp
+make validate-py-acp
 ```
+
+The GitHub Actions workflow at `.github/workflows/integration.yml` triggers
+automatically on pushes to `main` that touch `src/**` or `tests-integration/**`,
+and can also be run manually from the Actions tab → **Integration Tests** →
+**Run workflow** with a `suite` input (`all`, `engine`, `mcp`, `acp`).
 
 The workflow:
 1. Builds the debug binary (`cargo build --locked`)
-2. Installs `mcptools` (latest release, Linux amd64) when MCP suite is selected
-3. Runs `setup-test-env.sh` to create a fresh environment at `/tmp/llm-wiki-testing`
-4. Runs `validate-engine.sh` and/or `validate-mcp.sh`
+2. Installs Python deps via `uv sync`
+3. Runs the selected pytest suite(s)
 
-Use this after merging features that touch MCP handlers, graph rendering, or
-ingest logic — areas not covered by unit tests alone.
+No external tools required (`jq`, `mcptools`, etc.). Dependencies are declared
+in `tests-integration/pyproject.toml`.
+
+Use this after merging features that touch MCP handlers, ACP workflows, graph
+rendering, or ingest logic — areas not covered by unit tests alone.
 
 ## Environment Notes
 
@@ -189,4 +211,4 @@ ingest logic — areas not covered by unit tests alone.
   Or pass `--config` to individual commands when env vars are not practical.
 - `spaces create` is idempotent — safe to run on every build
 - `--dry-run` on ingest validates without committing
-- The wiki repo must be a git repository (`checkout@v4` handles this)
+- The wiki repo must be a git repository (`actions/checkout` handles this)

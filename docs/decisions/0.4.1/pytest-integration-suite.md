@@ -54,5 +54,5 @@ Root `Makefile` delegates with `$(MAKE) -C tests-integration test-engine BINARY=
 
 - `pyproject.toml` + `Makefile` + `conftest.py` added under `tests-integration/`.
 - All Python artefacts (`.venv/`, `uv.lock`, `__pycache__`) gitignored.
-- Bash scripts deleted section-by-section as pytest equivalents pass in CI.
+- Bash scripts in `docs/testing/scripts/` are kept for reference; removal is a follow-up task once CI is fully migrated.
 - `validate-py-engine`, `validate-py-acp`, `validate-py-mcp` targets added to root `Makefile`.
