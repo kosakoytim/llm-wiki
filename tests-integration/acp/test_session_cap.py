@@ -1,5 +1,4 @@
 import pytest
-from acp.conftest import make_acp_env
 
 
 async def test_acp_max_sessions_config_readable(wiki_env):

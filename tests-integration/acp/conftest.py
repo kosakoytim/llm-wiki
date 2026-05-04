@@ -48,7 +48,7 @@ class AcpEnv:
                         # EOF reached
                         break
                     output_lines.append(line.decode())
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # No more data coming soon, check if we have responses
                     if output_lines:
                         break
@@ -59,7 +59,7 @@ class AcpEnv:
             await proc.wait()
 
             stdout_text = "".join(output_lines)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             proc.kill()
             await proc.wait()
             raise
