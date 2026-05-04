@@ -63,7 +63,7 @@ async def test_content_write_skipped():
     pass
 
 
-async def test_content_new_creates_page(mutable_mcp_env, wiki_env):
+async def test_content_new_creates_page(mutable_mcp_env):
     data = await mutable_mcp_env.json(
         "wiki_content_new",
         {"uri": "concepts/test-new-page", "wiki": "research"},
