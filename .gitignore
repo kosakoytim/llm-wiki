@@ -11,3 +11,12 @@ docs/superpowers
 .code-review-graph/
 .mcp.json
 CLAUDE.md
+
+# Python / uv (tests-integration/)
+tests-integration/.venv/
+tests-integration/uv.lock
+tests-integration/__pycache__/
+tests-integration/.pytest_cache/
+tests-integration/**/__pycache__/
+tests-integration/**/*.pyc
+tests-integration/**/*.pyo
