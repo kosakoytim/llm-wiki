@@ -100,9 +100,15 @@ async def test_content_commit_after_write(mutable_mcp_env):
         {"uri": slug, "content": content, "wiki": "research"},
     )
 
-    # Commit the page
+    # Commit the page - should return commit hash
     result_text = await mutable_mcp_env.call(
         "wiki_content_commit",
         {"slugs": [slug], "message": "test: commit test page", "wiki": "research"},
     )
-    assert result_text  # non-empty response
+    # Assert commit succeeded: response should be non-empty (git hash)
+    assert result_text, "commit response should not be empty"
+    assert len(result_text) > 5, "commit hash should be a valid git SHA"
+
+    # Verify the page exists post-commit
+    resolved = await mutable_mcp_env.json("wiki_resolve", {"uri": slug, "wiki": "research"})
+    assert resolved["exists"] is True, f"page {slug} should exist after commit"
