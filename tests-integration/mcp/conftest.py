@@ -3,8 +3,9 @@ import json
 
 import pytest
 import pytest_asyncio
-from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+
+from mcp import ClientSession, StdioServerParameters
 
 
 class McpEnv:
@@ -38,12 +39,11 @@ async def mcp_env(wiki_env):
 
     async def _run():
         try:
-            async with stdio_client(server) as (read, write):
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
-                    env_holder.append(McpEnv(session))
-                    ready.set_result(None)
-                    await stop.wait()
+            async with stdio_client(server) as (read, write), ClientSession(read, write) as session:
+                await session.initialize()
+                env_holder.append(McpEnv(session))
+                ready.set_result(None)
+                await stop.wait()
         except Exception as e:
             if not ready.done():
                 ready.set_exception(e)
