@@ -16,9 +16,6 @@ class AcpEnv:
     def _request(self, method: str, params: dict) -> str:
         return json.dumps({"jsonrpc": "2.0", "id": self._next_id(), "method": method, "params": params})
 
-    def _notification(self, method: str, params: dict) -> str:
-        return json.dumps({"jsonrpc": "2.0", "method": method, "params": params})
-
     async def exchange(self, messages: list[str], timeout: float = 15.0) -> list[dict]:
         """Send NDJSON messages, return parsed response lines."""
         payload = "\n".join(messages) + "\n"
@@ -36,7 +33,15 @@ class AcpEnv:
             proc.kill()
             await proc.wait()
             raise
-        return [json.loads(line) for line in stdout.decode().splitlines() if line.strip()]
+        result = []
+        for i, line in enumerate(stdout.decode().splitlines()):
+            if not line.strip():
+                continue
+            try:
+                result.append(json.loads(line))
+            except json.JSONDecodeError as e:
+                raise AssertionError(f"ACP response line {i} is not valid JSON: {e!r}") from e
+        return result
 
     async def initialize(self) -> dict:
         """Send initialize, return its result dict."""
@@ -89,7 +94,6 @@ class AcpEnv:
             }),
             self._request("session/new", new_params),
         ]
-        saved_id = self._req_id
         init_responses = await self.exchange(init_msgs)
         new_result = _find_result(init_responses, req_id=2)
         sid = new_result.get("sessionId")
