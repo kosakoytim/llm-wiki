@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Configurable `wiki_root`** — `wiki_root` key in `wiki.toml` (default `"wiki"`); all hardcoded `wiki/` paths replaced by `SpaceContext.wiki_root`; supports multi-component paths (e.g. `"src/wiki"`); validated at registration time using canonicalized paths (symlink-safe, reserved-dir checks); zero behavior change for existing wikis
 - **`wiki_spaces_register` tool** — new MCP tool and `llm-wiki spaces register` CLI subcommand; registers a pre-existing repository without creating files or git commits; validates `wiki_root` exists before completing; errors on conflicting `--wiki-root` vs `wiki.toml` value (no `--force`); hot-mounts the wiki if the server is running (tool count: 22 → 23)
 - **`--wiki-root` flag on `spaces create`** — creates the specified directory instead of `wiki/`; writes `wiki_root` into the generated `wiki.toml` when non-default
+- **ACP validation suite** — `docs/testing/scripts/validate-acp.sh` + per-section scripts in `docs/testing/scripts/acp/`; `setup-test-env.sh` configures ACP test settings; integrated into `.github/workflows/integration.yml` as `suite: acp`
 
 ## [0.2.0] — 2026-04-28
 
