@@ -49,7 +49,7 @@ validate-acp: build
 	LLM_WIKI_CONFIG=$(TEST_CFG) \
 	bash $(SCRIPTS)/validate-acp.sh
 
-validate: test-setup validate-engine validate-mcp validate-acp
+validate: test-clean test-setup validate-engine validate-mcp validate-acp
 
 # ── Pre-release checklist ─────────────────────────────────────────────────────
 # Mirrors docs/guides/release.md pre-release checklist.
