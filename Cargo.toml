@@ -12,7 +12,7 @@ documentation = "https://docs.rs/llm-wiki-engine"
 readme = "README.md"
 keywords = ["wiki", "knowledge-base", "mcp", "git", "acp"]
 categories = ["command-line-utilities", "development-tools"]
-exclude = [".github/", "tests/", "docs/"]
+exclude = [".github/", "tests/", "tests-integration/", "docs/"]
 
 [lib]
 name = "llm_wiki"
