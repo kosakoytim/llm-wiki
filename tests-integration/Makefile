@@ -1,9 +1,9 @@
 BINARY ?= ../target/debug/llm-wiki
 
-.PHONY: install test test-engine test-acp test-mcp
+.PHONY: install test test-engine test-acp test-mcp lint lint-fix
 
 install:
-	uv sync
+	uv sync --group dev
 
 test: install
 	LLM_WIKI_BIN=$(BINARY) uv run pytest -v
@@ -16,3 +16,9 @@ test-acp: install
 
 test-mcp: install
 	LLM_WIKI_BIN=$(BINARY) uv run pytest mcp/ -v
+
+lint: install
+	uv run ruff check .
+
+lint-fix: install
+	uv run ruff check --fix .
