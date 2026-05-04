@@ -20,3 +20,4 @@ tests-integration/.pytest_cache/
 tests-integration/**/__pycache__/
 tests-integration/**/*.pyc
 tests-integration/**/*.pyo
+pytest-of-*/

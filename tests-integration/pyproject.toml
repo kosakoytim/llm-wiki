@@ -16,6 +16,8 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["."]
 asyncio_mode = "auto"
+tmp_path_retention_count = 1
+tmp_path_retention_policy = "failed"
 
 [tool.ruff]
 target-version = "py311"
