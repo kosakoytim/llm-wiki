@@ -1,6 +1,10 @@
 import asyncio
 import json
+import os
+import shutil
 from pathlib import Path
+
+import pytest
 
 
 class AcpEnv:
@@ -26,15 +30,45 @@ class AcpEnv:
             stderr=asyncio.subprocess.DEVNULL,
         )
         try:
-            stdout, _ = await asyncio.wait_for(
-                proc.communicate(payload.encode()), timeout=timeout
-            )
+            # Write payload and close stdin
+            proc.stdin.write(payload.encode())
+            await proc.stdin.drain()
+            proc.stdin.close()
+
+            # Read all available output up to timeout
+            deadline = asyncio.get_event_loop().time() + timeout
+            output_lines = []
+            while asyncio.get_event_loop().time() < deadline:
+                try:
+                    # Read with shorter timeout and loop
+                    remaining = deadline - asyncio.get_event_loop().time()
+                    if remaining <= 0:
+                        break
+                    line = await asyncio.wait_for(
+                        proc.stdout.readline(),
+                        timeout=min(0.5, remaining)
+                    )
+                    if not line:
+                        # EOF reached
+                        break
+                    output_lines.append(line.decode())
+                except asyncio.TimeoutError:
+                    # No more data coming soon, check if we have responses
+                    if output_lines:
+                        break
+                    continue
+
+            # Ensure process is terminated
+            proc.kill()
+            await proc.wait()
+
+            stdout_text = "".join(output_lines)
         except asyncio.TimeoutError:
             proc.kill()
             await proc.wait()
             raise
         result = []
-        for i, line in enumerate(stdout.decode().splitlines()):
+        for i, line in enumerate(stdout_text.splitlines()):
             if not line.strip():
                 continue
             try:
@@ -174,3 +208,14 @@ def _find_result(responses: list[dict], req_id: int) -> dict:
 def make_acp_env(wiki_env) -> AcpEnv:
     """Convenience factory for use in tests."""
     return AcpEnv(binary=wiki_env.binary, config=wiki_env.config)
+
+
+@pytest.fixture()
+def binary():
+    """Override parent binary fixture to use LLM_WIKI_BIN env var directly (no shutil.which)."""
+    import subprocess
+    binary_env = os.environ.get("LLM_WIKI_BIN", "llm-wiki")
+    # Use binary_env directly without resolving via shutil.which to avoid asdf shim
+    result = subprocess.run([binary_env, "--version"], capture_output=True, text=True)
+    assert result.returncode == 0, f"binary not found or failed: {binary_env!r} — set LLM_WIKI_BIN"
+    return binary_env
