@@ -9,7 +9,7 @@ DEBUG_BIN := ./target/debug/llm-wiki
 REL_BIN   := ./target/release/llm-wiki
 SCRIPTS   := docs/testing/scripts
 
-.PHONY: build build-release test-clean test-setup validate validate-mcp validate-acp validate-engine pre-release
+.PHONY: build build-release test-clean test-setup validate validate-mcp validate-acp validate-engine validate-py validate-py-engine validate-py-acp validate-py-mcp pre-release
 
 # ── Build ──────────────────────────────────────────────────────────────────────
 
@@ -50,6 +50,20 @@ validate-acp: build
 	bash $(SCRIPTS)/validate-acp.sh
 
 validate: test-clean test-setup validate-engine validate-mcp validate-acp
+
+# ── pytest integration suite ──────────────────────────────────────────────────
+
+validate-py: build
+	$(MAKE) -C tests-integration test-engine BINARY=$(CURDIR)/$(DEBUG_BIN)
+
+validate-py-engine: build
+	$(MAKE) -C tests-integration test-engine BINARY=$(CURDIR)/$(DEBUG_BIN)
+
+validate-py-acp: build
+	$(MAKE) -C tests-integration test-acp BINARY=$(CURDIR)/$(DEBUG_BIN)
+
+validate-py-mcp: build
+	$(MAKE) -C tests-integration test-mcp BINARY=$(CURDIR)/$(DEBUG_BIN)
 
 # ── Pre-release checklist ─────────────────────────────────────────────────────
 # Mirrors docs/guides/release.md pre-release checklist.
