@@ -58,9 +58,24 @@ async def test_resolve_returns_slug(mcp_env):
     assert len(data["slug"]) > 0
 
 
-@pytest.mark.skip(reason="mutates wiki state")
-async def test_content_write_skipped():
-    pass
+async def test_content_write_and_read_back(mutable_mcp_env):
+    # Create a page first so we have a target to write to
+    new_data = await mutable_mcp_env.json(
+        "wiki_content_new",
+        {"uri": "concepts/test-write-target", "wiki": "research"},
+    )
+    slug = new_data["slug"]
+
+    # Write custom content to it
+    content = "---\ntitle: Write Test\ntype: page\nstatus: draft\n---\n\nHello write test.\n"
+    await mutable_mcp_env.call(
+        "wiki_content_write",
+        {"uri": slug, "content": content, "wiki": "research"},
+    )
+
+    # Read back and verify
+    text = await mutable_mcp_env.call("wiki_content_read", {"uri": slug, "wiki": "research"})
+    assert "Hello write test." in text
 
 
 async def test_content_new_creates_page(mutable_mcp_env):
