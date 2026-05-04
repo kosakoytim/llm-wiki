@@ -31,6 +31,6 @@ run      "schema remove custom type" \
          "schema file deleted" \
          $CLI schema remove test-custom --delete
 
-run_nocheck "schema list no longer shows removed type" \
+run      "schema list no longer shows removed type" \
          "" \
-         bash -c "$CLI schema list 2>&1 | grep -v 'test-custom'"
+         bash -c "! $CLI schema list 2>&1 | grep -q 'test-custom' && echo ok"

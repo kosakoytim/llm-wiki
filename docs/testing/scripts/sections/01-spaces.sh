@@ -38,8 +38,8 @@ run      "spaces register creates schemas dir" \
 # ── remove ────────────────────────────────────────────────────────────────────
 run      "spaces remove unregisters wiki" \
          "Removed" \
-         $CLI spaces remove register-test
+         $CLI spaces remove register-test --delete
 
-run_nocheck "spaces list no longer shows register-test" \
+run      "spaces list no longer shows register-test" \
          "" \
-         bash -c "$CLI spaces list 2>&1 | grep -v 'register-test'"
+         bash -c "! $CLI spaces list 2>&1 | grep -q 'register-test' && echo ok"
