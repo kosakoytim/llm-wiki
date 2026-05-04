@@ -1,24 +1,43 @@
 name: Integration Tests
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests-integration/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/integration.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests-integration/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/integration.yml"
   workflow_dispatch:
     inputs:
       suite:
         description: "Which suite to run"
         required: false
-        default: "both"
+        default: "all"
         type: choice
-        options: [both, engine, mcp, acp, all]
+        options: [all, engine, mcp, acp]
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
-  LLM_WIKI_TEST_DIR: /tmp/llm-wiki-testing
 
 jobs:
   integration:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -29,43 +48,22 @@ jobs:
       - name: Build
         run: cargo build --locked
 
-      - uses: actions/setup-go@v6
-        if: ${{ inputs.suite == 'both' || inputs.suite == 'mcp' || inputs.suite == 'all' }}
+      - uses: astral-sh/setup-uv@v5
         with:
-          go-version: stable
+          working-directory: tests-integration
 
-      - name: Install mcptools
-        if: ${{ inputs.suite == 'both' || inputs.suite == 'mcp' || inputs.suite == 'all' }}
-        run: |
-          go install github.com/f/mcptools/cmd/mcptools@latest
-          ln -s "$(go env GOPATH)/bin/mcptools" /usr/local/bin/mcp
-          mcp version
+      - name: Install Python deps
+        run: uv sync --group dev
+        working-directory: tests-integration
 
-      - name: Install jq
-        run: sudo apt-get install -y jq
+      - name: Run engine suite
+        if: ${{ inputs.suite == 'all' || inputs.suite == 'engine' || inputs.suite == '' }}
+        run: make -C tests-integration test-engine BINARY=$(pwd)/target/debug/llm-wiki
 
-      - name: Setup test environment
-        run: |
-          LLM_WIKI_BIN=./target/debug/llm-wiki \
-          bash ./docs/testing/scripts/setup-test-env.sh --dir "$LLM_WIKI_TEST_DIR"
+      - name: Run MCP suite
+        if: ${{ inputs.suite == 'all' || inputs.suite == 'mcp' || inputs.suite == '' }}
+        run: make -C tests-integration test-mcp BINARY=$(pwd)/target/debug/llm-wiki
 
-      - name: Run engine validation
-        if: ${{ inputs.suite == 'both' || inputs.suite == 'engine' || inputs.suite == 'all' }}
-        run: |
-          LLM_WIKI_BIN=./target/debug/llm-wiki \
-          LLM_WIKI_CONFIG="$LLM_WIKI_TEST_DIR/config.toml" \
-          bash ./docs/testing/scripts/validate-engine.sh
-
-      - name: Run MCP validation
-        if: ${{ inputs.suite == 'both' || inputs.suite == 'mcp' || inputs.suite == 'all' }}
-        run: |
-          LLM_WIKI_BIN=./target/debug/llm-wiki \
-          LLM_WIKI_CONFIG="$LLM_WIKI_TEST_DIR/config.toml" \
-          bash ./docs/testing/scripts/validate-mcp.sh
-
-      - name: Run ACP validation
-        if: ${{ inputs.suite == 'acp' || inputs.suite == 'all' }}
-        run: |
-          LLM_WIKI_BIN=./target/debug/llm-wiki \
-          LLM_WIKI_CONFIG="$LLM_WIKI_TEST_DIR/config.toml" \
-          bash ./docs/testing/scripts/validate-acp.sh
+      - name: Run ACP suite
+        if: ${{ inputs.suite == 'all' || inputs.suite == 'acp' || inputs.suite == '' }}
+        run: make -C tests-integration test-acp BINARY=$(pwd)/target/debug/llm-wiki
