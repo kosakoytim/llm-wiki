@@ -11,6 +11,10 @@ class McpEnv:
 
     async def call(self, tool: str, args: dict | None = None) -> str:
         result = await self._session.call_tool(tool, args or {})
+        if not result.content:
+            raise AssertionError(f"call_tool({tool!r}) returned empty content")
+        if getattr(result, "isError", False):
+            raise AssertionError(f"call_tool({tool!r}) returned error: {result.content[0].text}")
         return result.content[0].text
 
     async def json(self, tool: str, args: dict | None = None) -> dict | list:
