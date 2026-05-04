@@ -88,6 +88,22 @@ async def test_content_new_creates_page(mutable_mcp_env):
     assert Path(data["path"]).exists()
 
 
-@pytest.mark.skip(reason="mutates wiki state")
-async def test_content_commit_skipped():
-    pass
+async def test_content_commit_after_write(mutable_mcp_env):
+    # Create + write a page
+    new_data = await mutable_mcp_env.json(
+        "wiki_content_new",
+        {"uri": "concepts/test-commit-target", "wiki": "research"},
+    )
+    slug = new_data["slug"]
+    content = "---\ntitle: Commit Test\ntype: page\nstatus: draft\n---\n\nCommit me.\n"
+    await mutable_mcp_env.call(
+        "wiki_content_write",
+        {"uri": slug, "content": content, "wiki": "research"},
+    )
+
+    # Commit the page
+    result_text = await mutable_mcp_env.call(
+        "wiki_content_commit",
+        {"slugs": [slug], "message": "test: commit test page", "wiki": "research"},
+    )
+    assert result_text  # non-empty response
