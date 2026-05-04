@@ -178,20 +178,7 @@ pub fn register_existing(
 
     validate_wiki_root(&path, &effective_root)?;
 
-    // If wiki_root_override is set and toml doesn't have it, write it into wiki.toml
-    if wiki_root_override.is_some() && existing_toml_root.is_none() {
-        let toml_path = path.join("wiki.toml");
-        if toml_path.exists() {
-            let mut content = std::fs::read_to_string(&toml_path)?;
-            content.push_str(&format!("wiki_root = \"{effective_root}\"\n"));
-            std::fs::write(&toml_path, content)?;
-        } else {
-            std::fs::write(
-                &toml_path,
-                generate_wiki_toml(name, description, &effective_root),
-            )?;
-        }
-    }
+    ensure_structure(&path, name, description, &effective_root)?;
 
     let entry = WikiEntry {
         name: name.into(),

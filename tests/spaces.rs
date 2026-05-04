@@ -513,6 +513,25 @@ fn register_existing_basic() {
     let global = load_global(&cfg).unwrap();
     assert_eq!(global.wikis.len(), 1);
     assert_eq!(global.wikis[0].name, "existing");
+
+    // ensure_structure creates standard dirs
+    assert!(wiki_path.join("inbox").exists(), "inbox/ must be created");
+    assert!(wiki_path.join("raw").exists(), "raw/ must be created");
+    assert!(
+        wiki_path.join("schemas").exists(),
+        "schemas/ must be created"
+    );
+    assert!(
+        wiki_path.join("wiki").exists(),
+        "wiki/ content dir must exist"
+    );
+
+    // existing wiki.toml must not be overwritten
+    let toml_content = std::fs::read_to_string(wiki_path.join("wiki.toml")).unwrap();
+    assert_eq!(
+        toml_content, "name = \"existing\"\n",
+        "wiki.toml must not be overwritten"
+    );
 }
 
 #[test]
@@ -532,6 +551,25 @@ fn register_existing_with_custom_wiki_root() {
         llm_wiki::spaces::register_existing(&wiki_path, "skills", None, None, &cfg).unwrap();
 
     assert!(report.registered);
+
+    // ensure_structure creates standard dirs and custom content dir
+    assert!(wiki_path.join("inbox").exists(), "inbox/ must be created");
+    assert!(wiki_path.join("raw").exists(), "raw/ must be created");
+    assert!(
+        wiki_path.join("schemas").exists(),
+        "schemas/ must be created"
+    );
+    assert!(
+        wiki_path.join("skills").exists(),
+        "skills/ content dir must exist"
+    );
+
+    // existing wiki.toml with wiki_root must not be overwritten
+    let toml_content = std::fs::read_to_string(wiki_path.join("wiki.toml")).unwrap();
+    assert!(
+        toml_content.contains("wiki_root = \"skills\""),
+        "wiki.toml must preserve wiki_root"
+    );
 }
 
 #[test]
@@ -570,4 +608,65 @@ fn register_existing_missing_wiki_root_directory_errors() {
         llm_wiki::spaces::register_existing(&wiki_path, "skills", None, None, &cfg).unwrap_err();
 
     assert!(err.to_string().contains("does not exist"));
+}
+
+#[test]
+fn register_existing_no_prior_toml_creates_wiki_toml() {
+    let dir = tempfile::tempdir().unwrap();
+    let wiki_path = dir.path().join("new-repo");
+    let cfg = config_path(dir.path());
+
+    // Only create the content dir — no wiki.toml, no other dirs
+    std::fs::create_dir_all(wiki_path.join("content")).unwrap();
+
+    let report = llm_wiki::spaces::register_existing(
+        &wiki_path,
+        "new-repo",
+        Some("test description"),
+        Some("content"),
+        &cfg,
+    )
+    .unwrap();
+
+    assert!(report.registered);
+
+    // wiki.toml created with correct fields
+    let toml_path = wiki_path.join("wiki.toml");
+    assert!(toml_path.exists(), "wiki.toml must be created when absent");
+    let toml_content = std::fs::read_to_string(&toml_path).unwrap();
+    assert!(
+        toml_content.contains("name = \"new-repo\""),
+        "wiki.toml must contain name"
+    );
+    assert!(
+        toml_content.contains("description = \"test description\""),
+        "wiki.toml must contain description"
+    );
+    assert!(
+        toml_content.contains("wiki_root = \"content\""),
+        "wiki.toml must contain wiki_root"
+    );
+
+    // standard dirs created
+    assert!(wiki_path.join("inbox").exists(), "inbox/ must be created");
+    assert!(wiki_path.join("raw").exists(), "raw/ must be created");
+    assert!(
+        wiki_path.join("schemas").exists(),
+        "schemas/ must be created"
+    );
+    assert!(
+        wiki_path.join("content").exists(),
+        "content/ dir must exist"
+    );
+
+    // default schemas written
+    assert!(
+        wiki_path
+            .join("schemas")
+            .read_dir()
+            .unwrap()
+            .next()
+            .is_some(),
+        "schemas/ must contain default schema files"
+    );
 }

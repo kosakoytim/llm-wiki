@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `spaces register` now calls `ensure_structure`, creating `wiki.toml` and the
+  standard directory scaffold (`inbox/`, `raw/`, `schemas/`, content dir) when
+  absent, matching the behaviour of `spaces create` (fixes #62)
+
 ## [0.4.0] — 2026-05-03
 
 ### Added
