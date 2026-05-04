@@ -42,7 +42,7 @@ v0.1.1 added ACP transport but wired only the `research` workflow. `step_read` d
 
 **Rationale:** ACP sessions hold live resources (AtomicBool, label state). Unbounded growth risks OOM on long-running servers. 20 is generous for single-user IDE usage. Global-only because the cap is a server policy, not per-wiki.
 
-**Known limitation:** Session ID uses `timestamp_millis()`. Concurrent `NewSession` requests within the same millisecond generate the same ID, causing HashMap overwrites that silently bypass the cap check. Not fixed in v0.3.0 — the race window is <1 ms and IDE usage is sequential. Documented in `validate-acp.md`.
+**Known limitation:** Session ID uses `timestamp_millis()`. Concurrent `NewSession` requests within the same millisecond generate the same ID, causing HashMap overwrites that silently bypass the cap check. Not fixed in v0.3.0 — the race window is <1 ms and IDE usage is sequential.
 
 ### Watcher push via mpsc channel
 
@@ -58,6 +58,6 @@ v0.1.1 added ACP transport but wired only the `research` workflow. `step_read` d
 
 ### Test strategy: config verification for session cap
 
-**Decision:** Automated cap test (`08-session-cap.sh`) verifies only that `serve.acp_max_sessions` is set to a low value. Behavioral cap enforcement is deferred to manual testing (documented in `validate-acp.md`).
+**Decision:** The pytest ACP suite (`tests-integration/acp/test_session_cap.py`) verifies that `serve.acp_max_sessions` is readable via `config get`. Behavioral cap enforcement across subprocess boundaries is not automatically tested — each `exchange()` call is a fresh process, so in-memory sessions don't persist.
 
 **Rationale:** The `timestamp_millis()` TOCTOU race makes automated cap enforcement tests unreliable — sessions spawned in rapid succession get the same ID and silently overwrite each other in the HashMap, so the cap is never triggered. Fixing the race was blocked (out of scope for v0.3.0). The config check confirms the system is wired correctly without producing false failures.
