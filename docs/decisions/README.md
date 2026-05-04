@@ -4,6 +4,16 @@ Architectural decisions and their rationale, grouped by release.
 
 ---
 
+## v0.4.1 — 2026-05-04
+
+### Testing
+
+| Decision | Summary |
+| -------- | ------- |
+| [pytest-integration-suite](0.4.1/pytest-integration-suite.md) | Replace bash integration scripts with pytest suite under `tests-integration/`; eliminates false-positive grep patterns, provides automatic teardown and structured JSON inspection |
+
+---
+
 ## v0.4.0 — 2026-05-03
 
 ### Graph
