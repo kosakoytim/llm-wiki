@@ -27,6 +27,7 @@ class McpEnv:
 
 @pytest_asyncio.fixture()
 async def mcp_env(wiki_env):
+    """Standard read-only MCP session. Use mutable_mcp_env for tests that write wiki state."""
     server = StdioServerParameters(
         command=wiki_env.binary,
         args=["--config", str(wiki_env.config), "serve"],
