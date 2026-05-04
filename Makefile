@@ -54,7 +54,7 @@ validate: test-clean test-setup validate-engine validate-mcp validate-acp
 # ── pytest integration suite ──────────────────────────────────────────────────
 
 validate-py: build
-	$(MAKE) -C tests-integration test-engine BINARY=$(CURDIR)/$(DEBUG_BIN)
+	$(MAKE) -C tests-integration test BINARY=$(CURDIR)/$(DEBUG_BIN)
 
 validate-py-engine: build
 	$(MAKE) -C tests-integration test-engine BINARY=$(CURDIR)/$(DEBUG_BIN)
