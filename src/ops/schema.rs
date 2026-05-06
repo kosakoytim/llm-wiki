@@ -48,8 +48,25 @@ pub fn schema_show(engine: &EngineState, wiki_name: &str, type_name: &str) -> Re
         .schema_path(type_name)
         .ok_or_else(|| anyhow::anyhow!("type '{type_name}' is not registered"))?;
     let full_path = space.repo_root.join(schema_path);
-    std::fs::read_to_string(&full_path)
-        .with_context(|| format!("failed to read schema: {}", full_path.display()))
+
+    if full_path.exists() {
+        return std::fs::read_to_string(&full_path)
+            .with_context(|| format!("failed to read schema: {}", full_path.display()));
+    }
+
+    let filename = full_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("");
+    crate::default_schemas::default_schemas()
+        .get(filename)
+        .map(|s| s.to_string())
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "schema file not found on disk and no embedded default for '{type_name}': {}",
+                full_path.display()
+            )
+        })
 }
 
 /// Return a frontmatter template for a type, derived from its JSON Schema.
@@ -388,5 +405,16 @@ fn format_template_field(name: &str, prop: &serde_json::Value, type_name: &str) 
         }
         "boolean" => format!("{name}: false"),
         _ => format!("{name}: \"\""),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn default_schemas_map_has_concept() {
+        let schemas = crate::default_schemas::default_schemas();
+        assert!(schemas.contains_key("concept.json"), "embedded concept.json missing");
+        let content = schemas["concept.json"];
+        assert!(content.contains("\"concept\""), "concept.json lacks type identifier");
     }
 }
