@@ -33,12 +33,13 @@ async def test_lint_missing_page_does_not_crash(mcp_env):
     assert len(text) > 0
 
 
-async def test_graph_invalid_format_falls_back(mcp_env):
+async def test_graph_invalid_format_returns_error(mcp_env):
     await mcp_env.rebuild()
     is_error, text = await mcp_env.call_raw(
         "wiki_graph", {"format": "invalid-format-xyz", "wiki": SPACE_NAME}
     )
-    assert len(text) > 0
+    assert is_error is True
+    assert "invalid-format-xyz" in text or "unknown" in text.lower()
 
 
 async def test_resolve_missing_page_not_crash(mcp_env):
