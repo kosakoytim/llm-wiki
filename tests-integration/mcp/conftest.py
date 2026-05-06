@@ -3,6 +3,8 @@ import json
 
 import pytest
 import pytest_asyncio
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 
 # Stable slugs/names from the research wiki fixture — update here if fixture changes
 SLUG_MoE = "concepts/mixture-of-experts"
@@ -11,9 +13,6 @@ SLUG_ORPHAN = "concepts/orphan-concept"
 SLUG_MISSING = "concepts/does-not-exist-xyz"
 SPACE_NAME = "research"
 SPACE_NOTES = "notes"
-from mcp.client.stdio import stdio_client
-
-from mcp import ClientSession, StdioServerParameters
 
 
 class McpEnv:
@@ -34,6 +33,13 @@ class McpEnv:
 
     async def rebuild(self, wiki: str = "research") -> None:
         await self.call("wiki_index_rebuild", {"wiki": wiki})
+
+    async def call_raw(self, tool: str, args: dict | None = None) -> tuple[bool, str]:
+        """Returns (is_error, text) without raising on tool errors."""
+        result = await self._session.call_tool(tool, args or {})
+        is_error = getattr(result, "isError", False)
+        text = result.content[0].text if result.content else ""
+        return is_error, text
 
 
 @pytest_asyncio.fixture()
