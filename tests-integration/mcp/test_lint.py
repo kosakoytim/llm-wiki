@@ -1,4 +1,25 @@
+import pytest
+
 from conftest import SLUG_ORPHAN, SPACE_NAME
+
+
+@pytest.mark.parametrize("rule", ["broken-link", "orphan"])
+async def test_lint_rule_appears_in_text(mcp_env, rule):
+    await mcp_env.rebuild()
+    text = await mcp_env.call("wiki_lint", {"rules": [rule]})
+    assert rule in text
+
+
+@pytest.mark.parametrize("rule", ["broken-link", "orphan"])
+async def test_lint_rule_has_findings(mcp_env, rule):
+    await mcp_env.rebuild()
+    data = await mcp_env.json("wiki_lint", {"rules": [rule], "format": "json"})
+    assert isinstance(data["findings"], list)
+    assert len(data["findings"]) > 0
+    matching = [f for f in data["findings"] if f["rule"] == rule]
+    assert len(matching) > 0, f"no findings with rule={rule!r}"
+    for f in matching:
+        assert isinstance(f.get("slug"), str)
 
 
 async def test_lint_returns_findings(mcp_env):
@@ -8,29 +29,11 @@ async def test_lint_returns_findings(mcp_env):
     assert "error" in combined or "warning" in combined
 
 
-async def test_lint_broken_link_rule(mcp_env):
-    await mcp_env.rebuild()
-    text = await mcp_env.call("wiki_lint", {"rules": ["broken-link"]})
-    assert "broken-link" in text
-
-
-async def test_lint_orphan_rule(mcp_env):
-    await mcp_env.rebuild()
-    text = await mcp_env.call("wiki_lint", {"rules": ["orphan"]})
-    assert "orphan" in text
-
-
 async def test_lint_json_findings_array(mcp_env):
     await mcp_env.rebuild()
     data = await mcp_env.json("wiki_lint", {"format": "json"})
     assert isinstance(data["findings"], list)
-
-
-async def test_lint_broken_link_finds_dead_ref(mcp_env):
-    await mcp_env.rebuild()
-    data = await mcp_env.json("wiki_lint", {"rules": ["broken-link"], "format": "json"})
-    bl = [f for f in data["findings"] if f["rule"] == "broken-link"]
-    assert len(bl) > 0
+    assert len(data["findings"]) > 0
 
 
 async def test_lint_broken_link_detects_also_does_not_exist(mcp_env):
