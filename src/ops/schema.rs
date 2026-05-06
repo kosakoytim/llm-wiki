@@ -54,10 +54,7 @@ pub fn schema_show(engine: &EngineState, wiki_name: &str, type_name: &str) -> Re
             .with_context(|| format!("failed to read schema: {}", full_path.display()));
     }
 
-    let filename = full_path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("");
+    let filename = full_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
     crate::default_schemas::default_schemas()
         .get(filename)
         .map(|s| s.to_string())
@@ -413,8 +410,14 @@ mod tests {
     #[test]
     fn default_schemas_map_has_concept() {
         let schemas = crate::default_schemas::default_schemas();
-        assert!(schemas.contains_key("concept.json"), "embedded concept.json missing");
+        assert!(
+            schemas.contains_key("concept.json"),
+            "embedded concept.json missing"
+        );
         let content = schemas["concept.json"];
-        assert!(content.contains("\"concept\""), "concept.json lacks type identifier");
+        assert!(
+            content.contains("\"concept\""),
+            "concept.json lacks type identifier"
+        );
     }
 }
