@@ -1,3 +1,6 @@
+from conftest import SLUG_ORPHAN, SPACE_NAME
+
+
 async def test_lint_returns_findings(mcp_env):
     await mcp_env.rebuild()
     text = await mcp_env.call("wiki_lint")
@@ -41,12 +44,12 @@ async def test_lint_orphan_finds_orphan_concept(mcp_env):
     await mcp_env.rebuild()
     data = await mcp_env.json("wiki_lint", {"rules": ["orphan"], "format": "json"})
     slugs = [f["slug"] for f in data["findings"]]
-    assert "concepts/orphan-concept" in slugs
+    assert SLUG_ORPHAN in slugs
 
 
 async def test_lint_with_wiki_param(mcp_env):
     await mcp_env.rebuild()
-    text = await mcp_env.call("wiki_lint", {"wiki": "research"})
+    text = await mcp_env.call("wiki_lint", {"wiki": SPACE_NAME})
     combined = text.lower()
     assert "error" in combined or "warning" in combined
 

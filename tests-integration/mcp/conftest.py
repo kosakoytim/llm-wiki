@@ -3,6 +3,14 @@ import json
 
 import pytest
 import pytest_asyncio
+
+# Stable slugs/names from the research wiki fixture — update here if fixture changes
+SLUG_MoE = "concepts/mixture-of-experts"
+SLUG_SCALING_LAWS = "concepts/scaling-laws"
+SLUG_ORPHAN = "concepts/orphan-concept"
+SLUG_MISSING = "concepts/does-not-exist-xyz"
+SPACE_NAME = "research"
+SPACE_NOTES = "notes"
 from mcp.client.stdio import stdio_client
 
 from mcp import ClientSession, StdioServerParameters

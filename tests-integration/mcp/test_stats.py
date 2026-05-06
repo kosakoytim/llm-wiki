@@ -1,7 +1,10 @@
+from conftest import SPACE_NAME
+
+
 async def test_stats_returns_wiki_name(mcp_env):
     await mcp_env.rebuild()
     text = await mcp_env.call("wiki_stats")
-    assert "research" in text
+    assert SPACE_NAME in text
 
 
 async def test_stats_json_pages_gt_0(mcp_env):
