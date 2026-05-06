@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **MCP integration test quality** — hardened `tests-integration/mcp/` from smoke tests into correctness tests: centralized `rebuild()` helper on `McpEnv`; replaced hard-coded slugs/space names with `conftest` constants; strengthened assertions to validate JSON structure and field types; parametrized lint/structural rule tests; added `call_raw()` helper and negative-path tests for missing pages and bad input
 
 ### Fixed
+- `schema show` no longer fails when a schema file is absent from disk — falls back to embedded defaults
 - `spaces register` now calls `ensure_structure`, creating `wiki.toml` and the
   standard directory scaffold (`inbox/`, `raw/`, `schemas/`, content dir) when
   absent, matching the behaviour of `spaces create` (fixes #62)
