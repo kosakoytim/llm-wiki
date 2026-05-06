@@ -1,28 +1,24 @@
-async def _rebuild(mcp_env):
-    await mcp_env.call("wiki_index_rebuild", {"wiki": "research"})
-
-
 async def test_suggest_returns_results(mcp_env):
-    await _rebuild(mcp_env)
+    await mcp_env.rebuild()
     text = await mcp_env.call("wiki_suggest", {"slug": "concepts/mixture-of-experts"})
     assert text is not None
 
 
 async def test_suggest_json_is_array(mcp_env):
-    await _rebuild(mcp_env)
+    await mcp_env.rebuild()
     data = await mcp_env.json("wiki_suggest", {"slug": "concepts/mixture-of-experts", "format": "json"})
     assert isinstance(data, list)
 
 
 async def test_suggest_results_have_slug(mcp_env):
-    await _rebuild(mcp_env)
+    await mcp_env.rebuild()
     data = await mcp_env.json("wiki_suggest", {"slug": "concepts/mixture-of-experts", "format": "json"})
     if data:
         assert isinstance(data[0]["slug"], str)
 
 
 async def test_suggest_community_peers(mcp_env):
-    await _rebuild(mcp_env)
+    await mcp_env.rebuild()
     data = await mcp_env.json("wiki_suggest", {"slug": "concepts/mixture-of-experts", "format": "json"})
     cluster_count = sum(1 for r in data if "cluster" in r.get("reason", "").lower())
     assert cluster_count >= 0

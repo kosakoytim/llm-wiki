@@ -24,6 +24,9 @@ class McpEnv:
         text = await self.call(tool, args)
         return json.loads(text)
 
+    async def rebuild(self, wiki: str = "research") -> None:
+        await self.call("wiki_index_rebuild", {"wiki": wiki})
+
 
 @pytest_asyncio.fixture()
 async def mcp_env(wiki_env):
