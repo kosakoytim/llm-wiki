@@ -3,8 +3,9 @@ import json
 
 import pytest
 import pytest_asyncio
-from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+
+from mcp import ClientSession, StdioServerParameters
 
 # Stable slugs/names from the research wiki fixture — update here if fixture changes
 SLUG_MoE = "concepts/mixture-of-experts"

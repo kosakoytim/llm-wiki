@@ -1,4 +1,4 @@
-from conftest import SLUG_MoE, SPACE_NAME
+from conftest import SPACE_NAME, SLUG_MoE
 
 
 async def test_schema_list_returns_array(mcp_env):

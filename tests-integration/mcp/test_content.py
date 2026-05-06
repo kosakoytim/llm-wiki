@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from conftest import SLUG_MoE, SLUG_MISSING, SLUG_SCALING_LAWS, SPACE_NAME
+from conftest import SLUG_MISSING, SLUG_SCALING_LAWS, SPACE_NAME, SLUG_MoE
 
 
 async def test_content_read_returns_page_body(mcp_env):

@@ -1,4 +1,4 @@
-from conftest import SLUG_MoE, SPACE_NAME, SPACE_NOTES
+from conftest import SPACE_NAME, SPACE_NOTES, SLUG_MoE
 
 
 async def test_graph_mermaid_output(mcp_env):
