@@ -14,7 +14,7 @@ test-acp: install
 test-mcp: install
 	LLM_WIKI_BIN=$(BINARY) uv run pytest mcp/ -v
 
-test-all: test-engine test-acp test-mcp
+test: test-engine test-acp test-mcp
 
 lint: install
 	uv run ruff check .
