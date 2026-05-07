@@ -5,9 +5,6 @@ BINARY ?= ../target/debug/llm-wiki
 install:
 	uv sync --group dev
 
-test: install
-	LLM_WIKI_BIN=$(BINARY) uv run pytest -v
-
 test-engine: install
 	LLM_WIKI_BIN=$(BINARY) uv run pytest engine/ -v
 
@@ -16,6 +13,8 @@ test-acp: install
 
 test-mcp: install
 	LLM_WIKI_BIN=$(BINARY) uv run pytest mcp/ -v
+
+test-all: test-engine test-acp test-mcp
 
 lint: install
 	uv run ruff check .
