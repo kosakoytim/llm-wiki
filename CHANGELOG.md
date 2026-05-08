@@ -5,7 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.1] -  2026-05-08
+
+### Added
+
+- **pytest integration suite** — `tests-integration/` replaces bash test scripts; three suites: `engine/` (CLI subprocess), `mcp/` (MCP stdio via official `mcp` Python SDK), `acp/` (ACP NDJSON stdio via `asyncio`); managed by `uv`; root `Makefile` targets `validate-py`, `validate-py-engine`, `validate-py-mcp`, `validate-py-acp`
+- **GitHub Actions integration workflow** — `.github/workflows/integration.yml` runs the pytest suite on pushes/PRs touching `src/**` or `tests-integration/**`; `workflow_dispatch` with `suite` input (`all`, `engine`, `mcp`, `acp`)
+
+### Changed
+
+- **MCP integration test quality** — hardened `tests-integration/mcp/` from smoke tests into correctness tests: centralized `rebuild()` helper on `McpEnv`; replaced hard-coded slugs/space names with `conftest` constants; strengthened assertions to validate JSON structure and field types; parametrized lint/structural rule tests; added `call_raw()` helper and negative-path tests for missing pages and bad input
+
+### Fixed
+- `wiki_graph` / `graph` now rejects unknown `format` values with an error instead of silently falling back to Mermaid; valid values are `mermaid`, `dot`, `llms`
+- `schema show` no longer fails when a schema file is absent from disk — falls back to embedded defaults
+- `spaces register` now calls `ensure_structure`, creating `wiki.toml` and the
+  standard directory scaffold (`inbox/`, `raw/`, `schemas/`, content dir) when
+  absent, matching the behaviour of `spaces create` (fixes #62)
 
 ## [0.4.0] — 2026-05-03
 

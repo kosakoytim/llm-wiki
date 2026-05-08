@@ -99,3 +99,16 @@ jobs:
 
       - name: Publish to crates.io
         run: cargo publish --locked --token ${{ secrets.CARGO_TOKEN }}
+
+  notify-tap:
+    needs: release
+    if: ${{ !contains(github.ref, '-rc') }}
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Trigger homebrew-tap update
+        run: |
+          gh api repos/geronimo-iia/homebrew-tap/dispatches \
+            -f event_type=update-llm-wiki
+        env:
+          GH_TOKEN: ${{ secrets.TAP_DISPATCH_TOKEN }}

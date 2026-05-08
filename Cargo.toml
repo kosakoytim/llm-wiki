@@ -1,6 +1,6 @@
 [package]
 name = "llm-wiki-engine"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2024"
 rust-version = "1.95"
 description = "Git-backed wiki engine with MCP/ACP server — bring your own LLM"
@@ -12,7 +12,7 @@ documentation = "https://docs.rs/llm-wiki-engine"
 readme = "README.md"
 keywords = ["wiki", "knowledge-base", "mcp", "git", "acp"]
 categories = ["command-line-utilities", "development-tools"]
-exclude = [".github/", "tests/", "docs/"]
+exclude = [".github/", "tests/", "tests-integration/", "docs/"]
 
 [lib]
 name = "llm_wiki"

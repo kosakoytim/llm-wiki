@@ -84,7 +84,8 @@ pub fn graph_build(
     let rendered = match fmt {
         "dot" => graph::render_dot(&g),
         "llms" => graph::render_llms(&g),
-        _ => graph::render_mermaid(&g),
+        "mermaid" => graph::render_mermaid(&g),
+        other => anyhow::bail!("unknown graph format {other:?}: expected mermaid, dot, or llms"),
     };
 
     let out = if let Some(out_path) = params.output {
