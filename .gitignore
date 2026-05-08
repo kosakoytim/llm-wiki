@@ -22,3 +22,12 @@ tests-integration/**/*.pyc
 tests-integration/**/*.pyo
 pytest-of-*/
 uv-*.lock
+
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo
+*.pyd
+uv.lock
+
