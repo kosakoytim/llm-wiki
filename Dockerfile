@@ -26,7 +26,7 @@ RUN case "$TARGETARCH" in \
     chmod +x /usr/local/bin/llm-wiki && \
     rm /tmp/llm-wiki.tar.gz
 
-RUN useradd -m -u 1000 wiki
+RUN useradd -m -u 1001 wiki
 USER wiki
 
 WORKDIR /wiki
