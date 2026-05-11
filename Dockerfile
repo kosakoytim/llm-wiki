@@ -37,4 +37,4 @@ VOLUME ["/wiki/data"]
 EXPOSE 8080
 
 ENTRYPOINT ["llm-wiki"]
-CMD ["serve", "--http", ":8080", "--wiki-path", "/wiki/data"]
+CMD ["serve", "--http", ":8080", "--wiki", "/wiki/data"]
