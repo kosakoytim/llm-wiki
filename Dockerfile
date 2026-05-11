@@ -31,10 +31,12 @@ USER wiki
 
 WORKDIR /wiki
 
+COPY --chown=wiki:wiki config.toml /wiki/config.toml
+
 # Wiki data directory — mount a persistent volume here
 VOLUME ["/wiki/data"]
 
 EXPOSE 8080
 
 ENTRYPOINT ["llm-wiki"]
-CMD ["serve", "--http", ":8080", "--wiki", "/wiki/data"]
+CMD ["--config", "/wiki/config.toml", "serve", "--http", ":8080", "--wiki", "/wiki/data"]
