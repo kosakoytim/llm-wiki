@@ -11,10 +11,6 @@ if [ "$(id -u)" = "0" ]; then
     exec gosu wiki "$0" "$@"
 fi
 
-# Debug: show who we are and what permissions look like
-echo "Running as: $(id)"
-echo "Volume permissions: $(ls -la /wiki/data/)"
-
 # Initialize wiki space on first boot
 if [ ! -f "$WIKI_DATA/wiki.toml" ]; then
     echo "Initializing wiki space at $WIKI_DATA..."
@@ -25,7 +21,7 @@ if [ ! -f "$WIKI_DATA/wiki.toml" ]; then
         "$WIKI_DATA" \
         --name main \
         --description "Venus AI Coordinator — brain-modeled memory wiki" \
-        --set-default || { echo "ERROR: spaces create failed (config.toml permissions?)"; ls -la /wiki/config.toml; exit 1; }
+        --set-default || { echo "ERROR: spaces create failed"; exit 1; }
 
     mkdir -p "$WIKI_DATA/schemas"
     for SCHEMA in identity relationship preference routine project context daily_summary event episode task_context lesson; do
@@ -33,7 +29,12 @@ if [ ! -f "$WIKI_DATA/wiki.toml" ]; then
         echo "Copied schema: $SCHEMA"
     done
 
-    cd "$WIKI_DATA" && git add schemas/ && git commit -m "chore: register 11 custom brain-modeled schemas" && cd /wiki
+    cd "$WIKI_DATA" && \
+        git config user.email "wiki@venus" && \
+        git config user.name "llm-wiki" && \
+        git add schemas/ && \
+        git commit -m "chore: register 11 custom brain-modeled schemas" && \
+        cd /wiki
 
     echo "Wiki initialized with custom schemas."
 fi
