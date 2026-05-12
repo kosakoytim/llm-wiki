@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     git \
     libssl3 \
-    su-exec \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 ARG VERSION=v0.4.1

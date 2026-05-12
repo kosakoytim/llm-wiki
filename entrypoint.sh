@@ -8,7 +8,7 @@ SCHEMAS_SRC="/wiki/schemas"
 # Fix volume ownership if running as root (happens when Docker mounts override image ownership)
 if [ "$(id -u)" = "0" ]; then
     chown -R wiki:wiki /wiki/data
-    exec su-exec wiki "$0" "$@"
+    exec gosu wiki "$0" "$@"
 fi
 
 # Initialize wiki space on first boot
