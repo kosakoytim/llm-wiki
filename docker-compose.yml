@@ -4,8 +4,6 @@ services:
       context: .
       args:
         VERSION: v0.4.1
-    ports:
-      - "8080:8080"
     volumes:
       - ./wiki-data:/wiki/data
     restart: unless-stopped
