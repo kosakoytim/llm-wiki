@@ -26,18 +26,21 @@ RUN case "$TARGETARCH" in \
     chmod +x /usr/local/bin/llm-wiki && \
     rm /tmp/llm-wiki.tar.gz
 
-RUN useradd -m -u 1001 wiki
+RUN useradd -m -u 1001 wiki && \
+    mkdir -p /wiki/data && \
+    chown -R wiki:wiki /wiki
+
 USER wiki
 
 WORKDIR /wiki
 
 COPY --chown=wiki:wiki config.toml /wiki/config.toml
 COPY --chown=wiki:wiki schemas/ /wiki/schemas/
+COPY --chown=wiki:wiki entrypoint.sh /wiki/entrypoint.sh
 
-# Wiki data directory — mount a persistent volume here
+# Wiki data directory — mount a persistent volume here (pre-created with correct ownership)
 VOLUME ["/wiki/data"]
 
 EXPOSE 8080
 
-ENTRYPOINT ["llm-wiki"]
-CMD ["--config", "/wiki/config.toml", "serve", "--http", ":8080", "--wiki", "/wiki/data"]
+ENTRYPOINT ["/bin/sh", "/wiki/entrypoint.sh"]
