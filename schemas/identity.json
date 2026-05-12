@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "identity",
+  "title": "Identity",
+  "description": "A person, bot, or organization the agent knows about.",
+  "type": "object",
+  "required": ["title", "type"],
+  "properties": {
+    "title": { "type": "string", "description": "Full name or display name" },
+    "type": { "type": "string", "const": "identity" },
+    "summary": { "type": "string", "description": "One-line description of who this is" },
+    "tldr": { "type": "string", "description": "One-sentence essence — who is this person to the agent" },
+    "status": { "type": "string", "enum": ["active", "inactive", "unknown"], "default": "active" },
+    "last_updated": { "type": "string", "description": "ISO 8601 date" },
+    "tags": { "type": "array", "items": { "type": "string" }, "description": "Lowercase hyphenated search terms" },
+    "superseded_by": { "type": "string", "description": "Slug or rag:// reference if archived" },
+    "read_when": { "type": "array", "items": { "type": "string" }, "description": "Situations when this page should be retrieved" },
+    "identity_type": { "type": "string", "enum": ["person", "bot", "organization"], "default": "person" },
+    "aliases": { "type": "array", "items": { "type": "string" }, "description": "Other names, handles, or usernames" },
+    "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.7 },
+    "last_read": { "type": "string", "description": "ISO 8601 date" },
+    "importance_score": { "type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.7 },
+    "read_count": { "type": "integer", "default": 0 },
+    "claims": {
+      "type": "array",
+      "description": "Structured facts about this identity",
+      "items": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+          "source": { "type": "string" },
+          "section": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "concepts": { "type": "array", "items": { "type": "string" }, "description": "Related wiki page slugs" },
+    "sources": { "type": "array", "items": { "type": "string" }, "description": "Source refs (conv://, rag://)" }
+  },
+  "x-wiki-types": { "identity": "A person, bot, or organization the agent knows about" },
+  "x-graph-edges": {
+    "concepts": { "relation": "relates-to", "direction": "outgoing" },
+    "sources": { "relation": "evidenced-by", "direction": "outgoing" },
+    "superseded_by": { "relation": "superseded-by", "direction": "outgoing" }
+  },
+  "additionalProperties": true
+}

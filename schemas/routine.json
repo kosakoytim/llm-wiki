@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "routine",
+  "title": "Routine",
+  "description": "Recurring patterns, habits, and schedules.",
+  "type": "object",
+  "required": ["title", "type"],
+  "properties": {
+    "title": { "type": "string" },
+    "type": { "type": "string", "const": "routine" },
+    "summary": { "type": "string" },
+    "tldr": { "type": "string", "description": "One-sentence of what recurs and when" },
+    "status": { "type": "string", "enum": ["active", "paused", "ended"], "default": "active" },
+    "last_updated": { "type": "string", "description": "ISO 8601 date" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "superseded_by": { "type": "string" },
+    "read_when": { "type": "array", "items": { "type": "string" }, "description": "Situations when this routine is relevant" },
+    "applies_to": { "type": "string", "description": "Slug of identity this routine belongs to" },
+    "frequency": { "type": "string", "description": "e.g. daily, weekly, every_friday, ramadan_only" },
+    "timezone": { "type": "string", "default": "Asia/Jakarta" },
+    "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.7 },
+    "last_read": { "type": "string", "description": "ISO 8601 date" },
+    "importance_score": { "type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.7 },
+    "read_count": { "type": "integer", "default": 0 },
+    "claims": {
+      "type": "array",
+      "description": "Specific facts about this routine",
+      "items": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+          "source": { "type": "string" },
+          "section": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "concepts": { "type": "array", "items": { "type": "string" } },
+    "sources": { "type": "array", "items": { "type": "string" } }
+  },
+  "x-wiki-types": { "routine": "Recurring patterns, habits, and schedules" },
+  "x-graph-edges": {
+    "applies_to": { "relation": "applies-to", "direction": "outgoing", "target_types": ["identity"] },
+    "concepts": { "relation": "relates-to", "direction": "outgoing" },
+    "sources": { "relation": "evidenced-by", "direction": "outgoing" },
+    "superseded_by": { "relation": "superseded-by", "direction": "outgoing" }
+  },
+  "additionalProperties": true
+}

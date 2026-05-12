@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project",
+  "title": "Project",
+  "description": "An ongoing piece of work with goals and status.",
+  "type": "object",
+  "required": ["title", "type"],
+  "properties": {
+    "title": { "type": "string" },
+    "type": { "type": "string", "const": "project" },
+    "summary": { "type": "string" },
+    "tldr": { "type": "string", "description": "One-sentence of what this project is and its current state" },
+    "status": { "type": "string", "enum": ["active", "paused", "completed", "cancelled"], "default": "active" },
+    "last_updated": { "type": "string", "description": "ISO 8601 date" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "superseded_by": { "type": "string" },
+    "read_when": { "type": "array", "items": { "type": "string" }, "description": "Situations when this project page should be retrieved" },
+    "owner": { "type": "string", "description": "Slug of identity who owns this project" },
+    "goal": { "type": "string", "description": "What success looks like" },
+    "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.8 },
+    "last_read": { "type": "string", "description": "ISO 8601 date" },
+    "importance_score": { "type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.8 },
+    "read_count": { "type": "integer", "default": 0 },
+    "claims": {
+      "type": "array",
+      "description": "Key facts — decisions, blockers, progress",
+      "items": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+          "source": { "type": "string" },
+          "section": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "concepts": { "type": "array", "items": { "type": "string" } },
+    "sources": { "type": "array", "items": { "type": "string" } }
+  },
+  "x-wiki-types": { "project": "An ongoing piece of work with goals and status" },
+  "x-graph-edges": {
+    "owner": { "relation": "owned-by", "direction": "outgoing", "target_types": ["identity"] },
+    "concepts": { "relation": "involves", "direction": "outgoing" },
+    "sources": { "relation": "evidenced-by", "direction": "outgoing" },
+    "superseded_by": { "relation": "superseded-by", "direction": "outgoing" }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "event",
+  "title": "Event",
+  "description": "A significant one-time occurrence, past or upcoming.",
+  "type": "object",
+  "required": ["title", "type"],
+  "properties": {
+    "title": { "type": "string" },
+    "type": { "type": "string", "const": "event" },
+    "summary": { "type": "string" },
+    "tldr": { "type": "string", "description": "One-sentence of what this event is and why it matters" },
+    "status": { "type": "string", "enum": ["upcoming", "past", "cancelled"], "default": "upcoming" },
+    "last_updated": { "type": "string", "description": "ISO 8601 date" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "superseded_by": { "type": "string" },
+    "read_when": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Situations when this event is relevant"
+    },
+    "event_date": { "type": "string", "description": "ISO date or range e.g. 2026-06-15" },
+    "location": { "type": "string" },
+    "participants": { "type": "array", "items": { "type": "string" }, "description": "Slugs of identity pages" },
+    "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.8 },
+    "last_read": { "type": "string", "description": "ISO 8601 date" },
+    "importance_score": { "type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.75 },
+    "read_count": { "type": "integer", "default": 0 },
+    "claims": {
+      "type": "array",
+      "description": "Known facts about this event",
+      "items": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+          "source": { "type": "string" },
+          "section": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "concepts": { "type": "array", "items": { "type": "string" } },
+    "sources": { "type": "array", "items": { "type": "string" } }
+  },
+  "x-wiki-types": {
+    "event": "A significant one-time occurrence, past or upcoming"
+  },
+  "x-graph-edges": {
+    "participants": { "relation": "involves", "direction": "outgoing", "target_types": ["identity"] },
+    "concepts": { "relation": "relates-to", "direction": "outgoing" },
+    "sources": { "relation": "evidenced-by", "direction": "outgoing" },
+    "superseded_by": { "relation": "superseded-by", "direction": "outgoing" }
+  },
+  "additionalProperties": true
+}

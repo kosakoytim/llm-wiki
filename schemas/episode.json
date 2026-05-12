@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "episode",
+  "title": "Episode",
+  "description": "A meaningful conversation arc or situation that unfolded over multiple days.",
+  "type": "object",
+  "required": ["title", "type"],
+  "properties": {
+    "title": { "type": "string", "description": "e.g. 'Venus Deployment Debugging'" },
+    "type": { "type": "string", "const": "episode" },
+    "summary": { "type": "string" },
+    "tldr": { "type": "string", "description": "One-sentence of what happened and how it resolved" },
+    "status": { "type": "string", "enum": ["active", "resolved", "abandoned"], "default": "active" },
+    "last_updated": { "type": "string", "description": "ISO 8601 date" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "superseded_by": { "type": "string" },
+    "read_when": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Situations when this episode is relevant"
+    },
+    "date_start": { "type": "string", "description": "ISO 8601 date" },
+    "date_end": { "type": "string", "description": "ISO 8601 date — omit if still ongoing" },
+    "outcome": { "type": "string", "description": "How it resolved, if applicable" },
+    "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.7 },
+    "last_read": { "type": "string", "description": "ISO 8601 date" },
+    "importance_score": { "type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.65 },
+    "read_count": { "type": "integer", "default": 0 },
+    "claims": {
+      "type": "array",
+      "description": "Key moments or decisions in this episode",
+      "items": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+          "source": { "type": "string" },
+          "section": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "concepts": { "type": "array", "items": { "type": "string" } },
+    "sources": { "type": "array", "items": { "type": "string" } }
+  },
+  "x-wiki-types": {
+    "episode": "A meaningful conversation arc that unfolded over multiple days"
+  },
+  "x-graph-edges": {
+    "concepts": { "relation": "involves", "direction": "outgoing" },
+    "sources": { "relation": "evidenced-by", "direction": "outgoing" },
+    "superseded_by": { "relation": "superseded-by", "direction": "outgoing" }
+  },
+  "additionalProperties": true
+}

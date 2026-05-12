@@ -119,7 +119,12 @@
     "metadata": {
       "type": "object",
       "description": "Publishing metadata (author, version, homepage)"
-    }
+    },
+    "trigger": { "type": "string", "description": "When to use this skill (human-readable)" },
+    "last_read": { "type": "string", "format": "date" },
+    "importance_score": { "type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.9 },
+    "read_count": { "type": "integer", "default": 0 },
+    "sources": { "type": "array", "items": { "type": "string" } }
   },
   "x-wiki-types": {
     "skill": "Agent skill with workflow instructions"

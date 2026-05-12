@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lesson",
+  "title": "Lesson",
+  "description": "Something that went wrong or was discovered, and what was learned from it.",
+  "type": "object",
+  "required": ["title", "type"],
+  "properties": {
+    "title": { "type": "string" },
+    "type": { "type": "string", "const": "lesson" },
+    "summary": { "type": "string", "description": "One-line of what was learned" },
+    "tldr": { "type": "string", "description": "One-sentence actionable takeaway" },
+    "status": { "type": "string", "enum": ["active", "superseded"], "default": "active" },
+    "last_updated": { "type": "string", "description": "ISO 8601 date" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "superseded_by": { "type": "string" },
+    "read_when": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Situations where this lesson should be recalled to avoid repeating mistakes"
+    },
+    "domain": { "type": "string", "description": "e.g. technical, communication, planning, deployment" },
+    "what_happened": { "type": "string", "description": "Brief description of the triggering situation" },
+    "what_was_learned": { "type": "string", "description": "The insight, fix, or changed behavior" },
+    "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.9 },
+    "last_read": { "type": "string", "description": "ISO 8601 date" },
+    "importance_score": { "type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.75 },
+    "read_count": { "type": "integer", "default": 0 },
+    "claims": {
+      "type": "array",
+      "description": "Specific learned facts from this episode",
+      "items": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+          "source": { "type": "string" },
+          "section": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "concepts": { "type": "array", "items": { "type": "string" } },
+    "sources": { "type": "array", "items": { "type": "string" } }
+  },
+  "x-wiki-types": {
+    "lesson": "Something learned from failure or discovery"
+  },
+  "x-graph-edges": {
+    "concepts": { "relation": "relates-to", "direction": "outgoing" },
+    "sources": { "relation": "evidenced-by", "direction": "outgoing" },
+    "superseded_by": { "relation": "superseded-by", "direction": "outgoing" }
+  },
+  "additionalProperties": true
+}
