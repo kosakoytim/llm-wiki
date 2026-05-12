@@ -11,15 +11,21 @@ if [ "$(id -u)" = "0" ]; then
     exec gosu wiki "$0" "$@"
 fi
 
+# Debug: show who we are and what permissions look like
+echo "Running as: $(id)"
+echo "Volume permissions: $(ls -la /wiki/data/)"
+
 # Initialize wiki space on first boot
 if [ ! -f "$WIKI_DATA/wiki.toml" ]; then
     echo "Initializing wiki space at $WIKI_DATA..."
+
+    mkdir -p "$WIKI_DATA"
 
     llm-wiki --config "$WIKI_CONFIG" spaces create \
         "$WIKI_DATA" \
         --name main \
         --description "Venus AI Coordinator — brain-modeled memory wiki" \
-        --set-default
+        --set-default || { echo "ERROR: spaces create failed"; exit 1; }
 
     mkdir -p "$WIKI_DATA/schemas"
     for SCHEMA in identity relationship preference routine project context daily_summary event episode task_context lesson; do
