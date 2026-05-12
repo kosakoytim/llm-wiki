@@ -9,3 +9,9 @@ services:
     restart: unless-stopped
     environment:
       - RUST_LOG=info
+      - WIKI_NAME=${WIKI_NAME:-main}
+      - WIKI_DESCRIPTION=${WIKI_DESCRIPTION:-Personal AI memory wiki}
+      - WIKI_ALLOWED_HOSTS=${WIKI_ALLOWED_HOSTS:-localhost}
+      - WIKI_GIT_EMAIL=${WIKI_GIT_EMAIL:-wiki@llm-wiki}
+      - WIKI_GIT_NAME=${WIKI_GIT_NAME:-llm-wiki}
+      - WIKI_PORT=${WIKI_PORT:-8080}

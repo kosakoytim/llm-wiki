@@ -31,6 +31,8 @@ HOSTS_TOML=$(echo "$WIKI_ALLOWED_HOSTS" | tr ',' '\n' | sed 's/^[[:space:]]*//' 
 cat >> "$WIKI_RUNTIME_CONFIG" << EOF
 
 [serve]
+http = true
+http_port = ${WIKI_PORT}
 http_allowed_hosts = [
     "localhost",
     "127.0.0.1",
