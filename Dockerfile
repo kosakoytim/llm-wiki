@@ -32,6 +32,7 @@ USER wiki
 WORKDIR /wiki
 
 COPY --chown=wiki:wiki config.toml /wiki/config.toml
+COPY --chown=wiki:wiki schemas/ /wiki/schemas/
 
 # Wiki data directory — mount a persistent volume here
 VOLUME ["/wiki/data"]
