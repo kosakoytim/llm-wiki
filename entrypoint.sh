@@ -25,7 +25,7 @@ if [ ! -f "$WIKI_DATA/wiki.toml" ]; then
         "$WIKI_DATA" \
         --name main \
         --description "Venus AI Coordinator — brain-modeled memory wiki" \
-        --set-default || { echo "ERROR: spaces create failed"; exit 1; }
+        --set-default || { echo "ERROR: spaces create failed (config.toml permissions?)"; ls -la /wiki/config.toml; exit 1; }
 
     mkdir -p "$WIKI_DATA/schemas"
     for SCHEMA in identity relationship preference routine project context daily_summary event episode task_context lesson; do

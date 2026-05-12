@@ -33,9 +33,9 @@ RUN useradd -m -u 1001 wiki && \
 
 WORKDIR /wiki
 
-COPY config.toml /wiki/config.toml
-COPY schemas/ /wiki/schemas/
-COPY entrypoint.sh /wiki/entrypoint.sh
+COPY --chown=wiki:wiki config.toml /wiki/config.toml
+COPY --chown=wiki:wiki schemas/ /wiki/schemas/
+COPY --chown=wiki:wiki entrypoint.sh /wiki/entrypoint.sh
 RUN chmod +x /wiki/entrypoint.sh
 
 # Wiki data directory — mount a persistent volume here (pre-created with correct ownership)
