@@ -13,6 +13,7 @@ WIKI_GIT_NAME="${WIKI_GIT_NAME:-llm-wiki}"
 # WIKI_ALLOWED_HOSTS: comma-separated list of allowed hosts
 # e.g. WIKI_ALLOWED_HOSTS=myapp.example.com,localhost
 WIKI_ALLOWED_HOSTS="${WIKI_ALLOWED_HOSTS:-localhost}"
+WIKI_PORT="${WIKI_PORT:-8080}"
 
 WIKI_DATA="/wiki/data/${WIKI_NAME}"
 
@@ -64,4 +65,4 @@ if [ ! -f "$WIKI_DATA/wiki.toml" ]; then
     echo "Wiki initialized with custom schemas."
 fi
 
-exec llm-wiki --config "$WIKI_RUNTIME_CONFIG" serve --http :8080
+exec llm-wiki --config "$WIKI_RUNTIME_CONFIG" serve --http ":${WIKI_PORT}"
