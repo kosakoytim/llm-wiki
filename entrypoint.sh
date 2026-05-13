@@ -65,6 +65,15 @@ if [ ! -f "$WIKI_DATA/wiki.toml" ]; then
         cd /wiki
 
     echo "Wiki initialized with custom schemas."
+else
+    # On redeploy the runtime config is fresh but the volume already has wiki data.
+    # Re-register the existing space so the engine can mount it.
+    echo "Re-registering existing wiki space '$WIKI_NAME' at $WIKI_DATA..."
+    llm-wiki --config "$WIKI_RUNTIME_CONFIG" spaces register \
+        "$WIKI_DATA" \
+        --name "$WIKI_NAME" \
+        --description "$WIKI_DESCRIPTION" || { echo "ERROR: spaces register failed"; exit 1; }
+    echo "Wiki space '$WIKI_NAME' re-registered."
 fi
 
 exec llm-wiki --config "$WIKI_RUNTIME_CONFIG" serve --http ":${WIKI_PORT}"
