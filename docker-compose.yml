@@ -5,7 +5,7 @@ services:
       args:
         VERSION: v0.4.1
     volumes:
-      - ./wiki-data:/wiki/data
+      - wiki-data:/wiki/data
     restart: unless-stopped
     environment:
       - RUST_LOG=info
@@ -15,3 +15,6 @@ services:
       - WIKI_GIT_EMAIL=${WIKI_GIT_EMAIL:-wiki@llm-wiki}
       - WIKI_GIT_NAME=${WIKI_GIT_NAME:-llm-wiki}
       - WIKI_PORT=${WIKI_PORT:-8080}
+
+volumes:
+  wiki-data:
