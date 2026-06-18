@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "engagement",
+  "title": "Engagement Rule",
+  "description": "Rules for when and how the agent should engage — reply triggers, ignore conditions, group behavior.",
+  "x-index-aliases": {
+    "description": "summary"
+  },
+  "type": "object",
+  "required": ["title", "type"],
+  "properties": {
+    "title": { "type": "string", "description": "Category display name (e.g. Reply Triggers, Ignore)" },
+    "type": { "type": "string", "const": "engagement" },
+    "description": { "type": "string", "description": "What this rule category covers" },
+    "status": { "type": "string", "enum": ["active", "archived"], "default": "active" },
+    "last_updated": { "type": "string", "description": "ISO 8601 date" },
+    "tags": { "type": "array", "items": { "type": "string" }, "description": "Lowercase hyphenated search terms" },
+    "read_when": { "type": "array", "items": { "type": "string" }, "description": "Situations when this rule should be retrieved" },
+    "items": { "type": "array", "items": { "type": "string" }, "description": "The actual rules and instructions" },
+    "concepts": { "type": "array", "items": { "type": "string" }, "description": "Related wiki page slugs" }
+  },
+  "x-wiki-types": { "engagement": "Engagement and reply trigger rule" },
+  "x-graph-edges": {
+    "concepts": { "relation": "relates-to", "direction": "outgoing" }
+  },
+  "additionalProperties": true
+}

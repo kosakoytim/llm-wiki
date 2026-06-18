@@ -35,6 +35,7 @@ WORKDIR /wiki
 
 COPY --chown=wiki:wiki config.toml /wiki/config.toml
 COPY --chown=wiki:wiki schemas/ /wiki/schemas/
+COPY --chown=wiki:wiki seed/ /wiki/seed/
 COPY --chown=wiki:wiki entrypoint.sh /wiki/entrypoint.sh
 RUN chmod +x /wiki/entrypoint.sh
 

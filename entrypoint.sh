@@ -76,4 +76,48 @@ else
     echo "Wiki space '$WIKI_NAME' re-registered."
 fi
 
+# --- System space (AI behavior rules) ---
+SYSTEM_DATA="/wiki/data/system"
+
+if [ ! -f "$SYSTEM_DATA/wiki.toml" ]; then
+    echo "Initializing system wiki space at $SYSTEM_DATA..."
+
+    mkdir -p "$SYSTEM_DATA"
+
+    llm-wiki --config "$WIKI_RUNTIME_CONFIG" spaces create \
+        "$SYSTEM_DATA" \
+        --name "system" \
+        --description "AI behavior and rules" || { echo "ERROR: system spaces create failed"; exit 1; }
+
+    mkdir -p "$SYSTEM_DATA/schemas"
+    for SCHEMA in main engagement messaging initiative; do
+        cp "$SCHEMAS_SRC/${SCHEMA}.json" "$SYSTEM_DATA/schemas/${SCHEMA}.json"
+        echo "Copied system schema: $SCHEMA"
+    done
+
+    # Seed system pages
+    SEED_SRC="/wiki/seed/system"
+    if [ -d "$SEED_SRC" ]; then
+        mkdir -p "$SYSTEM_DATA/wiki"
+        cp "$SEED_SRC"/*.md "$SYSTEM_DATA/wiki/"
+        echo "Seeded system pages from $SEED_SRC"
+    fi
+
+    cd "$SYSTEM_DATA" && \
+        git config user.email "$WIKI_GIT_EMAIL" && \
+        git config user.name "$WIKI_GIT_NAME" && \
+        git add schemas/ wiki/ && \
+        git commit -m "chore: register 4 system rule schemas and seed 14 pages" && \
+        cd /wiki
+
+    echo "System wiki initialized."
+else
+    echo "Re-registering existing system wiki space at $SYSTEM_DATA..."
+    llm-wiki --config "$WIKI_RUNTIME_CONFIG" spaces register \
+        "$SYSTEM_DATA" \
+        --name "system" \
+        --description "AI behavior and rules" || { echo "ERROR: system spaces register failed"; exit 1; }
+    echo "System wiki space re-registered."
+fi
+
 exec llm-wiki --config "$WIKI_RUNTIME_CONFIG" serve --http ":${WIKI_PORT}"
